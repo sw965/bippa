@@ -1,0 +1,32 @@
+{
+    "BaseSpeed": 45,
+    "HiddenAbility": "にげあし",
+    "BaseHP": 45,
+    "EggGroups": [
+        "虫"
+    ],
+    "BaseSpDef": 20,
+    "BaseAtk": 30,
+    "BaseSpAtk": 20,
+    "Weight": 2.9,
+    "Types": [
+        "むし"
+    ],
+    "Height": 0.3,
+    "Learnset": [
+        "たいあたり",
+        "いとをはく",
+        "むしくい",
+        "エレキネット"
+    ],
+    "NormalAbilities": [
+        "りんぷん"
+    ],
+    "AllAbilities": [
+        "りんぷん",
+        "にげあし"
+    ],
+    "Category": "通常ポケモン",
+    "Gender": "♂♀両方",
+    "BaseDef": 35
+}

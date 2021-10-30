@@ -1,0 +1,19 @@
+{
+    "Protect": "通常",
+    "Category": "物理",
+    "Power": 35,
+    "MaxAttackNum": 1,
+    "MirrorMove": "できる",
+    "GigantamaxPower": 90,
+    "Contact": "×",
+    "MinAttackNum": 1,
+    "CriticalRank": 0,
+    "MagicCoat": "×",
+    "Substitute": "通常",
+    "Type": "じめん",
+    "PriorityRank": 0,
+    "BasePP": 15,
+    "Target": "1体選択",
+    "GigantamaxMove": "ダイアース",
+    "Accuracy": 85
+}

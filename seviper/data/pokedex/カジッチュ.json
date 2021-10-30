@@ -1,0 +1,41 @@
+{
+    "BaseSpeed": 20,
+    "HiddenAbility": "ぼうだん",
+    "BaseHP": 40,
+    "EggGroups": [
+        "植物",
+        "ドラゴン"
+    ],
+    "BaseSpDef": 40,
+    "BaseAtk": 40,
+    "BaseSpAtk": 40,
+    "Weight": 0.5,
+    "Types": [
+        "くさ",
+        "ドラゴン"
+    ],
+    "Height": 0.2,
+    "Learnset": [
+        "からにこもる",
+        "おどろかす",
+        "メロメロ",
+        "まるくなる",
+        "ころがる",
+        "リサイクル",
+        "ふいうち",
+        "グラススライダー",
+        "りゅうせいぐん"
+    ],
+    "NormalAbilities": [
+        "じゅくせい",
+        "くいしんぼう"
+    ],
+    "AllAbilities": [
+        "じゅくせい",
+        "くいしんぼう",
+        "ぼうだん"
+    ],
+    "Category": "通常ポケモン",
+    "Gender": "♂♀両方",
+    "BaseDef": 80
+}

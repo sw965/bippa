@@ -1,0 +1,19 @@
+{
+    "Protect": "貫通",
+    "Category": "物理",
+    "Power": 120,
+    "MaxAttackNum": 1,
+    "MirrorMove": "できる",
+    "GigantamaxPower": 140,
+    "Contact": "接触",
+    "MinAttackNum": 1,
+    "CriticalRank": 0,
+    "MagicCoat": "×",
+    "Substitute": "通常",
+    "Type": "ゴースト",
+    "PriorityRank": 0,
+    "BasePP": 5,
+    "Target": "1体選択",
+    "GigantamaxMove": "ダイホロウ",
+    "Accuracy": 100
+}

@@ -1,0 +1,32 @@
+package bippa
+
+//https://wiki.xn--rckteqa2e.com/wiki/%E3%81%99%E3%81%B0%E3%82%84%E3%81%95#.E8.A9.B3.E7.B4.B0.E3.81.AA.E4.BB.95.E6.A7.98
+type SpeedBonus int
+
+const (
+  INIT_SPEED_BONUS = SpeedBonus(4096)
+)
+
+func NewSpeedBonus(spovb *SelfPointOfViewBattle) SpeedBonus {
+	speedBonus := INIT_SPEED_BONUS
+	if spovb.SelfFighters[0].Item == "こだわりスカーフ" {
+		speedBonus = speedBonus.MulChoiceScarfSpeedBonus()
+	}
+	return result
+}
+
+func (speedBonus SpeedBonus) MulChoiceScarf() SpeedBonus {
+  result := RoundingZeroPointFiveOrMore(float64(speedBonus) * 6144.0 / 4096.0)
+  return SpeedBonus(result)
+}
+
+type FinalSpeed float64
+
+func NewFinalSpeed(spovb *SelfPointOfViewBattle) FinalSpeed {
+	speed := spovb.SelfFighters[0].State.Speed
+	rankBonus := RANK_TO_RANK_BONUS[spovb.SelfFighters[0].Rank.Speed]
+	speedBonus := NewSpeedBonus(spovb)
+
+	result := RoundingZeroPointFiveOrMore(float64(speed) * float64(rankBonus))
+	return RoundingZeroPointFiveOver(float64(result) * float64(speedBonus) / 4096.0)
+}

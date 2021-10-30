@@ -1,0 +1,4 @@
+github.com/seehuhn/mt19937 v1.0.0 h1:r02DuVkQXfohssWZO8L/TeAlYOah7aNNubEHB/7Vtfs=
+github.com/seehuhn/mt19937 v1.0.0/go.mod h1:RikyXajNu+1Gqxm4hOacc3ckyWRd0usF6IkE3gnEcAM=
+github.com/sw965/omw v1.0.0 h1:H6xyA+nurc3klUDmuSgjgOd2VyOhcG3JMvILGM4/vGo=
+github.com/sw965/omw v1.0.0/go.mod h1:raZk8POppV+U31z4eL7MWejOrsFYZ7Dfsqb0V7/xI6s=

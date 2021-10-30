@@ -1,0 +1,19 @@
+{
+    "Protect": "通常",
+    "Category": "物理",
+    "Power": 40,
+    "MaxAttackNum": 1,
+    "MirrorMove": "できる",
+    "GigantamaxPower": 90,
+    "Contact": "×",
+    "MinAttackNum": 1,
+    "CriticalRank": 0,
+    "MagicCoat": "×",
+    "Substitute": "通常",
+    "Type": "ノーマル",
+    "PriorityRank": 0,
+    "BasePP": 20,
+    "Target": "1体選択",
+    "GigantamaxMove": "ダイアタック",
+    "Accuracy": 100
+}

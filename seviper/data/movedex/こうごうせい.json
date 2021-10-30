@@ -1,0 +1,19 @@
+{
+    "Protect": "－",
+    "Category": "変化",
+    "Power": -1,
+    "MaxAttackNum": 1,
+    "MirrorMove": "×",
+    "GigantamaxPower": -1,
+    "Contact": "×",
+    "MinAttackNum": 1,
+    "CriticalRank": 0,
+    "MagicCoat": "×",
+    "Substitute": "通常",
+    "Type": "くさ",
+    "PriorityRank": 0,
+    "BasePP": 5,
+    "Target": "自分",
+    "GigantamaxMove": "ダイウォール",
+    "Accuracy": -1
+}
