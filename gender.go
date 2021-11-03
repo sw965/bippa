@@ -1,9 +1,5 @@
 package bippa
 
-import (
-	"math/rand"
-)
-
 type Gender string
 
 const (

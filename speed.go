@@ -10,9 +10,9 @@ const (
 func NewSpeedBonus(spovb *SelfPointOfViewBattle) SpeedBonus {
 	speedBonus := INIT_SPEED_BONUS
 	if spovb.SelfFighters[0].Item == "こだわりスカーフ" {
-		speedBonus = speedBonus.MulChoiceScarfSpeedBonus()
+		speedBonus = speedBonus.MulChoiceScarf()
 	}
-	return result
+	return speedBonus
 }
 
 func (speedBonus SpeedBonus) MulChoiceScarf() SpeedBonus {
@@ -24,9 +24,10 @@ type FinalSpeed float64
 
 func NewFinalSpeed(spovb *SelfPointOfViewBattle) FinalSpeed {
 	speed := spovb.SelfFighters[0].State.Speed
-	rankBonus := RANK_TO_RANK_BONUS[spovb.SelfFighters[0].Rank.Speed]
+	rankBonus := RANK__TO_RANK_BONUS[spovb.SelfFighters[0].Rank.Speed]
 	speedBonus := NewSpeedBonus(spovb)
 
 	result := RoundingZeroPointFiveOrMore(float64(speed) * float64(rankBonus))
-	return RoundingZeroPointFiveOver(float64(result) * float64(speedBonus) / 4096.0)
+	result = RoundingZeroPointFiveOver(float64(result) * float64(speedBonus) / 4096.0)
+  return FinalSpeed(result)
 }

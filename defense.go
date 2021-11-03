@@ -6,32 +6,32 @@ import (
 
 type FinalDefense int
 
-func (spovb *SelfPointOfViewBattle) NewFinalDefenseCalc(moveName MoveName, isCritical bool) (FinalDefense, error) {
+func NewFinalDefense(spovb *SelfPointOfViewBattle, moveName MoveName, isCritical bool) (FinalDefense, error) {
 	moveData := MOVEDEX[moveName]
 
-	var defValue int
-	var rank int
+	var defenseState_ State_
+	var rank_ Rank_
 
 	switch moveData.Category {
 	case PHYSICS:
-		defValue = spovb.SelfFighters[0].State.Def
-		rank = spovb.SelfFighters[0].RankState.Def
+		defenseState_ = spovb.SelfFighters[0].State.Def
+		rank_ = spovb.SelfFighters[0].Rank.Def
 	case SPECIAL:
-		defValue = spovb.SelfFighters[0].State.SpDef
-		rank = spovb.SelfFighters[0].RankState.SpDef
+		defenseState_ = spovb.SelfFighters[0].State.SpDef
+		rank_ = spovb.SelfFighters[0].Rank.SpDef
 	default:
 		return 0, fmt.Errorf("変化技以外でなければならない")
 	}
 
-	if rank > 0 && isCritical {
-		rank = 0
+	if rank_ > 0 && isCritical {
+		rank_ = 0
 	}
 
-  rankBonus := RANK_TO_RANK_BONUS[rank]
-	finalDefense := int(float64(defValue) * rankBonus)
+  rankBonus := RANK__TO_RANK_BONUS[rank_]
+	result := int(float64(defenseState_) * float64(rankBonus))
 
-	if finalDefense < 1 {
+	if result < 1 {
 		return 1, nil
 	}
-	return finalDefense, nil
+	return FinalDefense(result), nil
 }

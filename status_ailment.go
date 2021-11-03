@@ -9,4 +9,7 @@ const (
 )
 
 type StatusAilmentDetail struct {
+	StatusAilment StatusAilment
+	SleepRemainingTurn int
+	BadPoisonElapsedTurn int
 }

@@ -24,77 +24,42 @@ func (spovb *SelfPointOfViewBattle) SwitchPointOfView() SelfPointOfViewBattle {
 		SelfField:spovb.OpponentField, OpponentField:spovb.SelfField}
 }
 
-func (spovb *SelfPointOfViewBattle) FinalDamageCalc(moveName MoveName, isCritical bool, randomNum float64) (int, error) {
-	moveData := MOVEDEX[moveName]
-
-	finalPower, err := spovb.FinalPowerCalc(moveName)
-	if err != nil {
-		return 0, err
-	}
-
-	finalAttack, err := spovb.FinalAttackCalc(moveName, isCritical)
-	if err != nil {
-		return 0, err
-	}
-
-	opovb := spovb.SwitchPointOfView()
-	finalDefense, err := opovb.FinalDefenseCalc(moveName, isCritical)
-	if err != nil {
-		return 0, err
-	}
-
-	var criticalBonus float64
-
-	if isCritical {
-		criticalBonus = 6144.0 / 4096.0
+func (spovb *SelfPointOfViewBattle) Accuracy(moveName MoveName, moveData *MoveData) int {
+	if moveName == "どくどく" && spovb.SelfFighters[0].Types.In(POISON) {
+		return 100
 	} else {
-		criticalBonus = 4096.0 / 4096.0
+		return moveData.Accuracy
 	}
+}
 
-	sameTypeAttackBonus := spovb.SelfFighters[0].SameTypeAttackBonus(moveName)
-	effectivenessBonus := spovb.OpponentFighters[0].EffectivenessBonus(moveName)
-
-	var burnBonus float64
-	if spovb.SelfFighters[0].StatusAilmentParam.StatusAilment == BURN && moveData.Category == PHYSICS {
-		burnBonus = 2048.0 / 4096.0
+func (spovb *SelfPointOfViewBattle) IsCritical(moveName MoveName, random *rand.Rand) bool {
+	if ONE_HIT_KO_MOVE_NAMES.In(moveName) {
+		return false
 	} else {
-		burnBonus = 4096.0 / 4096.0
+		return IsCritical(random)
 	}
-
-	damageBonus := spovb.DamageBonus(moveName)
-
-	result := LEVEL*2/5 + 2
-	result = result * finalPower * finalAttack / finalDefense
-	result = result/50 + 2
-	result = RoundingZeroPointFiveOver(float64(result) * criticalBonus)
-	result = int(float64(result) * randomNum)
-	result = RoundingZeroPointFiveOver(float64(result) * float64(sameTypeAttackBonus))
-	result = int(float64(result) * effectivenessBonus)
-	result = RoundingZeroPointFiveOver(float64(result) * burnBonus)
-	result = RoundingZeroPointFiveOver(float64(result) * float64(damageBonus) / 4096.0)
-	return result, nil
 }
 
 func (spovb SelfPointOfViewBattle) ToDamage(damage int) SelfPointOfViewBattle {
 	currentHP := spovb.SelfFighters[0].State.CurrentHP
+	intCurrentHP := int(currentHP)
 
-	if damage > currentHP {
-		damage = currentHP
+	if damage > intCurrentHP {
+		damage = intCurrentHP
 	}
 
-	spovb.SelfFighters[0].State.CurrentHP -= damage
+	spovb.SelfFighters[0].State.CurrentHP -= State_(damage)
 	return spovb.SitrusBerryHeal()
 }
 
 func (spovb SelfPointOfViewBattle) Heal(heal int) SelfPointOfViewBattle {
-	maxHP := spovb.SelfFighters[0].State.MaxHP
-	currentHP := spovb.SelfFighters[0].State.CurrentHP
+	currentDamage := spovb.SelfFighters[0].CurrentDamage()
 
-	if (currentHP + heal) > maxHP {
-		heal = maxHP - currentHP
+	if currentDamage < heal {
+		heal = currentDamage
 	}
 
-	spovb.SelfFighters[0].State.CurrentHP += heal
+	spovb.SelfFighters[0].State.CurrentHP += State_(heal)
 	return spovb
 }
 
@@ -114,55 +79,11 @@ func (spovb SelfPointOfViewBattle) SitrusBerryHeal() SelfPointOfViewBattle {
 	maxHP := spovb.SelfFighters[0].State.MaxHP
 	currentHP := spovb.SelfFighters[0].State.CurrentHP
 
-	if currentHP <= int(float64(maxHP)*1.0/2.0) {
+	if int(currentHP) <= int(float64(maxHP)*1.0/2.0) {
 		heal := int(float64(maxHP) * (1.0 / 4.0))
 		spovb = spovb.Heal(heal)
 	}
 
-	return spovb
-}
-
-func (spovb SelfPointOfViewBattle) LumBerryRecover() SelfPointOfViewBattle {
-	if spovb.SelfFighters[0].Item != "ラムのみ" {
-		return spovb
-	}
-
-	if spovb.SelfFighters[0].StatusAilmentParam.StatusAilment == "" {
-		return spovb
-	}
-
-	if spovb.SelfFighters[0].IsFaint() {
-		return spovb
-	}
-
-	if spovb.OpponentFighters[0].Ability == "きんちょうかん" {
-		return spovb
-	}
-
-	spovb.SelfFighters[0].Item = ""
-	spovb.SelfFighters[0].StatusAilmentParam.StatusAilment = ""
-	return spovb
-}
-
-func (spovb SelfPointOfViewBattle) ChestoBerryRecover() SelfPointOfViewBattle {
-	if spovb.SelfFighters[0].Item != "カゴのみ" {
-		return spovb
-	}
-
-	if spovb.SelfFighters[0].StatusAilmentParam.StatusAilment != SLEEP {
-		return spovb
-	}
-
-	if spovb.SelfFighters[0].IsFaint() {
-		return spovb
-	}
-
-	if spovb.OpponentFighters[0].Ability == "きんちょうかん" {
-		return spovb
-	}
-
-	spovb.SelfFighters[0].Item = ""
-	spovb.SelfFighters[0].StatusAilmentParam.StatusAilment = ""
 	return spovb
 }
 
@@ -203,17 +124,17 @@ func (spovb SelfPointOfViewBattle) MoveUse(moveName MoveName, random *rand.Rand)
 		return SelfPointOfViewBattle{}, fmt.Errorf(errMsg)
 	}
 
-	isSleepStatus := spovb.SelfFighters[0].StatusAilmentParam.StatusAilment == SLEEP
+	isSleep := spovb.SelfFighters[0].StatusAilmentDetail.StatusAilment == SLEEP
 
-	if isSleepStatus {
-		spovb.SelfFighters[0].StatusAilmentParam.SleepRemainingTurn -= 1
+	if isSleep {
+		spovb.SelfFighters[0].StatusAilmentDetail.SleepRemainingTurn -= 1
 	}
 
-	if spovb.SelfFighters[0].StatusAilmentParam.SleepRemainingTurn == 0 && isSleepStatus {
-		spovb.SelfFighters[0].StatusAilmentParam.StatusAilment = ""
+	if spovb.SelfFighters[0].StatusAilmentDetail.SleepRemainingTurn == 0 && isSleep {
+		spovb.SelfFighters[0].StatusAilmentDetail.StatusAilment = ""
 	}
 
-	if spovb.SelfFighters[0].StatusAilmentParam.StatusAilment == SLEEP {
+	if spovb.SelfFighters[0].StatusAilmentDetail.StatusAilment == SLEEP {
 		return spovb, nil
 	}
 
@@ -225,17 +146,7 @@ func (spovb SelfPointOfViewBattle) MoveUse(moveName MoveName, random *rand.Rand)
 		spovb.SelfFighters[0].ChoiceMoveName = moveName
 	}
 
-	if spovb.OpponentFighters[0].IsProtectStats && moveData.Protect != "－" {
-		return spovb, nil
-	}
-
-	var accuracy int
-	if moveName == "どくどく" && spovb.SelfFighters[0].InType(POISON) {
-		accuracy = 100
-	} else {
-		accuracy = moveData.Accuracy
-	}
-
+	accuracy := spovb.Accuracy(moveName, moveData)
 	if accuracy != -1 {
 		if !IsHit(moveData.Accuracy, random) {
 			return spovb, nil
@@ -253,36 +164,25 @@ func (spovb SelfPointOfViewBattle) MoveUse(moveName MoveName, random *rand.Rand)
 	}
 
 	for i := 0; i < attackNum; i++ {
-		var isCritical bool
-
-		if ONE_HIT_KO_MOVE_NAMES.In(moveName) {
-			isCritical = false
-		} else {
-			isCritical = IsCritical(random)
-		}
-
-		damage, err := spovb.FinalDamageCalc(moveName, isCritical, DamageRandomNum(random))
+		isCritical := spovb.IsCritical(moveName, random)
+		finalDamage, err := NewFinalDamage(&spovb, moveName, isCritical, NewDamageR(random))
 
 		if err != nil {
 			return SelfPointOfViewBattle{}, err
 		}
 
-		if damage == 0 {
+		if finalDamage == 0 {
 			return spovb, nil
 		}
 
-		if spovb.OpponentFighters[0].IsFocusSashOk(damage) {
-			damage = spovb.OpponentFighters[0].State.MaxHP - 1
-
-			opovb := spovb.SwitchPointOfView()
-			opovb = opovb.ToDamage(damage)
-			spovb = opovb.SwitchPointOfView()
+		realDamage := NewRealDamage(&spovb, finalDamage)
+		if spovb.OpponentFighters[0].IsFocusSashOk(int(finalDamage)) {
 			spovb.OpponentFighters[0].Item = ""
-		} else {
-			opovb := spovb.SwitchPointOfView()
-			opovb = opovb.ToDamage(damage)
-			spovb = opovb.SwitchPointOfView()
 		}
+
+		opovb := spovb.SwitchPointOfView()
+		opovb = opovb.ToDamage(int(realDamage))
+		spovb = opovb.SwitchPointOfView()
 
 		if moveData.Contact == "接触" {
 			spovb = spovb.AfterContact()
@@ -318,14 +218,13 @@ func (spovb SelfPointOfViewBattle) Switch(pokeName PokeName) (SelfPointOfViewBat
 		return SelfPointOfViewBattle{}, fmt.Errorf(errMsg)
 	}
 
-	spovb.SelfFighters[0].Rank = spovb.SelfFighters[index].Rank.Reset()
-	spovb.SelfFighters[0].StatusAilmentParam.BadPoisonElapsedTurn = 0
+	spovb.SelfFighters[0].Rank = Rank{}
+	spovb.SelfFighters[0].StatusAilmentDetail.BadPoisonElapsedTurn = 0
 	spovb.SelfFighters[0].ChoiceMoveName = ""
-	spovb.SelfFighters[0].IsLeechSeedState = false
-	spovb.SelfFighters[0].ProtectConsecutiveSuccessCount = 0
+	spovb.SelfFighters[0].IsLeechSeed = false
 
 	if spovb.SelfFighters[0].Ability == "しぜんかいふく" {
-		spovb.SelfFighters[0].StatusAilmentParam.StatusAilment = ""
+		spovb.SelfFighters[0].StatusAilmentDetail.StatusAilment = ""
 	}
 
 	tmpFighters := spovb.SelfFighters
@@ -407,8 +306,8 @@ func (battle *Battle) FinalSpeedWinner() Winner {
 	p1PointOfViewBattle := battle.NewP1PointOfViewBattle()
 	p2PointOfViewBattle := battle.NewP2PointOfViewBattle()
 
-	p1FinalSpeed := p1PointOfViewBattle.FinalSpeed()
-	p2FinalSpeed := p2PointOfViewBattle.FinalSpeed()
+	p1FinalSpeed := NewFinalSpeed(&p1PointOfViewBattle)
+	p2FinalSpeed := NewFinalSpeed(&p2PointOfViewBattle)
 
 	if p1FinalSpeed > p2FinalSpeed {
 		return WINNER_PLAYER1
@@ -511,12 +410,6 @@ func (battle Battle) TurnEnd(random *rand.Rand) Battle {
 		return battle
 	}
 
-	protectStatsRelease := func(spovb SelfPointOfViewBattle) SelfPointOfViewBattle {
-		spovb.SelfFighters[0].IsProtectStats = false
-		return spovb
-	}
-
-	battle = run([]func(SelfPointOfViewBattle)SelfPointOfViewBattle{protectStatsRelease})
 	battle = run([]func(SelfPointOfViewBattle)SelfPointOfViewBattle{TurnEndLeftovers, TurnEndBlackSludge})
 	battle = run([]func(SelfPointOfViewBattle)SelfPointOfViewBattle{TurnEndLeechSeed})
 	battle = run([]func(SelfPointOfViewBattle)SelfPointOfViewBattle{TurnEndBadPoison})

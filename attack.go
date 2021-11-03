@@ -1,41 +1,45 @@
 package bippa
 
-type PhysicsBonus int
-
-const (
-  INIT_PHYSICS_BONUS = PhysicsBonus(4096)
+import (
+  "fmt"
 )
 
-func NewPhysicsBonus(spovb *SelfPointOfViewBattle) PhysicsBonus {
-  physicsBonus := INIT_PHYSICS_BONUS
+type PhysicsAttackBonus int
+
+const (
+  INIT_PHYSICS_ATTACK_BONUS = PhysicsAttackBonus(4096)
+)
+
+func NewPhysicsAttackBonus(spovb *SelfPointOfViewBattle) PhysicsAttackBonus {
+  physicsAttackBonus := INIT_PHYSICS_ATTACK_BONUS
 	if spovb.SelfFighters[0].Item == "こだわりハチマキ" {
-    physicsBonus = physicsBonus.MulChoiceBand()
+    physicsAttackBonus = physicsAttackBonus.MulChoiceBand()
 	}
-	return physicsBonus
+	return physicsAttackBonus
 }
 
-func (physicsBonus PhysicsBonus) MulChoiceBand() PhysicsBonus {
-  result := RoundingZeroPointFiveOrMore(float64(physicsBonus) * 6144.0 / 4096.0)
-  return PhysicsBonus(result)
+func (physicsAttackBonus PhysicsAttackBonus) MulChoiceBand() PhysicsAttackBonus {
+  result := RoundingZeroPointFiveOrMore(float64(physicsAttackBonus) * 6144.0 / 4096.0)
+  return PhysicsAttackBonus(result)
 }
 
-type SpecialBonus int
+type SpecialAttackBonus int
 
 const (
-  INIT_SPECIAL_BONUS = SpecialBonus(4096)
+  INIT_SPECIAL_ATTACK_BONUS = SpecialAttackBonus(4096)
 )
 
-func NewSpecialBonus(spovb *SelfPointOfViewBattle) SpecialBonus {
-	specialBonus := INIT_SPECIAL_BONUS
+func NewSpecialAttackBonus(spovb *SelfPointOfViewBattle) SpecialAttackBonus {
+	specialAttackBonus := INIT_SPECIAL_ATTACK_BONUS
 	if spovb.SelfFighters[0].Item == "こだわりメガネ" {
-    specialBonus = specialBonus.MulChoiceSpecs()
+    specialAttackBonus = specialAttackBonus.MulChoiceSpecs()
 	}
-	return specialBonus
+	return specialAttackBonus
 }
 
-func (specialBonus SpecialBonus) MulChoiceSpecs() SpecialBonus {
-  result := RoundingZeroPointFiveOrMore(float64(specialBonus) * 6144.0 / 4096.0)
-  return SpecialBonus(result)
+func (specialAttackBonus SpecialAttackBonus) MulChoiceSpecs() SpecialAttackBonus {
+  result := RoundingZeroPointFiveOrMore(float64(specialAttackBonus) * 6144.0 / 4096.0)
+  return SpecialAttackBonus(result)
 }
 
 type AttackBonus int
@@ -48,13 +52,13 @@ func NewAttackBonus(spovb *SelfPointOfViewBattle, moveName MoveName) (AttackBonu
 	moveData := MOVEDEX[moveName]
 
 	if moveData.Category == PHYSICS {
-    physicsBonus := NewPhysicsBonus(spovb)
-		return AttackBonus(physicsBonus), nil
+    physicsAttackBonus := NewPhysicsAttackBonus(spovb)
+		return AttackBonus(physicsAttackBonus), nil
 	}
 
 	if moveData.Category == SPECIAL {
-    specialBonus := NewSpecialBonus(spovb)
-		return SpecialBonus(pecialBonus), nil
+    specialAttackBonus := NewSpecialAttackBonus(spovb)
+		return AttackBonus(specialAttackBonus), nil
 	}
 
 	return 0, fmt.Errorf("変化技以外でなければならない")
@@ -62,19 +66,19 @@ func NewAttackBonus(spovb *SelfPointOfViewBattle, moveName MoveName) (AttackBonu
 
 type FinalAttack int
 
-func FinalAttackCalc(spovb *SelfPointOfViewBattle, moveName MoveName, isCritical bool) (FinalAttack, error) {
+func NewFinalAttack(spovb *SelfPointOfViewBattle, moveName MoveName, isCritical bool) (FinalAttack, error) {
 	moveData := MOVEDEX[moveName]
 
-	var atkValue int
-	var rank int
+	var attackState_ State_
+	var rank_ Rank_
 
 	switch moveData.Category {
 		case PHYSICS:
-			atkValue = spovb.SelfFighters[0].State.Atk
-			rank = spovb.SelfFighters[0].RankState.Atk
+			attackState_ = spovb.SelfFighters[0].State.Atk
+			rank_ = spovb.SelfFighters[0].Rank.Atk
 		case SPECIAL:
-			atkValue = spovb.SelfFighters[0].State.SpAtk
-			rank = spovb.SelfFighters[0].RankState.SpAtk
+			attackState_ = spovb.SelfFighters[0].State.SpAtk
+			rank_ = spovb.SelfFighters[0].Rank.SpAtk
 	}
 
 	//変化技の場合、ここでエラーが起きるので、上のswitch文ではチェック不要
@@ -84,16 +88,16 @@ func FinalAttackCalc(spovb *SelfPointOfViewBattle, moveName MoveName, isCritical
 		return 0, err
 	}
 
-	if rank < 0 && isCritical {
-		rank = 0
+	if rank_ < 0 && isCritical {
+		rank_ = 0
 	}
 
-  rankBonus := RANK_TO_RANK_BONUS[rank]
+  rankBonus := RANK__TO_RANK_BONUS[rank_]
 
-	finalAttack := int(float64(atkValue) * rankBonus)
+	finalAttack := int(float64(attackState_) * float64(rankBonus))
 	finalAttack = RoundingZeroPointFiveOver(float64(finalAttack) * float64(attackBonus) / 4096.0)
 	if finalAttack < 1 {
 		return 1, nil
 	}
-	return finalAttack, nil
+	return FinalAttack(finalAttack), nil
 }

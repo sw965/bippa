@@ -1,96 +1,92 @@
 package bippa
 
-type Rank int
+type Rank_ int
 
 const (
-	MIN_RANK = Rank(-6)
-	MAX_RANK = Rank(6)
+	MIN_RANK_ = Rank_(-6)
+	MAX_RANK_ = Rank_(6)
 )
 
-type RankBonus float64
-
-var RANK_TO_RANK_BONUS = map[Rank]RankBonus{
-	-6: 2.0 / 8.0, -5: 2.0 / 7.0, -4: 2.0 / 6.0, -3: 2.0 / 5.0, -2: 2.0 / 4.0, -1: 2.0 / 3.0,
-	0: 2.0 / 2.0,
-	1: 3.0 / 2.0, 2: 4.0 / 2.0, 3: 5.0 / 2.0, 4: 6.0 / 2.0, 5: 7.0 / 2.0, 6: 8.0 / 2.0,
+type Rank struct {
+	Atk   Rank_
+	Def   Rank_
+	SpAtk Rank_
+	SpDef Rank_
+	Speed Rank_
 }
 
-type RankState struct {
-	Atk   Rank
-	Def   Rank
-	SpAtk Rank
-	SpDef Rank
-	Speed Rank
+func (rank *Rank) TotalRise() Rank_ {
+	rank_ := Rank_(0)
+
+	if rank.Atk > 0 {
+		rank_ += rank.Atk
+	}
+
+	if rank.Def > 0 {
+		rank_ += rank.Def
+	}
+
+	if rank.SpAtk > 0 {
+		rank_ += rank.SpAtk
+	}
+
+	if rank.SpDef > 0 {
+		rank_ += rank.SpDef
+	}
+
+	if rank.Speed > 0 {
+		rank_ += rank.Speed
+	}
+	return rank_
 }
 
-func (rankState RankState) Reset() RankState {
-	return RankState{}
-}
-
-func (rankState *RankState) TotalRise() Rank {
-	rank := Rank(0)
-
-	if rankState.Atk > 0 {
-		rank += rankState.Atk
+func (rank Rank) Regulate() Rank {
+	if rank.Atk > MAX_RANK_ {
+		rank.Atk = MAX_RANK_
 	}
 
-	if rankState.Def > 0 {
-		rank += rankState.Def
+	if rank.Def > MAX_RANK_ {
+		rank.Def = MAX_RANK_
 	}
 
-	if rankState.SpAtk > 0 {
-		rank += rankState.SpAtk
+	if rank.SpAtk > MAX_RANK_ {
+		rank.SpAtk = MAX_RANK_
 	}
 
-	if rankState.SpDef > 0 {
-		rank += rankState.SpDef
+	if rank.SpDef > MAX_RANK_ {
+		rank.SpDef = MAX_RANK_
 	}
 
-	if rankState.Speed > 0 {
-		rank += rankState.Speed
+	if rank.Speed > MAX_RANK_ {
+		rank.Speed = MAX_RANK_
+	}
+
+	if rank.Atk < MIN_RANK_ {
+		rank.Atk = MIN_RANK_
+	}
+
+	if rank.Def < MIN_RANK_ {
+		rank.Def = MIN_RANK_
+	}
+
+	if rank.SpAtk < MIN_RANK_ {
+		rank.SpAtk = MIN_RANK_
+	}
+
+	if rank.SpDef < MIN_RANK_ {
+		rank.SpDef = MIN_RANK_
+	}
+
+	if rank.Speed < MIN_RANK_ {
+		rank.Speed = MIN_RANK_
 	}
 	return rank
 }
 
-func (rankState RankState) Regulate() RankState {
-	if rankState.Atk > MAX_RANK {
-		rankState.Atk = MAX_RANK
-	}
+type RankBonus float64
 
-	if rankState.Def > MAX_RANK {
-		rankState.Def = MAX_RANK
-	}
-
-	if rankState.SpAtk > MAX_RANK {
-		rankState.SpAtk = MAX_RANK
-	}
-
-	if rankState.SpDef > MAX_RANK {
-		rankState.SpDef = MAX_RANK
-	}
-
-	if rankState.Speed > MAX_RANK {
-		rankState.Speed = MAX_RANK
-	}
-
-	if rankState.Atk < MIN_RANK {
-		rankState.Atk = MIN_RANK
-	}
-
-	if rankState.Def < MIN_RANK {
-		rankState.Def = MIN_RANK
-	}
-
-	if rankState.SpAtk < MIN_RANK {
-		rankState.SpAtk = MIN_RANK
-	}
-
-	if rankState.SpDef < MIN_RANK {
-		rankState.SpDef = MIN_RANK
-	}
-
-	if rankState.Speed < MIN_RANK {
-		rankState.Speed = MIN_RANK
-	}
-	return rankState
+var RANK__TO_RANK_BONUS = map[Rank_]RankBonus{
+	-6: 2.0 / 8.0, -5: 2.0 / 7.0, -4: 2.0 / 6.0, -3: 2.0 / 5.0, -2: 2.0 / 4.0, -1: 2.0 / 3.0,
+	0: 2.0 / 2.0,
+	1: 3.0 / 2.0, 2: 4.0 / 2.0, 3: 5.0 / 2.0, 4: 6.0 / 2.0, 5: 7.0 / 2.0, 6: 8.0 / 2.0,
 }

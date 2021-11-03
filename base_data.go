@@ -27,7 +27,7 @@ type PokeData struct {
 	AllAbilities    Abilities
 
 	Gender Gender
-	Types  []string
+	Types  Types
 
 	BaseHP    int
 	BaseAtk   int
@@ -91,7 +91,7 @@ var ALL_POKE_NAMES = func() PokeNames {
 }()
 
 type MoveData struct {
-	Type     string
+	Type     Type
 	Category string
 	Power    int
 	Accuracy int
@@ -220,8 +220,8 @@ var ALL_NATURES = func() Natures {
 	return result
 }()
 
-type TypeData map[string]float64
-type Typedex map[string]TypeData
+type TypeData map[Type]float64
+type Typedex map[Type]TypeData
 
 var TYPEDEX = func() Typedex {
 	bytes, err := ioutil.ReadFile(TYPEDEX_PATH)

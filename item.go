@@ -1,9 +1,5 @@
 package bippa
 
-import (
-	"math/rand"
-)
-
 type Item string
 
 func (item Item) IsValid() bool {

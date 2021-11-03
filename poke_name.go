@@ -1,9 +1,5 @@
 package bippa
 
-import (
-	"math/rand"
-)
-
 type PokeName string
 
 func (pokeName PokeName) IsValid() bool {

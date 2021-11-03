@@ -11,37 +11,37 @@ const (
   INIT_POWER_BONUS = PowerBonus(4096)
 )
 
-type MovePowerAlpha int
+type AlphaMovePower int
 
-func NewMovePowerAlpha(moveName MoveName) MovePowerAlpha {
+func NewAlphaMovePower(spovb *SelfPointOfViewBattle, moveName MoveName) AlphaMovePower {
   movePower := MOVEDEX[moveName].Power
 
-  movePowerAlpha := MovePowerAlpha(movePower)
+  alphaMovePower := AlphaMovePower(movePower)
 
 	if moveName == "アシストパワー" {
-		movePowerAlpha = movePowerAlpha.AddStoredPower()
+		alphaMovePower = alphaMovePower.AddStoredPower(&spovb.SelfFighters[0].Rank)
 	}
-  return movePowerAlpha
+  return alphaMovePower
 }
 
 //アシストパワー
-func (movePowerAlpha MovePowerAlpha) AddStoredPower() MovePowerAlpha {
-  return movePowerAlpha + MovePowerAlpha(20 * spovb.SelfFighters[0].RankState.TotalRise())
+func (alphaMovePower AlphaMovePower) AddStoredPower(rank *Rank) AlphaMovePower {
+  return alphaMovePower + AlphaMovePower(20 * rank.TotalRise())
 }
 
 type FinalPower int
 
-func NewFinalPower(spovb *SelfPointOfViewBattle, moveName MoveName) (FinalMovePower, error) {
+func NewFinalPower(spovb *SelfPointOfViewBattle, moveName MoveName) (FinalPower, error) {
 	if MOVEDEX[moveName].Category == STATUS {
 		return 0, fmt.Errorf("変化技以外でなければならない")
 	}
 
 	powerBonus := INIT_POWER_BONUS
-	movePowerAlpha := NewMovePowerAlpha(moveName)
+	alphaMovePower := NewAlphaMovePower(spovb, moveName)
 
-	result := RoundingZeroPointFiveOver(float64(movePower) * float64(powerBonus) / 4096.0)
+	result := RoundingZeroPointFiveOver(float64(alphaMovePower) * float64(powerBonus) / 4096.0)
 	if result < 1 {
 		return 1, nil
 	}
-	return result, nil
+	return FinalPower(result), nil
 }

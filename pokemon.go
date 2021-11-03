@@ -4,65 +4,29 @@ import (
 	"fmt"
 )
 
-type PokemonState struct {
-	MaxHP     int
-	CurrentHP int
-	Atk       int
-	Def       int
-	SpAtk     int
-	SpDef     int
-	Speed     int
-}
-
-func NewPokemonState(pokeName PokeName, nature Nature, individualState *IndividualState, effortState *EffortState) (PokemonState, error) {
-	if !individualState.IsAllValid() {
-		errMsg := fmt.Sprintf("個体値は%v～%vでなければならない", MIN_INDIVIDUAL, MAX_INDIVIDUAL)
-		return PokemonState{}, fmt.Errorf(errMsg)
-	}
-
-	if !effortState.IsAllValid() {
-		errMsg := fmt.Sprintf("努力値は%v～%vでなければならない", MIN_EFFORT, MAX_EFFORT)
-		return PokemonState{}, fmt.Errorf(errMsg)
-	}
-
-	if !effortState.IsValidSum() {
-		errMsg := fmt.Sprintf("努力値の合計値は%vを超えてはならない", MAX_SUM_EFFORT)
-		return PokemonState{}, fmt.Errorf(errMsg)
-	}
-
-	pokeData := POKEDEX[pokeName]
-	natureData := NATUREDEX[nature]
-	hp := HpStateCalc(pokeData.BaseHP, individualState.HP, effortState.HP)
-	atk := StateCalc(pokeData.BaseAtk, individualState.Atk, effortState.Atk, natureData.AtkBonus)
-	def := StateCalc(pokeData.BaseDef, individualState.Def, effortState.Def, natureData.DefBonus)
-	spAtk := StateCalc(pokeData.BaseSpAtk, individualState.SpAtk, effortState.SpAtk, natureData.SpAtkBonus)
-	spDef := StateCalc(pokeData.BaseSpDef, individualState.SpDef, effortState.SpDef, natureData.SpDefBonus)
-	speed := StateCalc(pokeData.BaseSpeed, individualState.Speed, effortState.Speed, natureData.SpeedBonus)
-	return PokemonState{MaxHP: hp, CurrentHP: hp, Atk: atk, Def: def, SpAtk: spAtk, SpDef: spDef, Speed: speed}, nil
-}
-
 type Pokemon struct {
 	Name            PokeName
-	Level int
+	Level Level
 	Nature          Nature
 	Ability         Ability
 	Gender          Gender
 	Item            Item
 	Moveset         Moveset
-	IndividualState IndividualState
-	EffortState     EffortState
 
-	State PokemonState
+	Individual Individual
+	Effort     Effort
+	State State
+
 	Types Types
-	RankState  RankState
 
-	StatusAilmentParam StatusAilmentParam
-
+	Rank  Rank
+	StatusAilmentDetail StatusAilmentDetail
 	ChoiceMoveName                 MoveName
+	IsLeechSeed bool
 }
 
 func NewPokemon(pokeName PokeName, nature Nature, ability Ability, gender Gender, item Item,
-	moveNames MoveNames, pointUps []PointUp, individualState *IndividualState, effortState *EffortState) (Pokemon, error) {
+	moveNames MoveNames, pointUps []PointUp, individual *Individual, effort *Effort) (Pokemon, error) {
 
 	if !pokeName.IsValid() {
 		errMsg := fmt.Sprintf("「%v」というポケモンは存在しない", pokeName)
@@ -88,22 +52,23 @@ func NewPokemon(pokeName PokeName, nature Nature, ability Ability, gender Gender
 		errMsg := fmt.Sprintf("「%v」というアイテムは存在しない", item)
 		return Pokemon{}, fmt.Errorf(errMsg)
 	}
+
 	moveset, err := NewMoveset(pokeName, moveNames, pointUps)
 
 	if err != nil {
 		return Pokemon{}, err
 	}
 
-	state, err := NewPokemonState(pokeName, nature, individualState, effortState)
+	pokeData := POKEDEX[pokeName]
+	state, err := NewState(pokeName, nature, individual, effort, pokeData)
 
 	if err != nil {
 		return Pokemon{}, err
 	}
 
-	pokeData := POKEDEX[pokeName]
 	return Pokemon{Name: pokeName, Nature: nature, Ability: ability, Gender: gender, Item: item, Moveset: moveset,
-		IndividualState: *individualState, EffortState: *effortState,
-		State: state, Types: pokeData.Types, Level:LEVEL}, nil
+		Individual: *individual, Effort: *effort,
+		State: state, Types: pokeData.Types, Level:MAX_LEVEL}, nil
 }
 
 func (pokemon1 *Pokemon) Equal(pokemon2 *Pokemon) bool {
@@ -131,11 +96,11 @@ func (pokemon1 *Pokemon) Equal(pokemon2 *Pokemon) bool {
 		return false
 	}
 
-	if pokemon1.IndividualState != pokemon2.IndividualState {
+	if pokemon1.Individual != pokemon2.Individual {
 		return false
 	}
 
-	if pokemon1.EffortState != pokemon2.EffortState {
+	if pokemon1.Effort != pokemon2.Effort {
 		return false
 	}
 
@@ -144,7 +109,7 @@ func (pokemon1 *Pokemon) Equal(pokemon2 *Pokemon) bool {
 	}
 
 	for _, pokeType := range pokemon1.Types {
-		if !pokemon2.InType(pokeType) {
+		if !pokemon2.Types.In(pokeType) {
 			return false
 		}
 	}
@@ -153,7 +118,7 @@ func (pokemon1 *Pokemon) Equal(pokemon2 *Pokemon) bool {
 		return false
 	}
 
-	if pokemon1.StatusAilmentParam != pokemon2.StatusAilmentParam {
+	if pokemon1.StatusAilmentDetail != pokemon2.StatusAilmentDetail {
 		return false
 	}
 
@@ -161,15 +126,7 @@ func (pokemon1 *Pokemon) Equal(pokemon2 *Pokemon) bool {
 		return false
 	}
 
-	if pokemon1.IsProtectStats != pokemon2.IsProtectStats {
-		return false
-	}
-
-	if pokemon1.ProtectConsecutiveSuccessCount != pokemon2.ProtectConsecutiveSuccessCount {
-		return false
-	}
-
-	if pokemon1.IsLeechSeedState != pokemon2.IsLeechSeedState {
+	if pokemon1.IsLeechSeed != pokemon2.IsLeechSeed {
 		return false
 	}
 
@@ -185,32 +142,30 @@ func (pokemon *Pokemon) IsFaint() bool {
 }
 
 func (pokemon *Pokemon) IsFaintDamage(damage int) bool {
-	return damage >= pokemon.State.CurrentHP
+	return damage >= int(pokemon.State.CurrentHP)
 }
 
 func (pokemon *Pokemon) CurrentDamage() int {
-	return pokemon.State.MaxHP - pokemon.State.CurrentHP
+	return int(pokemon.State.MaxHP - pokemon.State.CurrentHP)
 }
 
-func (pokemon *Pokemon) SameTypeAttackBonus(moveName MoveName) float64 {
+func (pokemon *Pokemon) NewSameTypeAttackBonus(moveName MoveName) SameTypeAttackBonus {
 	moveType := MOVEDEX[moveName].Type
-	if pokemon.InType(moveType) {
-		return 6144.0 / 4096.0
-	}
-	return 4096.0 / 4096.0
+	inType := pokemon.Types.In(moveType)
+	return BOOL_TO_SAME_TYPE_ATTACK_BONUS[inType]
 }
 
-func (pokemon *Pokemon) EffectivenessBonus(moveName MoveName) float64 {
+func (pokemon *Pokemon) NewEffectivenessBonus(moveName MoveName) EffectivenessBonus {
 	result := 1.0
 	moveType := MOVEDEX[moveName].Type
 	for _, pokeType := range pokemon.Types {
 		result *= TYPEDEX[moveType][pokeType]
 	}
-	return result
+	return EffectivenessBonus(result)
 }
 
 func (pokemon *Pokemon) BadPoisonDamage() int {
-	return int(float64(pokemon.State.MaxHP) * float64(pokemon.StatusAilmentParam.BadPoisonElapsedTurn) / 16.0)
+	return int(float64(pokemon.State.MaxHP) * float64(pokemon.StatusAilmentDetail.BadPoisonElapsedTurn) / 16.0)
 }
 
 func (pokemon *Pokemon) IsFocusSashOk(damage int) bool {
