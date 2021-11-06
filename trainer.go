@@ -15,6 +15,19 @@ func NewRandomInstructionTrainer(random *rand.Rand) Trainer {
 	return result
 }
 
+func NewRandomAttackOnlyInstructionTrainer(random *rand.Rand) Trainer {
+	result := func(battle *Battle) (BattleCommand, error) {
+		if battle.P1Fighters[0].IsFaint() {
+			availableBattleCommands := battle.P1Fighters.NewAvailableBattleCommands()
+			return availableBattleCommands.RandomChoice(random), nil
+		} else {
+			availableMoveNames := battle.P1Fighters.NewAvailableMoveNames()
+			return BattleCommand(availableMoveNames.RandomChoice(random)), nil
+		}
+	}
+	return result
+}
+
 func (p1Trainer Trainer) OneGame(p2Trainer Trainer, battle Battle, random *rand.Rand) (Battle, error) {
 	var err error
 	var battleCommand BattleCommand

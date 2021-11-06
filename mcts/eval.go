@@ -2,7 +2,7 @@ package mcts
 
 import (
   "math/rand"
-  bp "bippa"
+  bp "github.com/sw965/bippa"
 )
 
 type Eval struct {

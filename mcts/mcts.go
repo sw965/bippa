@@ -3,8 +3,8 @@ package mcts
 import (
   "fmt"
   "math/rand"
-  "crow"
-  bp "bippa"
+  "github.com/sw965/crow"
+  bp "github.com/sw965/bippa"
 )
 
 type UCBParam struct {
