@@ -1,7 +1,6 @@
 package bippa
 
 import (
-	"bufio"
 	"fmt"
 	"math/rand"
 )
@@ -10,25 +9,8 @@ type Trainer func(*Battle) (BattleCommand, error)
 
 func NewRandomInstructionTrainer(random *rand.Rand) Trainer {
 	result := func(battle *Battle) (BattleCommand, error) {
-		availableBattleCommands := battle.P1Fighters.AvailableBattleCommands()
+		availableBattleCommands := battle.P1Fighters.NewAvailableBattleCommands()
 		return availableBattleCommands.RandomChoice(random), nil
-	}
-	return result
-}
-
-func NewScanTrainer(scanner *bufio.Scanner) Trainer {
-	result := func(battle *Battle) (BattleCommand, error) {
-		fmt.Println(battle.P1Fighters[0].Name + " はどうする？" )
-
-		for {
-			scanner.Scan()
-			text := scanner.Text()
-			battleCommand := BattleCommand(text)
-			if battle.P1Fighters.IsAvailableBattleCommand(battleCommand) {
-				return battleCommand, nil
-			}
-			fmt.Println("不適なコマンドなので、再度入力してね♡")
-		}
 	}
 	return result
 }

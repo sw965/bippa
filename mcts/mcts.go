@@ -44,7 +44,7 @@ func NewNodePointer(battle *bp.Battle) *Node {
                IsAllExpansion:false, IsP1Node:isP1Phase, SelectCount:0}
 }
 
-func (node *Node) NoExpansionBattleCommands() bp.BattleCommands {
+func (node *Node) NewNoExpansionBattleCommands() bp.BattleCommands {
   availableBattleCommands := node.AvailableBattleCommands
   result := make(bp.BattleCommands, 0, len(availableBattleCommands) - len(node.NextNodeParam))
 
@@ -166,7 +166,7 @@ func (nodes Nodes) Find(battle *bp.Battle) (*Node, error) {
 
 type NextNodeParam map[bp.BattleCommand]*UCBParam
 
-func (nextNodeParam NextNodeParam) BattleCommands() bp.BattleCommands {
+func (nextNodeParam NextNodeParam) NewBattleCommands() bp.BattleCommands {
   result := make(bp.BattleCommands, 0, len(nextNodeParam))
   for battleCommand, _ := range nextNodeParam {
     result = append(result, battleCommand)
@@ -221,7 +221,7 @@ func (nextNodeParam NextNodeParam) MaxUCB(X float64) (float64, error) {
   return maxUCB, nil
 }
 
-func (nextNodeParam NextNodeParam) MaxUCBBattleCommands(X float64) (bp.BattleCommands, error) {
+func (nextNodeParam NextNodeParam) NewMaxUCBBattleCommands(X float64) (bp.BattleCommands, error) {
   maxUCB, err := nextNodeParam.MaxUCB(X)
   if err != nil {
     return bp.BattleCommands{}, err
@@ -242,19 +242,19 @@ func (nextNodeParam NextNodeParam) MaxUCBBattleCommands(X float64) (bp.BattleCom
 }
 
 func (nextNodeParam NextNodeParam) MaxSimuNum() int {
-  battleCommands := nextNodeParam.BattleCommands()
-  maxSimuNum := nextNodeParam[battleCommands[0]].SimuNum
+  battleCommands := nextNodeParam.NewBattleCommands()
+  result := nextNodeParam[battleCommands[0]].SimuNum
 
   for _, battleCommand := range battleCommands[1:] {
     simuNum := nextNodeParam[battleCommand].SimuNum
-    if simuNum > maxSimuNum {
-      maxSimuNum = simuNum
+    if simuNum > result {
+      result = simuNum
     }
   }
-  return maxSimuNum
+  return result
 }
 
-func (nextNodeParam NextNodeParam) MaxSimuNumBattleCommands() bp.BattleCommands {
+func (nextNodeParam NextNodeParam) NewMaxSimuNumBattleCommands() bp.BattleCommands {
   maxSimuNum := nextNodeParam.MaxSimuNum()
   result := make(bp.BattleCommands, 0)
   for battleCommand, ucbParam := range nextNodeParam {
@@ -334,7 +334,7 @@ func NewMCTSTrainer(simuNum int, X float64, eval *Eval, random *rand.Rand) bp.Tr
       return "", err
     }
 
-    return allNodes[0].NextNodeParam.MaxSimuNumBattleCommands().RandomChoice(random), nil
+    return allNodes[0].NextNodeParam.NewMaxSimuNumBattleCommands().RandomChoice(random), nil
   }
   return result
 }

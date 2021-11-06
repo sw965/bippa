@@ -51,7 +51,6 @@ func LoadPokeData(filePath string) PokeData {
 	}
 
 	result := PokeData{}
-
 	if err := json.Unmarshal(bytes, &result); err != nil {
 		panic(err)
 	}
@@ -67,7 +66,6 @@ var POKEDEX = func() Pokedex {
 	}
 
 	result := Pokedex{}
-
 	for _, fileName := range listDir {
 		fullPath := POKEDEX_PATH + fileName
 		pokeName := strings.TrimRight(fileName, ".json")
@@ -78,13 +76,13 @@ var POKEDEX = func() Pokedex {
 }()
 
 var ALL_POKE_NAMES = func() PokeNames {
-	pokeNames, err := omw.ReadTextLines(ALL_POKE_NAMES_PATH)
+	allPokeNames, err := omw.ReadTextLines(ALL_POKE_NAMES_PATH)
 	if err != nil {
 		panic(err)
 	}
 
-	result := make(PokeNames, len(pokeNames))
-	for i, pokeName := range pokeNames {
+	result := make(PokeNames, len(allPokeNames))
+	for i, pokeName := range allPokeNames {
 		result[i] = PokeName(pokeName)
 	}
 	return result
@@ -132,7 +130,6 @@ type Movedex map[MoveName]*MoveData
 
 var MOVEDEX = func() Movedex {
 	result := Movedex{}
-
 	listDir, err := omw.ListDir(MOVEDEX_PATH)
 	if err != nil {
 		panic(err)
@@ -147,24 +144,26 @@ var MOVEDEX = func() Movedex {
 }()
 
 var ALL_MOVE_NAMES = func() MoveNames {
-	moveNames, err := omw.ReadTextLines(ALL_MOVE_NAMES_PATH)
+	allMoveNames, err := omw.ReadTextLines(ALL_MOVE_NAMES_PATH)
 	if err != nil {
 		panic(err)
 	}
-	result := make(MoveNames, len(moveNames))
-	for i, moveName := range moveNames {
+
+	result := make(MoveNames, len(allMoveNames))
+	for i, moveName := range allMoveNames {
 		result[i] = MoveName(moveName)
 	}
 	return result
 }()
 
 var ONE_HIT_KO_MOVE_NAMES = func() MoveNames {
-	moveNames, err := omw.ReadTextLines(ONE_HIT_KO_MOVE_NAMES_PATH)
+	oneHitKoMoveNames, err := omw.ReadTextLines(ONE_HIT_KO_MOVE_NAMES_PATH)
 	if err != nil {
 		panic(err)
 	}
-	result := make(MoveNames, len(moveNames))
-	for i, moveName := range moveNames {
+
+	result := make(MoveNames, len(oneHitKoMoveNames))
+	for i, moveName := range oneHitKoMoveNames {
 		result[i] = MoveName(moveName)
 	}
 	return result
@@ -189,7 +188,6 @@ var NATUREDEX = func() Naturedex {
 	}
 
 	result := Naturedex{}
-
 	if err := json.Unmarshal(bytes, &result); err != nil {
 		panic(err)
 	}
@@ -209,8 +207,9 @@ func (naturedex Naturedex) IDToNature(id int) (Nature, error) {
 }
 
 var ALL_NATURES = func() Natures {
-	result := make([]Nature, NATUREDEX_LENGTH)
 	var err error
+	result := make(Natures, NATUREDEX_LENGTH)
+
 	for i := 0; i < NATUREDEX_LENGTH; i++ {
 		result[i], err = NATUREDEX.IDToNature(i)
 		if err != nil {
@@ -231,7 +230,6 @@ var TYPEDEX = func() Typedex {
 	}
 
 	result := Typedex{}
-
 	if err := json.Unmarshal(bytes, &result); err != nil {
 		panic(err)
 	}
@@ -239,13 +237,13 @@ var TYPEDEX = func() Typedex {
 }()
 
 var ALL_ITEMS = func() Items {
-	items, err := omw.ReadTextLines(ALL_ITEMS_PATH)
+	allItems, err := omw.ReadTextLines(ALL_ITEMS_PATH)
 	if err != nil {
 		panic(err)
 	}
 
-	result := make(Items, 0, len(items)+1)
-	for _, item := range items {
+	result := make(Items, 0, len(allItems)+1)
+	for _, item := range allItems {
 		result = append(result, Item(item))
 	}
 	result = append(result, "なし")

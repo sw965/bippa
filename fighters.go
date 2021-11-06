@@ -29,7 +29,7 @@ func (fighters *Fighters) Index(pokeName PokeName) int {
 	return -1
 }
 
-func (fighters *Fighters) PokeNames() PokeNames {
+func (fighters *Fighters) NewPokeNames() PokeNames {
 	result := make(PokeNames, FIGHTERS_LENGTH)
 	for i, pokemon := range fighters {
 		result[i] = pokemon.Name
@@ -38,7 +38,7 @@ func (fighters *Fighters) PokeNames() PokeNames {
 }
 
 func (fighters *Fighters) IsUnique() bool {
-	return fighters.PokeNames().IsUnique()
+	return fighters.NewPokeNames().IsUnique()
 }
 
 func (fighters *Fighters) IsAllFaint() bool {
@@ -50,7 +50,7 @@ func (fighters *Fighters) IsAllFaint() bool {
 	return true
 }
 
-func (fighters *Fighters) AvailableMoveNames() MoveNames {
+func (fighters *Fighters) NewAvailableMoveNames() MoveNames {
 	if fighters[0].IsFaint() {
 		return MoveNames{}
 	}
@@ -61,7 +61,7 @@ func (fighters *Fighters) AvailableMoveNames() MoveNames {
 	if fighters[0].ChoiceMoveName != "" {
 		u = MoveNames{fighters[0].ChoiceMoveName}
 	} else {
-		u = moveset.MoveNames()
+		u = moveset.NewMoveNames()
 	}
 
 	result := make(MoveNames, 0)
@@ -78,7 +78,7 @@ func (fighters *Fighters) AvailableMoveNames() MoveNames {
 	return result
 }
 
-func (fighters *Fighters) SwitchablePokeNames() []PokeName {
+func (fighters *Fighters) NewSwitchablePokeNames() []PokeName {
 	result := make([]PokeName, 0)
 	for _, pokemon := range fighters[1:] {
 		if !pokemon.IsFaint() {
@@ -88,10 +88,10 @@ func (fighters *Fighters) SwitchablePokeNames() []PokeName {
 	return result
 }
 
-func (fighters *Fighters) AvailableBattleCommands() BattleCommands {
-	availableMoveNames := fighters.AvailableMoveNames()
-	switchablePokeNames := fighters.SwitchablePokeNames()
-	result := make([]BattleCommand, 0, len(availableMoveNames)+len(switchablePokeNames))
+func (fighters *Fighters) NewAvailableBattleCommands() BattleCommands {
+	availableMoveNames := fighters.NewAvailableMoveNames()
+	switchablePokeNames := fighters.NewSwitchablePokeNames()
+	result := make(BattleCommands, 0, len(availableMoveNames)+len(switchablePokeNames))
 
 	for _, moveName := range availableMoveNames {
 		result = append(result, BattleCommand(moveName))
@@ -104,7 +104,7 @@ func (fighters *Fighters) AvailableBattleCommands() BattleCommands {
 }
 
 func (fighters *Fighters) IsAvailableBattleCommand(battleCommand BattleCommand) bool {
-	availableBattleCommands := fighters.AvailableBattleCommands()
+	availableBattleCommands := fighters.NewAvailableBattleCommands()
 	for _, iBattleCommand := range availableBattleCommands {
 		if iBattleCommand == battleCommand {
 			return true
@@ -122,11 +122,11 @@ func (fighters *Fighters) Save(filePath string) error {
 }
 
 func ReadFighters(filePath string) (Fighters, error) {
-	fighters := Fighters{}
+	result := Fighters{}
 	file, err := ioutil.ReadFile(filePath)
 	if err != nil {
 		return Fighters{}, err
 	}
-	err = json.Unmarshal(file, &fighters)
-	return fighters, err
+	err = json.Unmarshal(file, &result)
+	return result, err
 }

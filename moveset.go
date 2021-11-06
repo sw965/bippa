@@ -9,7 +9,7 @@ const (
 	MAX_MOVESET_LENGTH = 4
 )
 
-type Moveset map[MoveName]int
+type Moveset map[MoveName]PowerPoint
 
 func NewMoveset(pokeName PokeName, moveNames MoveNames, pointUps []PointUp) (Moveset, error) {
 	for _, pointUp := range pointUps {
@@ -27,10 +27,10 @@ func NewMoveset(pokeName PokeName, moveNames MoveNames, pointUps []PointUp) (Mov
 	}
 
 	if len(moveNames) != len(pointUps) {
-		return Moveset{}, fmt.Errorf("pointUpsのlengthは、movesetのlengthと一致していなければならない")
+		return Moveset{}, fmt.Errorf("pointUpsのlengthは、moveNamesのlengthと一致していなければならない")
 	}
 
-	powerPoints := make([]int, len(moveNames))
+	powerPoints := make([]PowerPoint, len(moveNames))
 	for i, moveName := range moveNames {
 		basePP := MOVEDEX[moveName].BasePP
 		pointUp := pointUps[i]
@@ -38,7 +38,7 @@ func NewMoveset(pokeName PokeName, moveNames MoveNames, pointUps []PointUp) (Mov
 			errMsg := fmt.Sprintf("pointUpは%v～%vでなければならないが、%vが入力された", MIN_POINT_UP, MAX_POINT_UP, pointUp)
 			return Moveset{}, fmt.Errorf(errMsg)
 		}
-		powerPoints[i] = PowerPointCalc(basePP, pointUps[i])
+		powerPoints[i] = NewPowerPoint(basePP, pointUps[i])
 	}
 
 	result := Moveset{}
@@ -79,7 +79,7 @@ func (moveset Moveset) Copy() Moveset {
 	return result
 }
 
-func (moveset Moveset) MoveNames() MoveNames {
+func (moveset Moveset) NewMoveNames() MoveNames {
 	result := make(MoveNames, 0, len(moveset))
 	for moveName, _ := range moveset {
 		result = append(result, moveName)

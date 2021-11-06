@@ -16,28 +16,28 @@ type Rank struct {
 }
 
 func (rank *Rank) TotalRise() Rank_ {
-	rank_ := Rank_(0)
+	result := Rank_(0)
 
 	if rank.Atk > 0 {
-		rank_ += rank.Atk
+		result += rank.Atk
 	}
 
 	if rank.Def > 0 {
-		rank_ += rank.Def
+		result += rank.Def
 	}
 
 	if rank.SpAtk > 0 {
-		rank_ += rank.SpAtk
+		result += rank.SpAtk
 	}
 
 	if rank.SpDef > 0 {
-		rank_ += rank.SpDef
+		result += rank.SpDef
 	}
 
 	if rank.Speed > 0 {
-		rank_ += rank.Speed
+		result += rank.Speed
 	}
-	return rank_
+	return result
 }
 
 func (rank Rank) Regulate() Rank {

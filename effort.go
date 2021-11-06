@@ -28,6 +28,7 @@ var (
 	HA252_S4 = Effort{HP: 252, Atk: 252, Def: 0, SpAtk: 0, SpDef: 0, Speed: 4}
 
 	HB252_A4 = Effort{HP: 252, Atk: 4, Def: 252, SpAtk: 0, SpDef: 0, Speed: 0}
+	HB252_C4 = Effort{HP: 252, Atk: 0, Def: 252, SpAtk: 4, SpDef: 0, Speed :0}
 	HB252_D4 = Effort{HP: 252, Atk: 0, Def: 252, SpAtk: 0, SpDef: 4, Speed: 0}
 	HB252_S4 = Effort{HP: 252, Atk: 0, Def: 252, SpAtk: 0, SpDef: 0, Speed: 4}
 

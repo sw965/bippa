@@ -26,7 +26,7 @@ type Pokemon struct {
 }
 
 func NewPokemon(pokeName PokeName, nature Nature, ability Ability, gender Gender, item Item,
-	moveNames MoveNames, pointUps []PointUp, individual *Individual, effort *Effort) (Pokemon, error) {
+	moveNames MoveNames, pointUps PointUps, individual *Individual, effort *Effort) (Pokemon, error) {
 
 	if !pokeName.IsValid() {
 		errMsg := fmt.Sprintf("「%v」というポケモンは存在しない", pokeName)

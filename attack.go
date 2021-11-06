@@ -11,11 +11,11 @@ const (
 )
 
 func NewPhysicsAttackBonus(spovb *SelfPointOfViewBattle) PhysicsAttackBonus {
-  physicsAttackBonus := INIT_PHYSICS_ATTACK_BONUS
+  result := INIT_PHYSICS_ATTACK_BONUS
 	if spovb.SelfFighters[0].Item == "こだわりハチマキ" {
-    physicsAttackBonus = physicsAttackBonus.MulChoiceBand()
+    result = result.MulChoiceBand()
 	}
-	return physicsAttackBonus
+	return result
 }
 
 func (physicsAttackBonus PhysicsAttackBonus) MulChoiceBand() PhysicsAttackBonus {
@@ -30,11 +30,11 @@ const (
 )
 
 func NewSpecialAttackBonus(spovb *SelfPointOfViewBattle) SpecialAttackBonus {
-	specialAttackBonus := INIT_SPECIAL_ATTACK_BONUS
+	result := INIT_SPECIAL_ATTACK_BONUS
 	if spovb.SelfFighters[0].Item == "こだわりメガネ" {
-    specialAttackBonus = specialAttackBonus.MulChoiceSpecs()
+    result = result.MulChoiceSpecs()
 	}
-	return specialAttackBonus
+	return result
 }
 
 func (specialAttackBonus SpecialAttackBonus) MulChoiceSpecs() SpecialAttackBonus {
@@ -94,10 +94,10 @@ func NewFinalAttack(spovb *SelfPointOfViewBattle, moveName MoveName, isCritical 
 
   rankBonus := RANK__TO_RANK_BONUS[rank_]
 
-	finalAttack := int(float64(attackState_) * float64(rankBonus))
-	finalAttack = RoundingZeroPointFiveOver(float64(finalAttack) * float64(attackBonus) / 4096.0)
-	if finalAttack < 1 {
+	result := int(float64(attackState_) * float64(rankBonus))
+	result = RoundingZeroPointFiveOver(float64(result) * float64(attackBonus) / 4096.0)
+	if result < 1 {
 		return 1, nil
 	}
-	return FinalAttack(finalAttack), nil
+	return FinalAttack(result), nil
 }

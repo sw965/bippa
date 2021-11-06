@@ -72,10 +72,6 @@ func (spovb SelfPointOfViewBattle) SitrusBerryHeal() SelfPointOfViewBattle {
 		return spovb
 	}
 
-	if spovb.OpponentFighters[0].Ability == "きんちょうかん" {
-		return spovb
-	}
-
 	maxHP := spovb.SelfFighters[0].State.MaxHP
 	currentHP := spovb.SelfFighters[0].State.CurrentHP
 
@@ -98,6 +94,10 @@ func (spovb SelfPointOfViewBattle) AfterContact() SelfPointOfViewBattle {
 //https://latest.pokewiki.net/%E3%83%90%E3%83%88%E3%83%AB%E4%B8%AD%E3%81%AE%E5%87%A6%E7%90%86%E3%81%AE%E9%A0%86%E7%95%AA
 func (spovb SelfPointOfViewBattle) MoveUse(moveName MoveName, random *rand.Rand) (SelfPointOfViewBattle, error) {
 	var err error
+	
+	if spovb.SelfFighters[0].IsFaint() {
+		return spovb, nil
+	}
 
 	if moveName == STRUGGLE {
 		spovb.SelfFighters[0].State.CurrentHP = 0
@@ -141,6 +141,10 @@ func (spovb SelfPointOfViewBattle) MoveUse(moveName MoveName, random *rand.Rand)
 	copyMoveset := spovb.SelfFighters[0].Moveset.Copy()
 	copyMoveset[moveName] -= 1
 	spovb.SelfFighters[0].Moveset = copyMoveset
+
+	if spovb.OpponentFighters[0].IsFaint() {
+		return spovb, nil
+	}
 
 	if spovb.SelfFighters[0].Item.IsChoice() {
 		spovb.SelfFighters[0].ChoiceMoveName = moveName
@@ -276,7 +280,7 @@ type Battle struct {
 
 func (battle Battle) ReversePlayer() (Battle, error) {
 	if battle.P1Command != "" {
-		return Battle{}, fmt.Errorf("ReversePlayerを呼び出す時のP1Commandは、空でなければならない")
+		return Battle{}, fmt.Errorf("battle.ReversePlayerを呼び出す時のbattle.P1Commandは、ゼロ値でなければならない")
 	}
 	return Battle{P1Fighters:battle.P2Fighters, P2Fighters:battle.P1Fighters,
 		P1Field:battle.P2Field, P2Field:battle.P1Field, P1Command:battle.P1Command}, nil
@@ -333,7 +337,7 @@ func (battle *Battle) PriorityWinner(p1BattleCommand, p2BattleCommand BattleComm
 	return DRAW
 }
 
-func (battle *Battle) IsFirstAction(p1BattleCommand, p2BattleCommand BattleCommand, random *rand.Rand) bool {
+func (battle *Battle) IsP1FirstAction(p1BattleCommand, p2BattleCommand BattleCommand, random *rand.Rand) bool {
 	priorityWinner := battle.PriorityWinner(p1BattleCommand, p2BattleCommand)
 
 	if priorityWinner == WINNER_PLAYER1 {
@@ -433,7 +437,7 @@ func (battle Battle) Run(battleCommand BattleCommand, random *rand.Rand) (Battle
 		return battle, nil
 	}
 
-	isP1FirstAction := battle.IsFirstAction(battle.P1Command, battleCommand, random)
+	isP1FirstAction := battle.IsP1FirstAction(battle.P1Command, battleCommand, random)
 
 	var isP1Actions []bool
 	var actionOrderBattleCommands []BattleCommand

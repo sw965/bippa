@@ -12,19 +12,19 @@ const (
 type Team []Pokemon
 
 func NewTeam(pokemons []Pokemon) (Team, error) {
-	team := Team(pokemons)
-	if !team.IsUnique() {
+	result := Team(pokemons)
+	if !result.IsUnique() {
 		return Team{}, fmt.Errorf("同じポケモンをチームに入れる事は出来ない")
 	}
 
-	if !team.IsValidLength() {
+	if !result.IsValidLength() {
 		return Team{}, fmt.Errorf("チームは%v匹～%v匹で構成されていなければならない", MIN_TEAM_LENGTH, MAX_TEAM_LENGTH)
 	}
 
-	return team, nil
+	return result, nil
 }
 
-func (team Team) PokeNames() PokeNames {
+func (team Team) NewPokeNames() PokeNames {
 	result := make(PokeNames, len(team))
 	for i, pokemon := range team {
 		result[i] = pokemon.Name
@@ -33,7 +33,7 @@ func (team Team) PokeNames() PokeNames {
 }
 
 func (team Team) IsUnique() bool {
-	return team.PokeNames().IsUnique()
+	return team.NewPokeNames().IsUnique()
 }
 
 func (team Team) IsValidLength() bool {
@@ -41,7 +41,7 @@ func (team Team) IsValidLength() bool {
 	return length >= MIN_TEAM_LENGTH && length <= MAX_TEAM_LENGTH
 }
 
-func (team Team) SelectFighters(indices *[FIGHTERS_LENGTH]int) (Fighters, error) {
+func (team Team) NewSelectFighters(indices *[FIGHTERS_LENGTH]int) (Fighters, error) {
 	result := Fighters{}
 	for i, index := range indices {
 		result[i] = team[index]

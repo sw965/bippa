@@ -1,9 +1,5 @@
 package bippa
 
-import (
-	"math/rand"
-)
-
 type Nature string
 
 func (nature Nature) IsValid() bool {
@@ -12,8 +8,3 @@ func (nature Nature) IsValid() bool {
 }
 
 type Natures []Nature
-
-func (natures Natures) RandomChoice(random *rand.Rand) Nature {
-	index := random.Intn(len(natures))
-	return natures[index]
-}

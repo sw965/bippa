@@ -25,7 +25,7 @@ func NewRandomPlayoutEval(trainer bp.Trainer, random *rand.Rand) Eval {
       }
       gameWinner, err = gameEndBattle.Winner()
     }
-    return gameWinner.ToFloat64(), err
+    return WINNER_TO_FLOAT64[gameWinner], err
   }
 
   reverseFunc := func(evalY float64) float64 {

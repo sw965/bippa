@@ -24,11 +24,11 @@ const (
 )
 
 func NewDamageBonus(spovb *SelfPointOfViewBattle) DamageBonus {
-	damageBonus := INIT_DAMAGE_BONUS
+	result := INIT_DAMAGE_BONUS
 	if spovb.SelfFighters[0].Item == "いのちのたま" {
-		damageBonus = damageBonus.MulLifeOrb()
+		result = result.MulLifeOrb()
 	}
-	return damageBonus
+	return result
 }
 
 func (damageBonus DamageBonus) MulLifeOrb() DamageBonus {

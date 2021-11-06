@@ -1,9 +1,5 @@
 package bippa
 
-import (
-	"math/rand"
-)
-
 type Ability string
 
 func (ability Ability) IsValid(pokeName PokeName) bool {
@@ -16,8 +12,3 @@ func (ability Ability) IsValid(pokeName PokeName) bool {
 }
 
 type Abilities []Ability
-
-func (abilities Abilities) RandomChoice(random *rand.Rand) Ability {
-	index := random.Intn(len(abilities))
-	return abilities[index]
-}

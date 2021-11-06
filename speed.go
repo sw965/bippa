@@ -8,11 +8,11 @@ const (
 )
 
 func NewSpeedBonus(spovb *SelfPointOfViewBattle) SpeedBonus {
-	speedBonus := INIT_SPEED_BONUS
+	result := INIT_SPEED_BONUS
 	if spovb.SelfFighters[0].Item == "こだわりスカーフ" {
-		speedBonus = speedBonus.MulChoiceScarf()
+		result = result.MulChoiceScarf()
 	}
-	return speedBonus
+	return result
 }
 
 func (speedBonus SpeedBonus) MulChoiceScarf() SpeedBonus {
