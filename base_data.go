@@ -1,6 +1,7 @@
 package bippa
 
 import (
+	"os"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
