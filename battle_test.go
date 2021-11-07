@@ -10,49 +10,16 @@ import (
 
 var mtRandom = rand.New(mt19937.New())
 
-func NewVenusaur() Pokemon {
-  result, err := NewPokemon(
-    "フシギバナ", "しんちょう", "しんりょく",
-    "♀", "なし", MoveNames{"つるのムチ"}, PointUps{0},
-    &ALL_MAX_INDIVIDUAL, &CS252_H4,
-  )
-
-  if err != nil {
-    panic(err)
-  }
-  return result
-}
-
-func NewCharizard() Pokemon {
-  result, err := NewPokemon(
-    "リザードン", "おくびょう", "もうか",
-    "♂", "なし", MoveNames{"かえんほうしゃ"}, PointUps{1},
-    &ALL_MAX_INDIVIDUAL, &CS252_H4,
-  )
-
-  if err != nil {
-    panic(err)
-  }
-  return result
-}
-
-func NewBlastoise() Pokemon {
-  result, err := NewPokemon(
-    "カメックス", "ひかえめ", "げきりゅう",
-    "♂", "なし", MoveNames{"ハイドロポンプ"}, PointUps{3},
-    &ALL_MAX_INDIVIDUAL, &HC252_S4,
-  )
-
-  if err != nil {
-    panic(err)
-  }
-  return result
-}
-
 func TestHydroPump(t *testing.T) {
   mtRandom.Seed(time.Now().UnixNano())
-  p1Fighters := Fighters{NewBlastoise(), NewVenusaur(), NewCharizard()}
-  p2Fighters := Fighters{NewVenusaur(), NewCharizard(), NewBlastoise()}
+  p1Fighters := Fighters{
+    NEW_TEST_POKEMON["カメックス"](), NEW_TEST_POKEMON["リザードン"], NEW_TEST_POKEMON["フシギバナ"],
+  }
+
+  p2Fighters := Fighters{
+    NEW_TEST_POKEMON["フシギバナ"](), NEW_TEST_POKEMON["リザードン"], NEW_TEST_POKEMON["カメックス"],
+  }
+
   initBattle := Battle{P1Fighters:p1Fighters, P2Fighters:p2Fighters}
 
   testNum := 1280
