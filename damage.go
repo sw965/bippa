@@ -7,15 +7,17 @@ import (
 type DamageR float64
 
 func NewDamageR(random *rand.Rand) DamageR {
-	index := random.Intn(len(RANDOM_DAMAGES))
-	return RANDOM_DAMAGES[index]
+	index := random.Intn(DAMAGE_RS_LENGTH)
+	return DAMAGE_RS[index]
 }
 
 type DamageRs []DamageR
 
-var RANDOM_DAMAGES = []DamageR{
+var DAMAGE_RS = []DamageR{
 	0.85, 0.86, 0.87, 0.88, 0.89, 0.9, 0.91, 0.92, 0.93, 0.94, 0.95, 0.96, 0.97, 0.98, 0.99, 1.0,
 }
+
+var DAMAGE_RS_LENGTH = len(DAMAGE_RS)
 
 type DamageBonus int
 

@@ -94,7 +94,6 @@ func (spovb SelfPointOfViewBattle) AfterContact() SelfPointOfViewBattle {
 //https://latest.pokewiki.net/%E3%83%90%E3%83%88%E3%83%AB%E4%B8%AD%E3%81%AE%E5%87%A6%E7%90%86%E3%81%AE%E9%A0%86%E7%95%AA
 func (spovb SelfPointOfViewBattle) MoveUse(moveName MoveName, random *rand.Rand) (SelfPointOfViewBattle, error) {
 	var err error
-	
 	if spovb.SelfFighters[0].IsFaint() {
 		return spovb, nil
 	}

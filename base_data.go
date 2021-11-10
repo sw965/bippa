@@ -10,7 +10,7 @@ import (
 )
 
 var (
-	DATA_PATH      = os.Getenv("GOPATH") + "/seviper_at_sw965/data/"
+	DATA_PATH      = os.Getenv("GOPATH") + "/seviper/data/"
 	POKEDEX_PATH   = DATA_PATH + "pokedex/"
 	MOVEDEX_PATH   = DATA_PATH + "movedex/"
 	NATUREDEX_PATH = DATA_PATH + "naturedex.json"

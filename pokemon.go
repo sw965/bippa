@@ -183,7 +183,7 @@ func (pokemon *Pokemon) StealthRockDamage() int {
 func NewTestVenusaur() Pokemon {
   result, err := NewPokemon(
     "フシギバナ", "しんちょう", "しんりょく",
-    "♀", "なし", MoveNames{"つるのムチ"}, PointUps{0},
+    "♀", "なし", MoveNames{"はなふぶき"}, PointUps{0},
     &ALL_MAX_INDIVIDUAL, &CS252_H4,
   )
 
