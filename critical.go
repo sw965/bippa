@@ -4,7 +4,7 @@ type CriticalPercent float64
 
 const (
   CRITICAL_PERCENT = CriticalPercent(1.0 / 24.0)
-  NO_CRITICAL_PERCENT = CriticalPercent(1.0 - float64(CRITICAL_PERCENT))
+  NO_CRITICAL_PERCENT = 1.0 - float64(CRITICAL_PERCENT)
 )
 
 type CriticalBonus float64

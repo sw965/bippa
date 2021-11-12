@@ -492,11 +492,9 @@ func (battle *Battle) Winner() (Winner, error) {
 
 	if isP1AllFaint && isP2AllFaint {
 		return DRAW, nil
-	}
-
-	if isP1AllFaint {
+	} else if isP1AllFaint {
+		return WINNER_PLAYER2, nil
+	} else {
 		return WINNER_PLAYER1, nil
 	}
-
-	return WINNER_PLAYER2, nil
 }
