@@ -1,15 +1,15 @@
 package bippa
 
-type StatusAilment string
+type StatusAilment_ string
 
 const (
-	BAD_POISON = StatusAilment("もうどく")
-	SLEEP      = StatusAilment("ねむり")
-	BURN       = StatusAilment("やけど")
+	BAD_POISON = StatusAilment_("もうどく")
+	SLEEP      = StatusAilment_("ねむり")
+	BURN       = StatusAilment_("やけど")
 )
 
-type StatusAilmentDetail struct {
-	StatusAilment StatusAilment
+type StatusAilment struct {
+	Type StatusAilment_
 	SleepRemainingTurn int
 	BadPoisonElapsedTurn int
 }

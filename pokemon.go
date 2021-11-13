@@ -13,15 +13,16 @@ type Pokemon struct {
 	Item            Item
 	Moveset         Moveset
 
+	State State
 	Individual Individual
 	Effort     Effort
-	State State
-
 	Types Types
 
 	Rank  Rank
 	StatusAilmentDetail StatusAilmentDetail
 	ChoiceMoveName                 MoveName
+
+	IsRoost bool
 	IsLeechSeed bool
 }
 
@@ -96,15 +97,15 @@ func (pokemon1 *Pokemon) Equal(pokemon2 *Pokemon) bool {
 		return false
 	}
 
+	if pokemon1.State != pokemon2.State {
+		return false
+	}
+
 	if pokemon1.Individual != pokemon2.Individual {
 		return false
 	}
 
 	if pokemon1.Effort != pokemon2.Effort {
-		return false
-	}
-
-	if pokemon1.State != pokemon2.State {
 		return false
 	}
 
@@ -123,6 +124,10 @@ func (pokemon1 *Pokemon) Equal(pokemon2 *Pokemon) bool {
 	}
 
 	if pokemon1.ChoiceMoveName != pokemon2.ChoiceMoveName {
+		return false
+	}
+
+	if pokemon1.IsRoost != pokemon2.IsRoost {
 		return false
 	}
 

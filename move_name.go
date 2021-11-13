@@ -26,12 +26,9 @@ func (moveNames MoveNames) In(moveName MoveName) bool {
 	return false
 }
 
-func (moveNames MoveNames) Copy() MoveNames {
-	result := make(MoveNames, len(moveNames))
-	for i, moveName := range moveNames {
-		result[i] = moveName
-	}
-	return result
+func (moveNames MoveNames) RandomChoice(random *rand.Rand) MoveName {
+	index := random.Intn(len(moveNames))
+	return moveNames[index]
 }
 
 func (moveNames MoveNames) Shuffle(random *rand.Rand) MoveNames {
@@ -43,7 +40,10 @@ func (moveNames MoveNames) Shuffle(random *rand.Rand) MoveNames {
 	return result
 }
 
-func (moveNames MoveNames) RandomChoice(random *rand.Rand) MoveName {
-	index := random.Intn(len(moveNames))
-	return moveNames[index]
+func (moveNames MoveNames) Copy() MoveNames {
+	result := make(MoveNames, len(moveNames))
+	for i, moveName := range moveNames {
+		result[i] = moveName
+	}
+	return result
 }

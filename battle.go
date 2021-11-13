@@ -10,18 +10,19 @@ type SelfPointOfViewBattle struct {
 	SelfFighters Fighters
 	OpponentFighters Fighters
 
-	SelfField OneSideField
-	OpponentField OneSideField
+	SelfField SelfField
+	OpponentField SelfField
+	ShareField ShareField
 }
 
 func NewSelfPointOfView(selfFighters, opponentFIghters Fighters, needUI bool) SelfPointOfViewBattle {
 	return SelfPointOfViewBattle{SelfFighters:selfFighters, OpponentFighters:opponentFIghters,
-		SelfField:OneSideField{}, OpponentField:OneSideField{}}
+		SelfField:SelfField{}, OpponentField:SelfField{}}
 }
 
 func (spovb *SelfPointOfViewBattle) SwitchPointOfView() SelfPointOfViewBattle {
 	return SelfPointOfViewBattle{SelfFighters:spovb.OpponentFighters, OpponentFighters:spovb.SelfFighters,
-		SelfField:spovb.OpponentField, OpponentField:spovb.SelfField}
+		SelfField:spovb.OpponentField, OpponentField:spovb.SelfField, ShareField:spovb.ShareField}
 }
 
 func (spovb *SelfPointOfViewBattle) Accuracy(moveName MoveName, moveData *MoveData) int {
@@ -111,7 +112,7 @@ func (spovb SelfPointOfViewBattle) MoveUse(moveName MoveName, random *rand.Rand)
 	}
 
 	if spovb.SelfFighters[0].Moveset[moveName] <= 0 {
-		errMsg := fmt.Sprintf("%v を繰り出そうとしたが、powerPointが0以下", moveName)
+		errMsg := fmt.Sprintf("%v は %v を繰り出そうとしたが、powerPointが0以下", spovb.SelfFighters[0].Name, moveName)
 		return SelfPointOfViewBattle{}, fmt.Errorf(errMsg)
 	}
 
@@ -271,8 +272,9 @@ type Battle struct {
 	P1Fighters Fighters
 	P2Fighters Fighters
 
-	P1Field OneSideField
-	P2Field OneSideField
+	P1Field SelfField
+	P2Field SelfField
+	ShareField ShareField
 
 	P1Command BattleCommand
 }
@@ -282,7 +284,7 @@ func (battle Battle) ReversePlayer() (Battle, error) {
 		return Battle{}, fmt.Errorf("battle.ReversePlayerを呼び出す時のbattle.P1Commandは、ゼロ値でなければならない")
 	}
 	return Battle{P1Fighters:battle.P2Fighters, P2Fighters:battle.P1Fighters,
-		P1Field:battle.P2Field, P2Field:battle.P1Field, P1Command:battle.P1Command}, nil
+		P1Field:battle.P2Field, P2Field:battle.P1Field, ShareField:battle.ShareField, P1Command:battle.P1Command}, nil
 }
 
 func (battle *Battle) NewP1PointOfViewBattle() SelfPointOfViewBattle {
