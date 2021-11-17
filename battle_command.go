@@ -33,3 +33,12 @@ func (battleCommands BattleCommands) RandomChoice(random *rand.Rand) BattleComma
 	index := random.Intn(len(battleCommands))
 	return battleCommands[index]
 }
+
+func (battleCommands BattleCommands) IsAllPokeNames() bool {
+	for _, battleCommand := range battleCommands {
+		if !battleCommand.IsPokeName() {
+			return false
+		}
+	}
+	return true
+}

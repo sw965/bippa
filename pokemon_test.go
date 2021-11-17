@@ -5,7 +5,7 @@ import (
 )
 
 func TestVenusaur(t *testing.T) {
-  pokemon := NEW_TEST_POKEMON["フシギバナ"]()
+  pokemon := TEST_POKEMONS["フシギバナ"]()
   if pokemon.State.MaxHP != 187 {
     t.Errorf("テスト失敗")
   }
@@ -36,7 +36,7 @@ func TestVenusaur(t *testing.T) {
 }
 
 func TestCharizard(t *testing.T) {
-  pokemon := NEW_TEST_POKEMON["リザードン"]()
+  pokemon := TEST_POKEMONS["リザードン"]()
   if pokemon.State.MaxHP != 154 {
     t.Errorf("テスト失敗")
   }
@@ -67,7 +67,7 @@ func TestCharizard(t *testing.T) {
 }
 
 func TestBlastoise(t *testing.T) {
-  pokemon := NEW_TEST_POKEMON["カメックス"]()
+  pokemon := TEST_POKEMONS["カメックス"]()
   if pokemon.State.MaxHP != 186 {
     t.Errorf("テスト失敗")
   }

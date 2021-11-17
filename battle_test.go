@@ -1,5 +1,5 @@
-package bippa
 
+package bippa
 import (
   "testing"
   "fmt"
@@ -58,11 +58,11 @@ func NoEffectAttackMoveHelper(initBattle Battle, p1BattleCommand, p2BattleComman
 
 func TestNoEffectAttackMove(t *testing.T) {
   p1Fighters := Fighters{
-    NEW_TEST_POKEMON["カメックス"](), NEW_TEST_POKEMON["リザードン"](), NEW_TEST_POKEMON["フシギバナ"](),
+    TEST_POKEMONS["カメックス"](), TEST_POKEMONS["リザードン"](), TEST_POKEMONS["フシギバナ"](),
   }
 
   p2Fighters := Fighters{
-    NEW_TEST_POKEMON["フシギバナ"](), NEW_TEST_POKEMON["リザードン"](), NEW_TEST_POKEMON["カメックス"](),
+    TEST_POKEMONS["フシギバナ"](), TEST_POKEMONS["リザードン"](), TEST_POKEMONS["カメックス"](),
   }
 
   battle := Battle{P1Fighters:p1Fighters, P2Fighters:p2Fighters}

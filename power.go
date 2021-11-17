@@ -4,11 +4,15 @@ import (
   "fmt"
 )
 
-type PowerPoint int
+type PowerPoint struct {
+  Max int
+  Current int
+}
 
 func NewPowerPoint(basePP int, pointUp PointUp) PowerPoint {
-	v := ((5.0 + float64(pointUp)) / 5.0)
-	return PowerPoint(float64(basePP) * v)
+	v := (5.0 + float64(pointUp)) / 5.0
+	intV := int(float64(basePP) * v)
+  return PowerPoint{Max:intV, Current:intV}
 }
 
 //https://latest.pokewiki.net/%E3%83%80%E3%83%A1%E3%83%BC%E3%82%B8%E8%A8%88%E7%AE%97%E5%BC%8F

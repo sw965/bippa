@@ -67,7 +67,7 @@ func (fighters *Fighters) NewAvailableMoveNames() MoveNames {
 	result := make(MoveNames, 0)
 	for _, moveName := range u {
 		powerPoint := moveset[moveName]
-		if powerPoint > 0 {
+		if powerPoint.Current > 0 {
 			result = append(result, moveName)
 		}
 	}

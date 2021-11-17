@@ -19,7 +19,7 @@ type Pokemon struct {
 	Types Types
 
 	Rank  Rank
-	StatusAilmentDetail StatusAilmentDetail
+	StatusAilment StatusAilment
 	ChoiceMoveName                 MoveName
 
 	IsRoost bool
@@ -119,7 +119,7 @@ func (pokemon1 *Pokemon) Equal(pokemon2 *Pokemon) bool {
 		return false
 	}
 
-	if pokemon1.StatusAilmentDetail != pokemon2.StatusAilmentDetail {
+	if pokemon1.StatusAilment != pokemon2.StatusAilment {
 		return false
 	}
 
@@ -170,11 +170,15 @@ func (pokemon *Pokemon) NewEffectivenessBonus(moveName MoveName) EffectivenessBo
 }
 
 func (pokemon *Pokemon) BadPoisonDamage() int {
-	return int(float64(pokemon.State.MaxHP) * float64(pokemon.StatusAilmentDetail.BadPoisonElapsedTurn) / 16.0)
+	return int(float64(pokemon.State.MaxHP) * float64(pokemon.StatusAilment.BadPoisonElapsedTurn) / 16.0)
 }
 
 func (pokemon *Pokemon) IsFocusSashOk(damage int) bool {
 	return pokemon.IsFullHP() && pokemon.IsFaintDamage(damage) && pokemon.Item == "きあいのタスキ"
+}
+
+func (pokemon *Pokemon) SpikesDamage(count int) int {
+	return int(float64(pokemon.State.MaxHP) * SPIKES_COUNT_TO_DAMAGE_PERCENT[count])
 }
 
 func (pokemon *Pokemon) StealthRockDamage() int {

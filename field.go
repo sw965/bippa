@@ -20,14 +20,15 @@ func (weather_s Weather_s) In(weather_ Weather_) bool {
 	return false
 }
 
-
 type Weather struct {
 	Type Weather_
 	RemainingTurn int
 }
 
 type SelfField struct {
-	IsStealthRockActive bool
+	SpikesCount int
+	ToxicSpikesCount int
+	IsStealthRock bool
 }
 
 type ShareField struct {

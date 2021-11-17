@@ -64,7 +64,7 @@ func NewFinalDamage(spovb *SelfPointOfViewBattle, moveName MoveName, isCritical 
 	sameTypeAttackBonus := spovb.SelfFighters[0].NewSameTypeAttackBonus(moveName)
 	effectivenessBonus := spovb.OpponentFighters[0].NewEffectivenessBonus(moveName)
 
-	isBurn := spovb.SelfFighters[0].StatusAilmentDetail.StatusAilment == BURN
+	isBurn := spovb.SelfFighters[0].StatusAilment.Type == BURN
 	isPhysics := moveData.Category == PHYSICS
 	isBurnValid := isBurn && isPhysics
 	burnBonus := BOOL_TO_BURN_BONUS[isBurnValid]

@@ -146,7 +146,7 @@ func NewTestAerodactyl() Pokemon {
   return result
 }
 
-var NEW_TEST_POKEMON = map[PokeName]func()Pokemon{
+var TEST_POKEMONS = map[PokeName]func()Pokemon{
 	"フシギバナ":NewTestVenusaur,
 	"リザードン":NewTestCharizard,
 	"カメックス":NewTestBlastoise,

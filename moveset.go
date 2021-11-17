@@ -9,7 +9,7 @@ const (
 	MAX_MOVESET_LENGTH = 4
 )
 
-type Moveset map[MoveName]PowerPoint
+type Moveset map[MoveName]*PowerPoint
 
 func NewMoveset(pokeName PokeName, moveNames MoveNames, pointUps []PointUp) (Moveset, error) {
 	for _, pointUp := range pointUps {
@@ -43,7 +43,7 @@ func NewMoveset(pokeName PokeName, moveNames MoveNames, pointUps []PointUp) (Mov
 
 	result := Moveset{}
 	for i, moveName := range moveNames {
-		result[moveName] = powerPoints[i]
+		result[moveName] = &powerPoints[i]
 	}
 
 	if !result.IsValidLength() {
@@ -58,6 +58,15 @@ func (moveset Moveset) IsValidLength() bool {
 	return length >= MIN_MOVESET_LENGTH && length <= MAX_MOVESET_LENGTH
 }
 
+func (moveset Moveset) Copy() Moveset {
+	result := Moveset{}
+	for moveName, powerPoint := range moveset {
+		copyPowerPoint := PowerPoint{Max:powerPoint.Max, Current:powerPoint.Current}
+		result[moveName] = &copyPowerPoint
+	}
+	return result
+}
+
 func (moveset1 Moveset) Equal(moveset2 Moveset) bool {
 	for moveName1, powerPoint1 := range moveset1 {
 		powerPoint2, ok := moveset2[moveName1]
@@ -69,14 +78,6 @@ func (moveset1 Moveset) Equal(moveset2 Moveset) bool {
 		}
 	}
 	return true
-}
-
-func (moveset Moveset) Copy() Moveset {
-	result := Moveset{}
-	for moveName, powerPoint := range moveset {
-		result[moveName] = powerPoint
-	}
-	return result
 }
 
 func (moveset Moveset) NewMoveNames() MoveNames {
