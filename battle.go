@@ -26,8 +26,20 @@ func (spovb *SelfPointOfViewBattle) SwitchPointOfView() SelfPointOfViewBattle {
 }
 
 func (spovb *SelfPointOfViewBattle) Accuracy(moveName MoveName, moveData *MoveData) int {
+	weatherType := spovb.ShareField.Weather.Type
+
 	if moveName == "どくどく" && spovb.SelfFighters[0].Types.In(POISON) {
 		return 100
+	} else if moveName == "かみなり" && weatherType == RAIN {
+		return 100
+	} else if moveName == "ぼうふう" && weatherType == RAIN {
+		return 100
+	} else if moveName == "ふぶき" && weatherType == HAIL {
+		return 100
+	} else if moveName == "かみなり" && weatherType == SUNNY_DAY {
+		return 50
+	} else if moveName == "ぼうふう" && weatherType == SUNNY_DAY {
+		return 50
 	} else {
 		return moveData.Accuracy
 	}
@@ -41,7 +53,7 @@ func (spovb *SelfPointOfViewBattle) IsCritical(moveName MoveName, random *rand.R
 	}
 }
 
-func (spovb SelfPointOfViewBattle) ToDamage(damage int) (SelfPointOfViewBattle, func(SelfPointOfViewBattle) SelfPointOfViewBattle) {
+func (spovb SelfPointOfViewBattle) ToDamage(damage int) SelfPointOfViewBattle {
 	currentHP := spovb.SelfFighters[0].State.CurrentHP
 	intCurrentHP := int(currentHP)
 
@@ -50,12 +62,7 @@ func (spovb SelfPointOfViewBattle) ToDamage(damage int) (SelfPointOfViewBattle, 
 	}
 
 	spovb.SelfFighters[0].State.CurrentHP -= State_(damage)
-
-	sitrusBerryHeal := func(spovb SelfPointOfViewBattle) SelfPointOfViewBattle {
-		return spovb.SitrusBerryHeal()
-	}
-
-	return spovb, sitrusBerryHeal
+	return spovb.SitrusBerryHeal()
 }
 
 func (spovb SelfPointOfViewBattle) Heal(heal int) SelfPointOfViewBattle {
@@ -92,8 +99,7 @@ func (spovb SelfPointOfViewBattle) SitrusBerryHeal() SelfPointOfViewBattle {
 func (spovb SelfPointOfViewBattle) AfterContact() SelfPointOfViewBattle {
 	if spovb.OpponentFighters[0].Item == "ゴツゴツメット" {
 		damage := int(float64(spovb.SelfFighters[0].State.MaxHP) * 1.0 / 6.0)
-		spovb, sitrusBerryHeal := spovb.ToDamage(damage)
-		spovb = sitrusBerryHeal(spovb)
+		spovb = spovb.ToDamage(damage)
 	}
 	return spovb
 }
@@ -195,8 +201,7 @@ func (spovb SelfPointOfViewBattle) MoveUse(moveName MoveName, random *rand.Rand)
 		}
 
 		opovb := spovb.SwitchPointOfView()
-		opovb, sitrusBerryHeal := opovb.ToDamage(int(realDamage))
-		opovb = sitrusBerryHeal(opovb)
+		opovb = opovb.ToDamage(int(realDamage))
 		spovb = opovb.SwitchPointOfView()
 
 		if moveData.Contact == "接触" {
@@ -210,8 +215,7 @@ func (spovb SelfPointOfViewBattle) MoveUse(moveName MoveName, random *rand.Rand)
 
 	if spovb.SelfFighters[0].Item == "いのちのたま" {
 		damage := int(float64(spovb.SelfFighters[0].State.MaxHP) * 1.0 / 10.0)
-		spovb, sitrusBerryHeal := spovb.ToDamage(damage)
-		spovb = sitrusBerryHeal(spovb)
+		spovb = spovb.ToDamage(damage)
 	}
 	return spovb, nil
 }
@@ -220,7 +224,7 @@ func (spovb SelfPointOfViewBattle) AfterSentOut() SelfPointOfViewBattle {
 	spikesCount := spovb.SelfField.SpikesCount
 	if spikesCount > 0 {
 		damage := spovb.SelfFighters[0].SpikesDamage(spikesCount)
-		spovb, _ = spovb.ToDamage(damage)
+		spovb = spovb.ToDamage(damage)
 	}
 
 	if spovb.SelfFighters[0].IsFaint() {
@@ -242,16 +246,56 @@ func (spovb SelfPointOfViewBattle) AfterSentOut() SelfPointOfViewBattle {
 
 	if spovb.SelfField.IsStealthRock {
 		damage := spovb.SelfFighters[0].StealthRockDamage()
-		spovb, _ = spovb.ToDamage(damage)
+		spovb = spovb.ToDamage(damage)
 	}
 
 	if spovb.SelfFighters[0].IsFaint() {
 		return spovb
 	}
 
-	if spovb.SelfFighters[0].Ability == "ゆきふらし" {
-		spovb.ShareField.Weather.Type = HAIL
+	ability := spovb.SelfFighters[0].Ability
+	item := spovb.SelfFighters[0].Item
+	var weather_ Weather_
+	var weatherRemainingTurn int
+
+	switch ability {
+		case "あめふらし":
+			weather_ = RAIN
+
+			if item == "しめったいわ" {
+				weatherRemainingTurn = 8
+			} else {
+				weatherRemainingTurn = 5
+			}
+		case "ゆきふらし":
+			weather_ = HAIL
+
+			if item == "つめたいいわ" {
+				weatherRemainingTurn = 8
+			} else {
+				weatherRemainingTurn = 5
+			}
+		case "すなおこし":
+			weather_ = SANDSTORM
+
+			if item == "さらさらいわ" {
+				weatherRemainingTurn = 8
+			} else {
+				weatherRemainingTurn = 5
+			}
+		case "ひでり":
+			weather_ = SUNNY_DAY
+
+			if item == "あついいわ" {
+				weatherRemainingTurn = 8
+			} else {
+				weatherRemainingTurn = 5
+			}
 	}
+
+	spovb.ShareField.Weather.Type = weather_
+	spovb.ShareField.Weather.RemainingTurn = weatherRemainingTurn
+
 	return spovb
 }
 
@@ -463,6 +507,10 @@ func (battle Battle) TurnEnd(random *rand.Rand) Battle {
 	}
 
 	battle = run([]func(SelfPointOfViewBattle)SelfPointOfViewBattle{TurnEndLeftovers, TurnEndBlackSludge})
+	battle = run([]func(SelfPointOfViewBattle)SelfPointOfViewBattle{TurnEndWeather})
+	battle = run([]func(SelfPointOfViewBattle)SelfPointOfViewBattle{TurnEndHailDamage, TurnEndSandstoremDamage})
+	battle = run([]func(SelfPointOfViewBattle)SelfPointOfViewBattle{TurnEndDrySkin, TurnEndSolarPower, TurnEndRainDish, TurnEndIceBody})
+	battle = run([]func(SelfPointOfViewBattle)SelfPointOfViewBattle{TurnEndRainDish})
 	battle = run([]func(SelfPointOfViewBattle)SelfPointOfViewBattle{TurnEndLeechSeed})
 	battle = run([]func(SelfPointOfViewBattle)SelfPointOfViewBattle{TurnEndBadPoison})
 	battle = run([]func(SelfPointOfViewBattle)SelfPointOfViewBattle{TurnEndBurn})

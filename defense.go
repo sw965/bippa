@@ -4,6 +4,7 @@ import (
   "fmt"
 )
 
+type DefenseBonus int
 type FinalDefense int
 
 func NewFinalDefense(spovb *SelfPointOfViewBattle, moveName MoveName, isCritical bool) (FinalDefense, error) {
@@ -29,6 +30,10 @@ func NewFinalDefense(spovb *SelfPointOfViewBattle, moveName MoveName, isCritical
 
   rankBonus := RANK__TO_RANK_BONUS[rank_]
 	result := int(float64(defenseState_) * float64(rankBonus))
+
+  if spovb.ShareField.Weather.Type == SANDSTORM && spovb.SelfFighters[0].Types.In(ROCK) {
+    result = int(float64(result) * 6144.0 / 4096.0)
+  }
 
 	if result < 1 {
 		return 1, nil

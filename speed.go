@@ -9,6 +9,29 @@ const (
 
 func NewSpeedBonus(spovb *SelfPointOfViewBattle) SpeedBonus {
 	result := INIT_SPEED_BONUS
+
+  ability := spovb.SelfFighters[0].Ability
+  weatherType := spovb.ShareField.Weather.Type
+
+  switch ability {
+    case "すいすい":
+      if weatherType == RAIN {
+        result = result.MulSwiftSwim()
+      }
+    case "ゆきかき":
+      if weatherType == HAIL {
+        result = result.MulSlushRush()
+      }
+    case "すなかき":
+      if weatherType == SANDSTORM {
+        result = result.MulSandRush()
+      }
+    case "ようりょくそ":
+      if weatherType == SUNNY_DAY {
+        result = result.MulChlorophyll()
+      }
+  }
+
 	if spovb.SelfFighters[0].Item == "こだわりスカーフ" {
 		result = result.MulChoiceScarf()
 	}
@@ -17,6 +40,26 @@ func NewSpeedBonus(spovb *SelfPointOfViewBattle) SpeedBonus {
 
 func (speedBonus SpeedBonus) MulChoiceScarf() SpeedBonus {
   result := RoundingZeroPointFiveOrMore(float64(speedBonus) * 6144.0 / 4096.0)
+  return SpeedBonus(result)
+}
+
+func (speedBonus SpeedBonus) MulSwiftSwim() SpeedBonus {
+  result := RoundingZeroPointFiveOrMore(float64(speedBonus) * 8192.0 / 4096.0)
+  return SpeedBonus(result)
+}
+
+func (speedBonus SpeedBonus) MulSlushRush() SpeedBonus {
+  result := RoundingZeroPointFiveOrMore(float64(speedBonus) * 8192.0 / 4096.0)
+  return SpeedBonus(result)
+}
+
+func (speedBonus SpeedBonus) MulSandRush() SpeedBonus {
+  result := RoundingZeroPointFiveOrMore(float64(speedBonus) * 8192.0 / 4096.0)
+  return SpeedBonus(result)
+}
+
+func (speedBonus SpeedBonus) MulChlorophyll() SpeedBonus {
+  result := RoundingZeroPointFiveOrMore(float64(speedBonus) * 8192.0 / 4096.0)
   return SpeedBonus(result)
 }
 

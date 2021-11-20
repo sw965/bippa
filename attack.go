@@ -31,10 +31,22 @@ const (
 
 func NewSpecialAttackBonus(spovb *SelfPointOfViewBattle) SpecialAttackBonus {
 	result := INIT_SPECIAL_ATTACK_BONUS
+  ability := spovb.SelfFighters[0].Ability
+  weatherType := spovb.ShareField.Weather.Type
+
+  if ability == "サンパワー" && weatherType == SUNNY_DAY {
+    result = result.MulSolarPower()
+  }
+
 	if spovb.SelfFighters[0].Item == "こだわりメガネ" {
     result = result.MulChoiceSpecs()
 	}
 	return result
+}
+
+func (specialAttackBonus SpecialAttackBonus) MulSolarPower() SpecialAttackBonus {
+  result := RoundingZeroPointFiveOrMore(float64(specialAttackBonus) * 6144.0 / 4096.0)
+  return SpecialAttackBonus(result)
 }
 
 func (specialAttackBonus SpecialAttackBonus) MulChoiceSpecs() SpecialAttackBonus {

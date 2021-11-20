@@ -4,6 +4,8 @@ import (
 	"math/rand"
 )
 
+//https://latest.pokewiki.net/%E3%83%80%E3%83%A1%E3%83%BC%E3%82%B8%E8%A8%88%E7%AE%97%E5%BC%8F
+
 type DamageR float64
 
 func NewDamageR(random *rand.Rand) DamageR {
@@ -59,8 +61,8 @@ func NewFinalDamage(spovb *SelfPointOfViewBattle, moveName MoveName, isCritical 
 		return 0, err
 	}
 
+	weatherBonus := NewWeatherBonus(spovb, moveData.Type)
 	criticalBonus := BOOL_TO_CRITICAL_BONUS[isCritical]
-
 	sameTypeAttackBonus := spovb.SelfFighters[0].NewSameTypeAttackBonus(moveName)
 	effectivenessBonus := spovb.OpponentFighters[0].NewEffectivenessBonus(moveName)
 
@@ -74,6 +76,7 @@ func NewFinalDamage(spovb *SelfPointOfViewBattle, moveName MoveName, isCritical 
 	result := int(MAX_LEVEL)*2/5 + 2
 	result = int(float64(result) * float64(finalPower) * float64(finalAttack) / float64(finalDefense))
 	result = result/50 + 2
+	result = RoundingZeroPointFiveOver(float64(result) * float64(weatherBonus))
 	result = RoundingZeroPointFiveOver(float64(result) * float64(criticalBonus))
 	result = int(float64(result) * float64(damageR))
 	result = RoundingZeroPointFiveOver(float64(result) * float64(sameTypeAttackBonus))
