@@ -20,3 +20,10 @@ func NewAllMaxPointUps(length int) PointUps {
 	}
 	return result
 }
+
+var ALL_MAX_POINT_UPS = map[int]PointUps{
+	1:PointUps{MAX_POINT_UP},
+	2:PointUps{MAX_POINT_UP, MAX_POINT_UP},
+	3:PointUps{MAX_POINT_UP, MAX_POINT_UP, MAX_POINT_UP},
+	4:PointUps{MAX_POINT_UP, MAX_POINT_UP, MAX_POINT_UP, MAX_POINT_UP},
+}

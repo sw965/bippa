@@ -188,3 +188,35 @@ func (pokemon *Pokemon) StealthRockDamage() int {
 	}
 	return int(float64(pokemon.State.MaxHP) * damagePercent)
 }
+
+func (pokemon *Pokemon) RainActiveTurn() int {
+	if pokemon.Item == "しめったいわ" {
+		return 8
+	} else {
+		return 5
+	}
+}
+
+func (pokemon *Pokemon) HailActiveTurn() int {
+	if pokemon.Item == "つめたいいわ" {
+		return 8
+	} else {
+		return 5
+	}
+}
+
+func (pokemon *Pokemon) SandstormActiveTurn() int {
+	if pokemon.Item == "さらさらいわ" {
+		return 8
+	} else {
+		return 5
+	}
+}
+
+func (pokemon *Pokemon) SunnyDayActiveTurn() int {
+	if pokemon.Item == "あついいわ" {
+		return 8
+	} else {
+		return 5
+	}
+}

@@ -68,11 +68,11 @@ func TestCharizard(t *testing.T) {
 
 func TestBlastoise(t *testing.T) {
   pokemon := TEST_POKEMONS["カメックス"]()
-  if pokemon.State.MaxHP != 186 {
+  if pokemon.State.MaxHP != 155 {
     t.Errorf("テスト失敗")
   }
 
-  if pokemon.State.CurrentHP != 186 {
+  if pokemon.State.CurrentHP != 155 {
     t.Errorf("テスト失敗")
   }
 
@@ -92,7 +92,7 @@ func TestBlastoise(t *testing.T) {
     t.Errorf("テスト失敗")
   }
 
-  if pokemon.State.Speed != 99 {
+  if pokemon.State.Speed != 130 {
     t.Errorf("テスト失敗")
   }
 }

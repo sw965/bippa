@@ -30,10 +30,6 @@ func TurnEndBlackSludge(spovb SelfPointOfViewBattle) SelfPointOfViewBattle {
 	}
 
 	if spovb.SelfFighters[0].Types.In(POISON) {
-		if spovb.SelfFighters[0].IsFullHP() {
-			return spovb
-		}
-
 		heal := int(float64(spovb.SelfFighters[0].State.MaxHP) * 1.0 / 16.0)
 		spovb = spovb.Heal(heal)
 	} else {

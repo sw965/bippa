@@ -76,6 +76,18 @@ func (spovb SelfPointOfViewBattle) Heal(heal int) SelfPointOfViewBattle {
 	return spovb
 }
 
+func (spovb SelfPointOfViewBattle) RankFluctuation(fluctuationRank *Rank) SelfPointOfViewBattle {
+  rank := spovb.SelfFighters[0].Rank
+  newRank := rank.Add(fluctuationRank)
+
+	if spovb.SelfFighters[0].Item == "しろいハーブ" && newRank.InDown() {
+		newRank = newRank.ResetDown()
+	}
+
+  spovb.SelfFighters[0].Rank = newRank.Regulate()
+	return spovb
+}
+
 func (spovb SelfPointOfViewBattle) SitrusBerryHeal() SelfPointOfViewBattle {
 	if spovb.SelfFighters[0].Item != "オボンのみ" {
 		return spovb
@@ -97,6 +109,11 @@ func (spovb SelfPointOfViewBattle) SitrusBerryHeal() SelfPointOfViewBattle {
 }
 
 func (spovb SelfPointOfViewBattle) AfterContact() SelfPointOfViewBattle {
+	if spovb.OpponentFighters[0].Ability == "てつのトゲ" {
+		damage := int(float64(spovb.SelfFighters[0].State.MaxHP) * 1.0 / 8.0)
+		spovb = spovb.ToDamage(damage)
+	}
+
 	if spovb.OpponentFighters[0].Item == "ゴツゴツメット" {
 		damage := int(float64(spovb.SelfFighters[0].State.MaxHP) * 1.0 / 6.0)
 		spovb = spovb.ToDamage(damage)
@@ -150,6 +167,21 @@ func (spovb SelfPointOfViewBattle) MoveUse(moveName MoveName, random *rand.Rand)
 		return spovb, nil
 	}
 
+	isParalysis := spovb.SelfFighters[0].StatusAilment.Type == PARALYSIS
+
+	if isParalysis && IsHit(25, random) {
+		return spovb, nil
+	}
+
+	isFreeze := spovb.SelfFighters[0].StatusAilment.Type == FREEZE
+	if isFreeze && IsHit(20, random) {
+		spovb.SelfFighters[0].StatusAilment.Type = ""
+	}
+
+	if spovb.SelfFighters[0].StatusAilment.Type == FREEZE {
+		return spovb, nil
+	}
+
 	copyMoveset := spovb.SelfFighters[0].Moveset.Copy()
 	copyMoveset[moveName].Current -= 1
 	spovb.SelfFighters[0].Moveset = copyMoveset
@@ -160,6 +192,10 @@ func (spovb SelfPointOfViewBattle) MoveUse(moveName MoveName, random *rand.Rand)
 
 	if spovb.SelfFighters[0].Item.IsChoice() {
 		spovb.SelfFighters[0].ChoiceMoveName = moveName
+	}
+
+	if spovb.OpponentFighters[0].Ability == "ふゆう" && moveData.Type == GROUND {
+		return spovb, nil
 	}
 
 	accuracy := spovb.Accuracy(moveName, moveData)
@@ -174,7 +210,7 @@ func (spovb SelfPointOfViewBattle) MoveUse(moveName MoveName, random *rand.Rand)
 		if !ok {
 			return spovb, nil
 		}
-		return statusMove(spovb), nil
+		return statusMove(spovb, random), nil
 	}
 
 	attackNum, err := omw.RandomInt(moveData.MinAttackNum, moveData.MaxAttackNum+1, random)
@@ -203,6 +239,13 @@ func (spovb SelfPointOfViewBattle) MoveUse(moveName MoveName, random *rand.Rand)
 		opovb := spovb.SwitchPointOfView()
 		opovb = opovb.ToDamage(int(realDamage))
 		spovb = opovb.SwitchPointOfView()
+
+		switch moveName {
+			case "れいとうビーム":
+				spovb.OpponentFighters[0].StatusAilment.Type = NewFreeze(10, random)
+			case "ギガドレイン":
+				spovb = spovb.Heal(int(realDamage) / 2)
+		}
 
 		if moveData.Contact == "接触" {
 			spovb = spovb.AfterContact()
@@ -254,43 +297,22 @@ func (spovb SelfPointOfViewBattle) AfterSentOut() SelfPointOfViewBattle {
 	}
 
 	ability := spovb.SelfFighters[0].Ability
-	item := spovb.SelfFighters[0].Item
 	var weather_ Weather_
 	var weatherRemainingTurn int
 
 	switch ability {
 		case "あめふらし":
 			weather_ = RAIN
-
-			if item == "しめったいわ" {
-				weatherRemainingTurn = 8
-			} else {
-				weatherRemainingTurn = 5
-			}
+			weatherRemainingTurn = spovb.SelfFighters[0].RainActiveTurn()
 		case "ゆきふらし":
 			weather_ = HAIL
-
-			if item == "つめたいいわ" {
-				weatherRemainingTurn = 8
-			} else {
-				weatherRemainingTurn = 5
-			}
+			weatherRemainingTurn = spovb.SelfFighters[0].HailActiveTurn()
 		case "すなおこし":
 			weather_ = SANDSTORM
-
-			if item == "さらさらいわ" {
-				weatherRemainingTurn = 8
-			} else {
-				weatherRemainingTurn = 5
-			}
+			weatherRemainingTurn = spovb.SelfFighters[0].SandstormActiveTurn()
 		case "ひでり":
 			weather_ = SUNNY_DAY
-
-			if item == "あついいわ" {
-				weatherRemainingTurn = 8
-			} else {
-				weatherRemainingTurn = 5
-			}
+			weatherRemainingTurn = spovb.SelfFighters[0].SunnyDayActiveTurn()
 	}
 
 	spovb.ShareField.Weather.Type = weather_

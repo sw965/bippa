@@ -1,104 +1,62 @@
 package bippa
 
-import (
-  "math"
-)
+type TestCurrentHPs map[State_]int
 
-//PtpDamageの説明 (Pokemon Trainer Paradiseの略)
-//https://pokemon-trainer.net/swsh/damage/ (ポケモントレーナー天国のダメージ計算ツール)
-//↑のサイトでダメージ計算を行うと↓ような計算結果が出力される。
-
-//ダメージ詳細
-//はなびらのまい
-//フシギバナ → カメックス
-//ダメージ
-//86, 90, 90, 90, 92, 92, 92, 96, 96, 96, 98, 98, 98, 102, 102, 104
-//急所ダメージ
-//132, 132, 134, 134, 138, 138, 140, 140, 144, 144, 146, 146, 150, 150, 152, 156
-//以下略
-
-//上記のダメージを元に、PtpDamageDataを作る。例は次のようになる。
-//ptpDamage.NoCritical = map[int]int{86:1, 90:3, 92:3, 96:3, 98:3, 102:2, 104:1}
-//ptpDamage.Critical = map[int]int{132:2, 134:2, 138:2, 140:2, 144:2, 146:2, 150:2, 152:1, 156:1}
-
-//PtpDamageDataは、真の確率分布を作る為のデータであり、
-//テストで出力された確率分布が、真の値とどの程度の誤差があるのかを確認する為にある。
-type PtpDamage struct {
-  NoCritical map[int]int
-  Critical map[int]int
-}
-
-func (ptpDamage *PtpDamage) NewDamageProbabilityDistribution(accuracy int) DamageProbabilityDistribution {
-	result := DamageProbabilityDistribution{}
-  accuracyPercent := float64(accuracy) / float64(100.0)
-
-	for damage, count := range ptpDamage.NoCritical {
-    rPercent := float64(count) / float64(DAMAGE_RS_LENGTH)
-		result[damage] = rPercent * accuracyPercent * float64(NO_CRITICAL_PERCENT)
-	}
-
-	for damage, count := range ptpDamage.Critical {
-    rPercent := float64(count) / float64(DAMAGE_RS_LENGTH)
-		percent := rPercent * accuracyPercent * float64(CRITICAL_PERCENT)
-		if _, ok := result[damage]; ok {
-			//確率の加法定理
-			result[damage] += percent
-		} else {
-			result[damage] = percent
-		}
-	}
-  result[0] = 1.0 - accuracyPercent
-	return result
-}
-
-//key valueに入力する値はPtpDamageDataと同じである。
-type TestDamageData map[int]int
-
-func (testDamageData TestDamageData) Increment(key int) {
-  if _, ok := testDamageData[key]; ok {
-    testDamageData[key] += 1
-  } else {
-    testDamageData[key] = 1
-  }
-}
-
-func (testDamageData TestDamageData) TotalCount() int {
-  result := 0
-  for _, count := range testDamageData {
-    result += count
+func (testCurrentHPs TestCurrentHPs) NewKeyState_s() []State_ {
+  result := make([]State_, 0, len(testCurrentHPs))
+  for currentHP, _ := range testCurrentHPs {
+    result = append(result, currentHP)
   }
   return result
 }
 
-func (testDamageData TestDamageData) NewDamageProbabilityDistribution() DamageProbabilityDistribution {
-  result := DamageProbabilityDistribution{}
-  totalCount := testDamageData.TotalCount()
-  for damage, count := range testDamageData {
-    result[damage] = float64(count) / float64(totalCount)
-  }
-  return result
-}
-
-type DamageProbabilityDistribution map[int]float64
-
-func (d1 DamageProbabilityDistribution) ErrorValue(d2 DamageProbabilityDistribution) map[int]float64 {
-  result := map[int]float64{}
-  for damage, percent1 := range d1 {
-    if _, ok := d2[damage]; !ok {
-      result[damage] = 999.0
-    } else {
-      percent2 := d2[damage]
-      result[damage] = math.Abs(percent1 - percent2)
+func (testCurrentHPs TestCurrentHPs) Min() State_ {
+  keys := testCurrentHPs.NewKeyState_s()
+  result := keys[0]
+  for _, currentHP := range keys {
+    if result > currentHP {
+      result = currentHP
     }
   }
   return result
 }
 
+func (testCurrentHPs TestCurrentHPs) Max() State_ {
+  result := State_(0)
+  for currentHP, _ := range testCurrentHPs {
+    if result < currentHP {
+      result = currentHP
+    }
+  }
+  return result
+}
+
+func (testCurrentHPs TestCurrentHPs) Increment(currentHP State_) {
+  if _, ok := testCurrentHPs[currentHP]; ok {
+    testCurrentHPs[currentHP] += 1
+  } else {
+    testCurrentHPs[currentHP] = 1
+  }
+}
+
+func (testCurrentHPs TestCurrentHPs) SumCount() int {
+  result := 0
+  for _, count := range testCurrentHPs {
+    result += count
+  }
+  return result
+}
+
+func (testCurrentHPs TestCurrentHPs) Percent(currentHP State_) float64 {
+  count  := testCurrentHPs[currentHP]
+  return float64(count) / float64(testCurrentHPs.SumCount())
+}
+
 func NewTestVenusaur() Pokemon {
   result, err := NewPokemon(
-    "フシギバナ", "しんちょう", "しんりょく",
-    "♀", "なし", MoveNames{"はなふぶき"}, PointUps{0},
-    &ALL_MAX_INDIVIDUAL, &HD252_S4,
+    "フシギバナ", "しんちょう", "しんりょく", "♀", "くろいヘドロ",
+    MoveNames{"ギガドレイン", "やどりぎのタネ", "まもる", "ヘドロばくだん"},
+    ALL_MAX_POINT_UPS[MAX_MOVESET_LENGTH], &ALL_MAX_INDIVIDUAL, &HD252_S4,
   )
 
   if err != nil {
@@ -109,9 +67,9 @@ func NewTestVenusaur() Pokemon {
 
 func NewTestCharizard() Pokemon {
   result, err := NewPokemon(
-    "リザードン", "おくびょう", "もうか",
-    "♂", "なし", MoveNames{"かえんほうしゃ"}, PointUps{1},
-    &ALL_MAX_INDIVIDUAL, &CS252_H4,
+    "リザードン", "おくびょう", "もうか", "♂", "こだわりスカーフ",
+    MoveNames{"かえんほうしゃ", "エアスラッシュ", "りゅうのはどう", "オーバーヒート"},
+    ALL_MAX_POINT_UPS[MAX_MOVESET_LENGTH], &ALL_MAX_INDIVIDUAL, &CS252_H4,
   )
 
   if err != nil {
@@ -123,8 +81,8 @@ func NewTestCharizard() Pokemon {
 func NewTestBlastoise() Pokemon {
   result, err := NewPokemon(
     "カメックス", "ひかえめ", "げきりゅう",
-    "♂", "なし", MoveNames{"ハイドロポンプ"}, PointUps{3},
-    &ALL_MAX_INDIVIDUAL, &HC252_S4,
+    "♂", "しろいハーブ", MoveNames{"ハイドロカノン", "からをやぶる", "れいとうビーム", "あくのはどう"},
+    ALL_MAX_POINT_UPS[MAX_MOVESET_LENGTH], &ALL_MAX_INDIVIDUAL, &CS252_H4,
   )
 
   if err != nil {
@@ -136,8 +94,86 @@ func NewTestBlastoise() Pokemon {
 func NewTestAerodactyl() Pokemon {
   result, err := NewPokemon(
     "プテラ", "ようき", "プレッシャー", "♂", "きあいのタスキ",
-    MoveNames{"ストーンエッジ"}, PointUps{3},
-    &ALL_MAX_INDIVIDUAL, &AS252_H4,
+    MoveNames{"がんせきふうじ", "じしん", "ステルスロック", "ちょうはつ"},
+    ALL_MAX_POINT_UPS[MAX_MOVESET_LENGTH], &ALL_MAX_INDIVIDUAL, &AS252_H4,
+  )
+
+  if err != nil {
+    panic(err)
+  }
+  return result
+}
+
+func NewTestNinetales() Pokemon {
+  result, err := NewPokemon(
+    "キュウコン", "おくびょう", "ひでり", "♀", "きあいのタスキ",
+    MoveNames{"マジカルフレイム", "おにび", "ソーラービーム", "おきみやげ"},
+    ALL_MAX_POINT_UPS[MAX_MOVESET_LENGTH], &ALL_MAX_INDIVIDUAL, &CS252_H4,
+  )
+
+  if err != nil {
+    panic(err)
+  }
+  return result
+}
+
+func NewTestBlissey() Pokemon {
+  result, err := NewPokemon(
+    "ハピナス", "ひかえめ", "てんのめぐみ", "♀", "たべのこし",
+    MoveNames{"トライアタック", "シャドーボール", "タマゴうみ", "れいとうビーム"},
+    ALL_MAX_POINT_UPS[MAX_MOVESET_LENGTH], &ALL_MAX_INDIVIDUAL, &CB252_S4,
+  )
+
+  if err != nil {
+    panic(err)
+  }
+  return result
+}
+
+func NewTestTyranitar() Pokemon {
+  result, err := NewPokemon(
+    "バンギラス", "いじっぱり", "すなおこし", "♂", "とつげきチョッキ",
+    MoveNames{"ストーンエッジ", "かみくだく", "アイアンヘッド", "ばかぢから"},
+    ALL_MAX_POINT_UPS[MAX_MOVESET_LENGTH], &ALL_MAX_INDIVIDUAL, &HA252_S4,
+  )
+
+  if err != nil {
+    panic(err)
+  }
+  return result
+}
+
+func NewTestLudicolo() Pokemon {
+  result, err := NewPokemon(
+    "ルンパッパ", "おだやか", "あめうけざら", "♀", "たべのこし",
+    MoveNames{"なみのり", "あまごい", "やどりぎのタネ", "まもる"},
+    ALL_MAX_POINT_UPS[MAX_MOVESET_LENGTH], &ALL_MAX_INDIVIDUAL, &HD252_S4,
+  )
+
+  if err != nil {
+    panic(err)
+  }
+  return result
+}
+
+func NewTestToxicroak() Pokemon {
+  result, err := NewPokemon(
+    "ドクロッグ", "ようき", "かんそうはだ", "♀", "きあいのタスキ",
+    MoveNames{"ヘドロばくだん", "こごえるかぜ", "ちょうはつ", "どくどく"},
+    ALL_MAX_POINT_UPS[MAX_MOVESET_LENGTH], &ALL_MAX_INDIVIDUAL, &CS252_H4,
+  )
+
+  if err != nil {
+    panic(err)
+  }
+  return result
+}
+
+func NewTestCresselia() Pokemon {
+  result, err := NewPokemon(
+    "クレセリア", "ずぶとい", "ふゆう", "♀", "オボンのみ",
+    MoveNames{"サイコキネシス", "れいとうビーム", "つきのひかり", "みかづきのまい"},
+    ALL_MAX_POINT_UPS[MAX_MOVESET_LENGTH], &ALL_MAX_INDIVIDUAL, &HB252_S4,
   )
 
   if err != nil {
@@ -150,5 +186,10 @@ var TEST_POKEMONS = map[PokeName]func()Pokemon{
 	"フシギバナ":NewTestVenusaur,
 	"リザードン":NewTestCharizard,
 	"カメックス":NewTestBlastoise,
+  "キュウコン":NewTestNinetales,
 	"プテラ":NewTestAerodactyl,
+  "バンギラス":NewTestTyranitar,
+  "ルンパッパ":NewTestLudicolo,
+  "ドクロッグ":NewTestToxicroak,
+  "クレセリア":NewTestCresselia,
 }

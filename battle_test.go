@@ -1,8 +1,8 @@
-
 package bippa
+
 import (
-  "testing"
   "fmt"
+  "testing"
   "math/rand"
   "github.com/seehuhn/mt19937"
   "time"
@@ -14,70 +14,70 @@ func init() {
   mtRandom.Seed(time.Now().UnixNano())
 }
 
-func NoEffectAttackMoveHelper(initBattle Battle, p1BattleCommand, p2BattleCommand BattleCommand,
-  p1PtpDamage, p2PtpDamage *PtpDamage, p1Accuracy, p2Accuracy, testNum int, permissionErrorValue float64) string {
-  p1TrueDamageProbabilityDistribution := p1PtpDamage.NewDamageProbabilityDistribution(p2Accuracy)
-  p2TrueDamageProbabilityDistribution := p2PtpDamage.NewDamageProbabilityDistribution(p1Accuracy)
-  p1TestDamageData := TestDamageData{0:0}
-  p2TestDamageData := TestDamageData{0:0}
-
-  for i := 0; i < testNum; i++ {
-    battle, err := initBattle.Run(p1BattleCommand, mtRandom)
-    if err != nil {
-      panic(err)
-    }
-
-    battle, err = battle.Run(p2BattleCommand, mtRandom)
-    if err != nil {
-      panic(err)
-    }
-
-    p1Damage := battle.P1Fighters[0].CurrentDamage()
-    p2Damage := battle.P2Fighters[0].CurrentDamage()
-    p1TestDamageData.Increment(p1Damage)
-    p2TestDamageData.Increment(p2Damage)
-  }
-
-  p1TestDamageProbabilityDistribution := p1TestDamageData.NewDamageProbabilityDistribution()
-  p1ErrorValue := p1TrueDamageProbabilityDistribution.ErrorValue(p1TestDamageProbabilityDistribution)
-  for damage, errorValue := range p1ErrorValue {
-    if permissionErrorValue < errorValue {
-      return fmt.Sprintf("p1Damage %v errorValue = %v", damage, errorValue)
-    }
-  }
-
-  p2TestDamageProbabilityDistribution := p2TestDamageData.NewDamageProbabilityDistribution()
-  p2ErrorValue := p2TrueDamageProbabilityDistribution.ErrorValue(p2TestDamageProbabilityDistribution)
-  for damage, errorValue := range p2ErrorValue {
-    if permissionErrorValue < errorValue {
-      return fmt.Sprintf("p2Damage %v errorValue = %v", damage, errorValue)
-    }
-  }
-  return ""
-}
-
-func TestNoEffectAttackMove(t *testing.T) {
+func TestGigaDrain(t *testing.T) {
   p1Fighters := Fighters{
-    TEST_POKEMONS["カメックス"](), TEST_POKEMONS["リザードン"](), TEST_POKEMONS["フシギバナ"](),
+    TEST_POKEMONS["フシギバナ"](),
+    TEST_POKEMONS["リザードン"](),
+    TEST_POKEMONS["カメックス"](),
   }
 
   p2Fighters := Fighters{
-    TEST_POKEMONS["フシギバナ"](), TEST_POKEMONS["リザードン"](), TEST_POKEMONS["カメックス"](),
+    TEST_POKEMONS["カメックス"](),
+    TEST_POKEMONS["リザードン"](),
+    TEST_POKEMONS["フシギバナ"](),
   }
 
-  battle := Battle{P1Fighters:p1Fighters, P2Fighters:p2Fighters}
-  p1PtpDamage := PtpDamage{}
-  p1PtpDamage.NoCritical = map[int]int{86:1, 90:3, 92:3, 96:3, 98:3, 102:2, 104:1}
-  p1PtpDamage.Critical = map[int]int{132:2, 134:2, 138:2, 140:2, 144:2, 146:2, 150:2, 152:1, 156:1}
+  p1Fighters[0].State.CurrentHP = 111
+  p1TestCurrentHPs := TestCurrentHPs{}
+  p2TestCurrentHPs := TestCurrentHPs{}
 
-  p2PtpDamage := PtpDamage{}
-  p2PtpDamage.NoCritical = map[int]int{28:2, 29:2, 30:5, 31:2, 32:2, 33:3}
-  p2PtpDamage.Critical = map[int]int{42:3, 43:2, 44:1, 45:3, 46:2, 47:1, 48:3, 49:1, 50:1}
+  initBattle := Battle{P1Fighters:p1Fighters, P2Fighters:p2Fighters}
+  testSimuNum := 12800
 
-  errMsg := NoEffectAttackMoveHelper(battle, "ハイドロポンプ", "はなふぶき", &p1PtpDamage, &p2PtpDamage,
-    80, 100, 12800, 0.01)
+  for i := 0; i < testSimuNum; i++ {
+    battle, err := initBattle.Run("ギガドレイン", mtRandom)
+    if err != nil {
+      panic(err)
+    }
 
-  if errMsg != "" {
-    t.Errorf(errMsg)
+    battle, err = battle.Run("れいとうビーム", mtRandom)
+    if err != nil {
+      panic(err)
+    }
+
+    p1CurrentHP := battle.P1Fighters[0].State.CurrentHP
+    p2CurrentHP := battle.P2Fighters[0].State.CurrentHP
+    p1TestCurrentHPs.Increment(p1CurrentHP)
+    p2TestCurrentHPs.Increment(p2CurrentHP)
   }
+
+  //p1GigaDrainMinDamage := 74
+  p1GigaDrainMaxDamage := 134
+  p1BlackSludgeFloatHeal := 187.0 / 16.0
+  p1BlackSludgeHeal := int(p1BlackSludgeFloatHeal)
+  expectedP2MaxHP := 155
+
+  expectedP1MinCurrentHP := State_(1 + p1BlackSludgeHeal)
+  expectedP1MaxCurrentHP := State_((111 - 62) + (p1GigaDrainMaxDamage / 2) + p1BlackSludgeHeal)
+  expectedP2MinCurrentHP := State_(expectedP2MaxHP - p1GigaDrainMaxDamage)
+  expectedP2MaxCurrentHP := State_(expectedP2MaxHP)
+
+  if expectedP1MinCurrentHP != p1TestCurrentHPs.Min() {
+    t.Errorf("テスト失敗")
+  }
+
+  if expectedP1MaxCurrentHP != p1TestCurrentHPs.Max() {
+    t.Errorf("テスト失敗")
+  }
+
+  if expectedP2MinCurrentHP != p2TestCurrentHPs.Min() {
+    t.Errorf("テスト失敗")
+  }
+
+  if expectedP2MaxCurrentHP != p2TestCurrentHPs.Max() {
+    t.Errorf("テスト失敗")
+  }
+
+  fmt.Println(0.1 * 0.8)
+  fmt.Println(p2TestCurrentHPs.Percent(expectedP2MaxCurrentHP))
 }

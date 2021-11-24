@@ -41,3 +41,7 @@ func IsHit(percent int, random *rand.Rand) bool {
 func IsCritical(random *rand.Rand) bool {
 	return random.Intn(24) == 0
 }
+
+func GetSleepRemainingTurn(random *rand.Rand) int {
+	return random.Intn(3) + 2
+}

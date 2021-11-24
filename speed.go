@@ -38,26 +38,31 @@ func NewSpeedBonus(spovb *SelfPointOfViewBattle) SpeedBonus {
 	return result
 }
 
+//こだわりスカーフ
 func (speedBonus SpeedBonus) MulChoiceScarf() SpeedBonus {
   result := RoundingZeroPointFiveOrMore(float64(speedBonus) * 6144.0 / 4096.0)
   return SpeedBonus(result)
 }
 
+//すいすい
 func (speedBonus SpeedBonus) MulSwiftSwim() SpeedBonus {
   result := RoundingZeroPointFiveOrMore(float64(speedBonus) * 8192.0 / 4096.0)
   return SpeedBonus(result)
 }
 
+//ゆきかき
 func (speedBonus SpeedBonus) MulSlushRush() SpeedBonus {
   result := RoundingZeroPointFiveOrMore(float64(speedBonus) * 8192.0 / 4096.0)
   return SpeedBonus(result)
 }
 
+//すなかき
 func (speedBonus SpeedBonus) MulSandRush() SpeedBonus {
   result := RoundingZeroPointFiveOrMore(float64(speedBonus) * 8192.0 / 4096.0)
   return SpeedBonus(result)
 }
 
+//ようりょくそ
 func (speedBonus SpeedBonus) MulChlorophyll() SpeedBonus {
   result := RoundingZeroPointFiveOrMore(float64(speedBonus) * 8192.0 / 4096.0)
   return SpeedBonus(result)
@@ -72,5 +77,6 @@ func NewFinalSpeed(spovb *SelfPointOfViewBattle) FinalSpeed {
 
 	result := RoundingZeroPointFiveOrMore(float64(speed) * float64(rankBonus))
 	result = RoundingZeroPointFiveOver(float64(result) * float64(speedBonus) / 4096.0)
+  result = int(float64(result) * float64(PARALYSIS_BONUS))
   return FinalSpeed(result)
 }

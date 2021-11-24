@@ -22,33 +22,34 @@ type Effort struct {
 }
 
 var (
-	HA252_B4 = Effort{HP: 252, Atk: 252, Def: 4, SpAtk: 0, SpDef: 0, Speed: 0}
-	HA252_C4 = Effort{HP: 252, Atk: 252, Def: 0, SpAtk: 4, SpDef: 0, Speed: 0}
-	HA252_D4 = Effort{HP: 252, Atk: 252, Def: 0, SpAtk: 0, SpDef: 4, Speed: 0}
-	HA252_S4 = Effort{HP: 252, Atk: 252, Def: 0, SpAtk: 0, SpDef: 0, Speed: 4}
+	HA252_B4 = Effort{HP: MAX_EFFORT_, Atk: MAX_EFFORT_, Def: 4, SpAtk: 0, SpDef: 0, Speed: 0}
+	HA252_C4 = Effort{HP: MAX_EFFORT_, Atk: MAX_EFFORT_, Def: 0, SpAtk: 4, SpDef: 0, Speed: 0}
+	HA252_D4 = Effort{HP: MAX_EFFORT_, Atk: MAX_EFFORT_, Def: 0, SpAtk: 0, SpDef: 4, Speed: 0}
+	HA252_S4 = Effort{HP: MAX_EFFORT_, Atk: MAX_EFFORT_, Def: 0, SpAtk: 0, SpDef: 0, Speed: 4}
 
-	HB252_A4 = Effort{HP: 252, Atk: 4, Def: 252, SpAtk: 0, SpDef: 0, Speed: 0}
-	HB252_C4 = Effort{HP: 252, Atk: 0, Def: 252, SpAtk: 4, SpDef: 0, Speed :0}
-	HB252_D4 = Effort{HP: 252, Atk: 0, Def: 252, SpAtk: 0, SpDef: 4, Speed: 0}
-	HB252_S4 = Effort{HP: 252, Atk: 0, Def: 252, SpAtk: 0, SpDef: 0, Speed: 4}
+	HB252_A4 = Effort{HP: MAX_EFFORT_, Atk: 4, Def: MAX_EFFORT_, SpAtk: 0, SpDef: 0, Speed: 0}
+	HB252_C4 = Effort{HP: MAX_EFFORT_, Atk: 0, Def: MAX_EFFORT_, SpAtk: 4, SpDef: 0, Speed :0}
+	HB252_D4 = Effort{HP: MAX_EFFORT_, Atk: 0, Def: MAX_EFFORT_, SpAtk: 0, SpDef: 4, Speed: 0}
+	HB252_S4 = Effort{HP: MAX_EFFORT_, Atk: 0, Def: MAX_EFFORT_, SpAtk: 0, SpDef: 0, Speed: 4}
 
-	HC252_S4 = Effort{HP: 252, Atk: 0, Def: 0, SpAtk: 252, SpDef: 0, Speed: 4}
+	HC252_S4 = Effort{HP: MAX_EFFORT_, Atk: 0, Def: 0, SpAtk: MAX_EFFORT_, SpDef: 0, Speed: 4}
 
-	HS252_C4 = Effort{HP: 252, Atk: 0, Def: 0, SpAtk: 4, SpDef: 0, Speed: 252}
+	HS252_C4 = Effort{HP: MAX_EFFORT_, Atk: 0, Def: 0, SpAtk: 4, SpDef: 0, Speed: 252}
 
-	HD252_B4 = Effort{HP: 252, Atk: 0, Def: 4, SpAtk: 0, SpDef: 252, Speed: 0}
-	HD252_S4 = Effort{HP: 252, Atk: 0, Def: 0, SpAtk: 0, SpDef: 252, Speed: 4}
+	HD252_B4 = Effort{HP: MAX_EFFORT_, Atk: 0, Def: 4, SpAtk: 0, SpDef: MAX_EFFORT_, Speed: 0}
+	HD252_S4 = Effort{HP: MAX_EFFORT_, Atk: 0, Def: 0, SpAtk: 0, SpDef: MAX_EFFORT_, Speed: 4}
 
-	AD252_H4 = Effort{HP: 4, Atk: 252, Def: 0, SpAtk: 0, SpDef: 252, Speed: 0}
+	AD252_H4 = Effort{HP: 4, Atk: MAX_EFFORT_, Def: 0, SpAtk: 0, SpDef: MAX_EFFORT_, Speed: 0}
 
-	AS252_H4 = Effort{HP: 4, Atk: 252, Def: 0, SpAtk: 0, SpDef: 0, Speed: 252}
+	AS252_H4 = Effort{HP: 4, Atk: MAX_EFFORT_, Def: 0, SpAtk: 0, SpDef: 0, Speed: 252}
 
-	BC252_H4 = Effort{HP: 4, Atk: 0, Def: 252, SpAtk: 252, SpDef: 0, Speed: 0}
-	BC252_S4 = Effort{HP: 0, Atk: 0, Def: 252, SpAtk: 252, SpDef: 0, Speed: 4}
+	BC252_H4 = Effort{HP: 4, Atk: 0, Def: MAX_EFFORT_, SpAtk: MAX_EFFORT_, SpDef: 0, Speed: 0}
+	BC252_S4 = Effort{HP: 0, Atk: 0, Def: MAX_EFFORT_, SpAtk: MAX_EFFORT_, SpDef: 0, Speed: 4}
 
-	CD252_H4 = Effort{HP: 4, Atk: 0, Def: 0, SpAtk: 252, SpDef: 252, Speed: 0}
-	CS252_H4 = Effort{HP: 4, Atk: 0, Def: 0, SpAtk: 252, SpDef: 0, Speed: 252}
-	CS252_B4 = Effort{HP: 0, Atk: 0, Def: 4, SpAtk: 252, SpDef: 0, Speed: 252}
+	CB252_S4 = Effort{HP:0, Atk:0, Def:MAX_EFFORT_, SpAtk:MAX_EFFORT_, Speed:4}
+	CD252_H4 = Effort{HP: 4, Atk: 0, Def: 0, SpAtk: MAX_EFFORT_, SpDef: MAX_EFFORT_, Speed: 0}
+	CS252_H4 = Effort{HP: 4, Atk: 0, Def: 0, SpAtk: MAX_EFFORT_, SpDef: 0, Speed: 252}
+	CS252_B4 = Effort{HP: 0, Atk: 0, Def: 4, SpAtk: MAX_EFFORT_, SpDef: 0, Speed: 252}
 )
 
 func (effort *Effort) Sum() Effort_ {
