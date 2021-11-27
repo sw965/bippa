@@ -239,36 +239,29 @@ func NewSunnyDay(spovb SelfPointOfViewBattle, _ *rand.Rand) SelfPointOfViewBattl
   return spovb
 }
 
-func NewSelfRankFluctuationMove(spovb SelfPointOfViewBattle, fluctuationRank *Rank) SelfPointOfViewBattle {
-  rank := spovb.SelfFighters[0].Rank
-  newRank := rank.Add(fluctuationRank)
-  spovb.SelfFighters[0].Rank = newRank.Regulate()
-  return spovb
-}
-
 //つるぎのまい
 func NewSwordsDance(spovb SelfPointOfViewBattle, _ *rand.Rand) SelfPointOfViewBattle {
-  return NewSelfRankFluctuationMove(spovb, &Rank{Atk:2})
+  return spovb.RankFluctuation(&Rank{Atk:2})
 }
 
 //りゅうのまい
 func NewDragonDance(spovb SelfPointOfViewBattle, _ *rand.Rand) SelfPointOfViewBattle {
-  return NewSelfRankFluctuationMove(spovb, &Rank{Atk:1, Speed:1})
+  return spovb.RankFluctuation(&Rank{Atk:1, Speed:1})
 }
 
 //からをやぶる
 func NewShellSmash(spovb SelfPointOfViewBattle, _ *rand.Rand) SelfPointOfViewBattle {
-  return NewSelfRankFluctuationMove(spovb, &Rank{Atk:2, Def:-1, SpAtk:2, SpDef:-1, Speed:2})
+  return spovb.RankFluctuation(&Rank{Atk:2, Def:-1, SpAtk:2, SpDef:-1, Speed:2})
 }
 
 //てっぺき
 func NewIronDefense(spovb SelfPointOfViewBattle, _ *rand.Rand) SelfPointOfViewBattle {
-  return NewSelfRankFluctuationMove(spovb, &Rank{Def:2})
+  return spovb.RankFluctuation(&Rank{Def:2})
 }
 
 //めいそう
 func NewCalmMind(spovb SelfPointOfViewBattle, _ *rand.Rand) SelfPointOfViewBattle {
-  return NewSelfRankFluctuationMove(spovb, &Rank{SpAtk:1, SpDef:1})
+  return spovb.RankFluctuation(&Rank{SpAtk:1, SpDef:1})
 }
 
 var STATUS_MOVES = map[MoveName]StatusMove{

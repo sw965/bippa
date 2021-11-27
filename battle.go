@@ -617,3 +617,37 @@ func (battle *Battle) Winner() (Winner, error) {
 		return WINNER_P1, nil
 	}
 }
+
+func (battle Battle) RepeatRun(p1BattleCommand, p2BattleCommand BattleCommand, repeatNum int, random *rand.Rand) (Battles, error) {
+	result := make(Battles, repeatNum)
+	for i := 0; i < repeatNum; i++ {
+		tmp, err := battle.Run(p1BattleCommand, random)
+		if err != nil {
+			return Battles{}, err
+		}
+
+		resultBattle, err := tmp.Run(p2BattleCommand, random)
+		if err != nil {
+			return Battles{}, err
+		}
+		result[i] = resultBattle
+	}
+	return result, nil
+}
+
+type Battles []Battle
+
+func (battles Battles) Filter(f func(battle Battle) bool) Battles {
+	result := make(Battles, 0)
+	for _, battle := range battles {
+		if f(battle) {
+			result = append(result, battle)
+		}
+	}
+	return result
+}
+
+func (battles Battles) FilterPercent(f func(battle Battle) bool) float64 {
+	filteredBattles := battles.Filter(f)
+	return float64(len(filteredBattles)) / float64(len(battles))
+}

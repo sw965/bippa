@@ -1,57 +1,5 @@
 package bippa
 
-type TestCurrentHPs map[State_]int
-
-func (testCurrentHPs TestCurrentHPs) NewKeyState_s() []State_ {
-  result := make([]State_, 0, len(testCurrentHPs))
-  for currentHP, _ := range testCurrentHPs {
-    result = append(result, currentHP)
-  }
-  return result
-}
-
-func (testCurrentHPs TestCurrentHPs) Min() State_ {
-  keys := testCurrentHPs.NewKeyState_s()
-  result := keys[0]
-  for _, currentHP := range keys {
-    if result > currentHP {
-      result = currentHP
-    }
-  }
-  return result
-}
-
-func (testCurrentHPs TestCurrentHPs) Max() State_ {
-  result := State_(0)
-  for currentHP, _ := range testCurrentHPs {
-    if result < currentHP {
-      result = currentHP
-    }
-  }
-  return result
-}
-
-func (testCurrentHPs TestCurrentHPs) Increment(currentHP State_) {
-  if _, ok := testCurrentHPs[currentHP]; ok {
-    testCurrentHPs[currentHP] += 1
-  } else {
-    testCurrentHPs[currentHP] = 1
-  }
-}
-
-func (testCurrentHPs TestCurrentHPs) SumCount() int {
-  result := 0
-  for _, count := range testCurrentHPs {
-    result += count
-  }
-  return result
-}
-
-func (testCurrentHPs TestCurrentHPs) Percent(currentHP State_) float64 {
-  count  := testCurrentHPs[currentHP]
-  return float64(count) / float64(testCurrentHPs.SumCount())
-}
-
 func NewTestVenusaur() Pokemon {
   result, err := NewPokemon(
     "フシギバナ", "しんちょう", "しんりょく", "♀", "くろいヘドロ",

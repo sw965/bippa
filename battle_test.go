@@ -1,7 +1,6 @@
 package bippa
 
 import (
-  "fmt"
   "testing"
   "math/rand"
   "github.com/seehuhn/mt19937"
@@ -27,57 +26,42 @@ func TestGigaDrain(t *testing.T) {
     TEST_POKEMONS["フシギバナ"](),
   }
 
-  p1Fighters[0].State.CurrentHP = 111
-  p1TestCurrentHPs := TestCurrentHPs{}
-  p2TestCurrentHPs := TestCurrentHPs{}
-
-  initBattle := Battle{P1Fighters:p1Fighters, P2Fighters:p2Fighters}
   testSimuNum := 12800
+  p1Fighters[0].State.CurrentHP = 1
+  initTestBattle := Battle{P1Fighters:p1Fighters, P2Fighters:p2Fighters}
+  battleResults, err := initTestBattle.RepeatRun("ギガドレイン", "からをやぶる", testSimuNum, mtRandom)
 
-  for i := 0; i < testSimuNum; i++ {
-    battle, err := initBattle.Run("ギガドレイン", mtRandom)
-    if err != nil {
-      panic(err)
-    }
-
-    battle, err = battle.Run("れいとうビーム", mtRandom)
-    if err != nil {
-      panic(err)
-    }
-
-    p1CurrentHP := battle.P1Fighters[0].State.CurrentHP
-    p2CurrentHP := battle.P2Fighters[0].State.CurrentHP
-    p1TestCurrentHPs.Increment(p1CurrentHP)
-    p2TestCurrentHPs.Increment(p2CurrentHP)
+  if err != nil {
+    panic(err)
   }
 
-  //p1GigaDrainMinDamage := 74
-  p1GigaDrainMaxDamage := 134
-  p1BlackSludgeFloatHeal := 187.0 / 16.0
-  p1BlackSludgeHeal := int(p1BlackSludgeFloatHeal)
-  expectedP2MaxHP := 155
+  //条件付確率 p2のカメックスのCurrentHPが81(ギガドレインのダメージが74)であるという前提
+  //初期HP + ギガドレインの回復量 + くろいヘドロの回復量
+  p1GigaDrainHeal40Percent := battleResults.Filter(
+    func(battle Battle) bool {
+      return battle.P2Fighters[0].State.CurrentHP == 81
+    },
+  ).FilterPercent(
+    func(battle Battle) bool {
+      return battle.P1Fighters[0].State.CurrentHP == (1 + 37 + 11)
+    },
+  )
 
-  expectedP1MinCurrentHP := State_(1 + p1BlackSludgeHeal)
-  expectedP1MaxCurrentHP := State_((111 - 62) + (p1GigaDrainMaxDamage / 2) + p1BlackSludgeHeal)
-  expectedP2MinCurrentHP := State_(expectedP2MaxHP - p1GigaDrainMaxDamage)
-  expectedP2MaxCurrentHP := State_(expectedP2MaxHP)
-
-  if expectedP1MinCurrentHP != p1TestCurrentHPs.Min() {
+  if p1GigaDrainHeal40Percent != 1.0 {
     t.Errorf("テスト失敗")
   }
 
-  if expectedP1MaxCurrentHP != p1TestCurrentHPs.Max() {
+  p1GigaDrainHeal67Percent := battleResults.Filter(
+    func(battle Battle) bool {
+      return battle.P2Fighters[0].State.CurrentHP == 21
+    },
+  ).FilterPercent(
+    func(battle Battle) bool {
+      return battle.P1Fighters[0].State.CurrentHP == (1 + 67 + 11)
+    },
+  )
+
+  if p1GigaDrainHeal67Percent != 1.0 {
     t.Errorf("テスト失敗")
   }
-
-  if expectedP2MinCurrentHP != p2TestCurrentHPs.Min() {
-    t.Errorf("テスト失敗")
-  }
-
-  if expectedP2MaxCurrentHP != p2TestCurrentHPs.Max() {
-    t.Errorf("テスト失敗")
-  }
-
-  fmt.Println(0.1 * 0.8)
-  fmt.Println(p2TestCurrentHPs.Percent(expectedP2MaxCurrentHP))
 }
