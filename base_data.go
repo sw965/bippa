@@ -1,25 +1,24 @@
 package bippa
 
 import (
-	"os"
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
+	"os"
 	"strings"
 	"github.com/sw965/omw"
 )
 
 var (
-	DATA_PATH      = os.Getenv("GOPATH") + "/seviper/data/"
+	DATA_PATH      = os.Getenv("GOPATH") + "/raticate/data/"
 	POKEDEX_PATH   = DATA_PATH + "pokedex/"
 	MOVEDEX_PATH   = DATA_PATH + "movedex/"
 	NATUREDEX_PATH = DATA_PATH + "naturedex.json"
 	TYPEDEX_PATH   = DATA_PATH + "typedex.json"
 
-	ALL_POKE_NAMES_PATH = DATA_PATH + "all_poke_names.txt"
-	ALL_MOVE_NAMES_PATH = DATA_PATH + "all_move_names.txt"
-	ONE_HIT_KO_MOVE_NAMES_PATH = DATA_PATH + "one_hit_ko_move_names.txt"
-	ALL_ITEMS_PATH      = DATA_PATH + "all_items.txt"
+	ALL_POKE_NAMES_PATH        = DATA_PATH + "all_poke_names.txt"
+	ALL_NATURES_PATH           = DATA_PATH + "all_natures.txt"
+	ALL_MOVE_NAMES_PATH        = DATA_PATH + "all_move_names.txt"
+	ALL_ITEMS_PATH             = DATA_PATH + "all_items.txt"
 )
 
 type PokeData struct {
@@ -27,8 +26,8 @@ type PokeData struct {
 	HiddenAbility   Ability
 	AllAbilities    Abilities
 
-	Gender Gender
-	Types  Types
+	Gender string
+	Types      Types
 
 	BaseHP    int
 	BaseAtk   int
@@ -89,6 +88,18 @@ var ALL_POKE_NAMES = func() PokeNames {
 	return result
 }()
 
+var ALL_ABILITIES = func() Abilities {
+	result := make(Abilities, 0)
+	for _, pokeData := range POKEDEX {
+		for _, ability := range pokeData.AllAbilities {
+			if !result.In(ability) {
+				result = append(result, ability)
+			}
+		}
+	}
+	return result
+}
+
 type MoveData struct {
 	Type     Type
 	Category string
@@ -108,7 +119,7 @@ type MoveData struct {
 	GigantamaxPower int
 
 	PriorityRank int
-	CriticalRank int
+	CriticalRank CriticalRank
 
 	MinAttackNum int
 	MaxAttackNum int
@@ -157,26 +168,12 @@ var ALL_MOVE_NAMES = func() MoveNames {
 	return result
 }()
 
-var ONE_HIT_KO_MOVE_NAMES = func() MoveNames {
-	oneHitKoMoveNames, err := omw.ReadTextLines(ONE_HIT_KO_MOVE_NAMES_PATH)
-	if err != nil {
-		panic(err)
-	}
-
-	result := make(MoveNames, len(oneHitKoMoveNames))
-	for i, moveName := range oneHitKoMoveNames {
-		result[i] = MoveName(moveName)
-	}
-	return result
-}()
-
 type NatureData struct {
-	ID         int
-	AtkBonus   float64
-	DefBonus   float64
-	SpAtkBonus float64
-	SpDefBonus float64
-	SpeedBonus float64
+	AtkBonus   NatureBonus
+	DefBonus   NatureBonus
+	SpAtkBonus NatureBonus
+	SpDefBonus NatureBonus
+	SpeedBonus NatureBonus
 }
 
 type Naturedex map[Nature]*NatureData
@@ -195,27 +192,15 @@ var NATUREDEX = func() Naturedex {
 	return result
 }()
 
-var NATUREDEX_LENGTH = len(NATUREDEX)
-
-func (naturedex Naturedex) IDToNature(id int) (Nature, error) {
-	for nature, natureData := range NATUREDEX {
-		if natureData.ID == id {
-			return Nature(nature), nil
-		}
-	}
-	errMsg := fmt.Sprintf("NATUREDEXにID:%vは存在しない", id)
-	return "", fmt.Errorf(errMsg)
-}
-
 var ALL_NATURES = func() Natures {
-	var err error
-	result := make(Natures, NATUREDEX_LENGTH)
+	allNatures, err := omw.ReadTextLines(ALL_NATURES_PATH)
+	if err != nil {
+		panic(err)
+	}
 
-	for i := 0; i < NATUREDEX_LENGTH; i++ {
-		result[i], err = NATUREDEX.IDToNature(i)
-		if err != nil {
-			panic(err)
-		}
+	result := make(Natures, len(allNatures))
+	for i, nature := range allNatures {
+		result[i] = Nature(nature)
 	}
 	return result
 }()
@@ -237,17 +222,19 @@ var TYPEDEX = func() Typedex {
 	return result
 }()
 
+const (
+	NO_ITEM = Item("なし")
+)
+
 var ALL_ITEMS = func() Items {
 	allItems, err := omw.ReadTextLines(ALL_ITEMS_PATH)
 	if err != nil {
 		panic(err)
 	}
 
-	result := make(Items, 0, len(allItems)+1)
+	result := make(Items, 0, len(allItems))
 	for _, item := range allItems {
 		result = append(result, Item(item))
 	}
-	result = append(result, "なし")
-
 	return result
 }()

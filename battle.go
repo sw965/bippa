@@ -2,430 +2,507 @@ package bippa
 
 import (
 	"fmt"
-	"math/rand"
+	"encoding/json"
+	"io/ioutil"
 	"github.com/sw965/omw"
+	"math/rand"
 )
 
-type SelfPointOfViewBattle struct {
-	SelfFighters Fighters
-	OpponentFighters Fighters
-
-	SelfField SelfField
-	OpponentField SelfField
-	ShareField ShareField
+func IsHit(n int, random *rand.Rand) bool {
+	return random.Intn(100) < n
 }
 
-func NewSelfPointOfView(selfFighters, opponentFIghters Fighters, needUI bool) SelfPointOfViewBattle {
-	return SelfPointOfViewBattle{SelfFighters:selfFighters, OpponentFighters:opponentFIghters,
-		SelfField:SelfField{}, OpponentField:SelfField{}}
-}
+type CriticalRank int
 
-func (spovb *SelfPointOfViewBattle) SwitchPointOfView() SelfPointOfViewBattle {
-	return SelfPointOfViewBattle{SelfFighters:spovb.OpponentFighters, OpponentFighters:spovb.SelfFighters,
-		SelfField:spovb.OpponentField, OpponentField:spovb.SelfField, ShareField:spovb.ShareField}
-}
+const (
+	MIN_TEAM_LENGTH = 3
+	MAX_TEAM_LENGTH = 6
+)
 
-func (spovb *SelfPointOfViewBattle) Accuracy(moveName MoveName, moveData *MoveData) int {
-	weatherType := spovb.ShareField.Weather.Type
+type Team []Pokemon
 
-	if moveName == "どくどく" && spovb.SelfFighters[0].Types.In(POISON) {
-		return 100
-	} else if moveName == "かみなり" && weatherType == RAIN {
-		return 100
-	} else if moveName == "ぼうふう" && weatherType == RAIN {
-		return 100
-	} else if moveName == "ふぶき" && weatherType == HAIL {
-		return 100
-	} else if moveName == "かみなり" && weatherType == SUNNY_DAY {
-		return 50
-	} else if moveName == "ぼうふう" && weatherType == SUNNY_DAY {
-		return 50
+func NewTeam(pokemons []Pokemon) (Team, error) {
+	team := Team(pokemons)
+
+	pokeNames := make(PokeNames, len(team))
+	for i, pokemon := range pokemons {
+		pokeNames[i] = pokemon.Name
+	}
+
+	if pokeNames.IsUnique() {
+		return Team{}, fmt.Errorf("同じポケモンを、チームに入れる事は出来ない")
+	}
+
+	teamLength := len(team)
+
+	if MIN_TEAM_LENGTH <= teamLength && MAX_TEAM_LENGTH >= teamLength {
+		return team, nil
 	} else {
-		return moveData.Accuracy
+		return Team{}, fmt.Errorf("チームは、%v匹～%v匹で構成されていなければならない", MIN_TEAM_LENGTH, MAX_TEAM_LENGTH)
 	}
 }
 
-func (spovb *SelfPointOfViewBattle) IsCritical(moveName MoveName, random *rand.Rand) bool {
-	if ONE_HIT_KO_MOVE_NAMES.In(moveName) {
-		return false
+const (
+	FIGHTERS_LENGTH = 3
+)
+
+type Fighters [FIGHTERS_LENGTH]Pokemon
+
+func (fighters1 *Fighters) Equal(fighters2 *Fighters) bool {
+	for i, pokemon := range fighters1 {
+		if !pokemon.Equal(&fighters2[i]) {
+			return false
+		}
+	}
+	return true
+}
+
+func (fighters *Fighters) Index(pokeName PokeName) int {
+	for i, pokemon := range fighters {
+		if pokemon.Name == pokeName {
+			return i
+		}
+	}
+	return -1
+}
+
+func (fighters *Fighters) PokeNames() PokeNames {
+	result := make(PokeNames, FIGHTERS_LENGTH)
+	for i, pokemon := range fighters {
+		result[i] = pokemon.Name
+	}
+	return result
+}
+
+func (fighters *Fighters) IsAllFaint() bool {
+	for _, pokemon := range fighters {
+		if !pokemon.IsFaint() {
+			return false
+		}
+	}
+	return true
+}
+
+func (fighters *Fighters) LegalActionMoveNames() MoveNames {
+	if fighters[0].IsFaint() {
+		return MoveNames{}
+	}
+
+	tmpResult := MoveNames{}
+	for moveName, powerPoint := range fighters[0].Moveset {
+		if powerPoint.Current > 0 {
+			tmpResult = append(tmpResult, moveName)
+		}
+	}
+
+	var result MoveNames
+
+	if fighters[0].ChoiceMoveName != "" {
+		result = MoveNames{fighters[0].ChoiceMoveName}
+	} else if fighters[0].Item == "とつげきチョッキ" {
+		for _, moveName := range tmpResult {
+			if MOVEDEX[moveName].Category != STATUS {
+				result = append(result, moveName)
+			}
+		}
 	} else {
-		return IsCritical(random)
+		result = tmpResult
+	}
+
+	if len(result) == 0 {
+		return MoveNames{STRUGGLE}
+	}
+	return result
+}
+
+func (fighters *Fighters) LegalActionPokeNames() []PokeName {
+	result := make([]PokeName, 0)
+	for _, pokemon := range fighters[1:] {
+		if !pokemon.IsFaint() {
+			result = append(result, pokemon.Name)
+		}
+	}
+	return result
+}
+
+func (fighters *Fighters) LegalActionCommands() ActionCommands {
+	legalActionMoveNames := fighters.LegalActionMoveNames()
+	legalActionPokeNames := fighters.LegalActionPokeNames()
+	result := make(ActionCommands, 0, len(legalActionMoveNames) + len(legalActionPokeNames))
+
+	for _, moveName := range legalActionMoveNames {
+		result = append(result, ActionCommand(moveName))
+	}
+
+	for _, pokeName := range legalActionPokeNames {
+		result = append(result, ActionCommand(pokeName))
+	}
+	return result
+}
+
+func (fighters *Fighters) Save(filePath string) error {
+	file, err := json.MarshalIndent(fighters, "", " ")
+	if err != nil {
+		return err
+	}
+	return ioutil.WriteFile(filePath, file, 0644)
+}
+
+func ReadFighters(filePath string) (Fighters, error) {
+	result := Fighters{}
+	file, err := ioutil.ReadFile(filePath)
+	if err != nil {
+		return Fighters{}, err
+	}
+	err = json.Unmarshal(file, &result)
+	return result, err
+}
+
+//https://wiki.xn--rckteqa2e.com/wiki/%E3%81%99%E3%81%B0%E3%82%84%E3%81%95#.E8.A9.B3.E7.B4.B0.E3.81.AA.E4.BB.95.E6.A7.98
+type SpeedBonus int
+
+const (
+	INIT_SPEED_BONUS = SpeedBonus(4096)
+)
+
+func NewSpeedBonus(battle *Battle) SpeedBonus {
+	result := int(INIT_SPEED_BONUS)
+	if battle.P1Fighters[0].Item == "こだわりスカーフ" {
+		result = FiveOrMoreRounding(float64(result) * 6144.0 / 4096.0)
+	}
+	return SpeedBonus(result)
+}
+
+type FinalSpeed float64
+
+func NewFinalSpeed(battle *Battle) FinalSpeed {
+	speed := battle.P1Fighters[0].Speed
+	rankBonus := battle.P1Fighters[0].Rank.Speed.ToBonus()
+	speedBonus := NewSpeedBonus(battle)
+
+	result := FiveOrMoreRounding(float64(speed) * float64(rankBonus))
+	result = FiveOverRounding(float64(result) * float64(speedBonus) / 4096.0)
+	return FinalSpeed(result)
+}
+
+type ActionCommand string
+
+func (actionCommand ActionCommand) IsMoveName() bool {
+	_, ok := MOVEDEX[MoveName(actionCommand)]
+	return ok
+}
+
+func (actionCommand ActionCommand) IsPokeName() bool {
+	_, ok := POKEDEX[PokeName(actionCommand)]
+	return ok
+}
+
+func (actionCommand ActionCommand) PriorityRank() int {
+	if actionCommand == ActionCommand(STRUGGLE) {
+		return 0
+	} else if actionCommand.IsMoveName() {
+		return MOVEDEX[MoveName(actionCommand)].PriorityRank
+	} else {
+		return 999
 	}
 }
 
-func (spovb SelfPointOfViewBattle) ToDamage(damage int) SelfPointOfViewBattle {
-	currentHP := spovb.SelfFighters[0].State.CurrentHP
+type ActionCommands []ActionCommand
+
+func (actionCommands ActionCommands) RandomChoice(random *rand.Rand) ActionCommand {
+	index := random.Intn(len(actionCommands))
+	return actionCommands[index]
+}
+
+type Action struct {
+	P1 ActionCommand
+	P2 ActionCommand
+}
+
+func (action *Action) IsP1Only() bool {
+	return action.P1 != "" && action.P2 == ""
+}
+
+func (action *Action) IsP2Only() bool {
+	return action.P1 == "" && action.P2 != ""
+}
+
+type Actions []Action
+
+func (actions Actions) RandomChoice(random *rand.Rand) Action {
+	index := random.Intn(len(actions))
+	return actions[index]
+}
+
+type Battle struct {
+	P1Fighters Fighters
+	P2Fighters Fighters
+}
+
+func (battle *Battle) Reverse() Battle {
+	return Battle{P1Fighters: battle.P2Fighters, P2Fighters: battle.P1Fighters}
+}
+
+func (battle *Battle) IsCritical(moveName MoveName, random *rand.Rand) bool {
+	//https://wiki.xn--rckteqa2e.com/wiki/%E6%80%A5%E6%89%80
+	criticalRank := MOVEDEX[moveName].CriticalRank
+	return random.Intn(CRITICAL_N[criticalRank]) == 0
+}
+
+func (battle Battle) Damage(damage int) Battle {
+	if battle.P1Fighters[0].IsFaint() {
+		return battle
+	}
+
+	currentHP := battle.P1Fighters[0].CurrentHP
 	intCurrentHP := int(currentHP)
 
 	if damage > intCurrentHP {
 		damage = intCurrentHP
 	}
 
-	spovb.SelfFighters[0].State.CurrentHP -= State_(damage)
-	return spovb.SitrusBerryHeal()
+	battle.P1Fighters[0].CurrentHP -= damage
+	return battle.SitrusBerryHeal()
 }
 
-func (spovb SelfPointOfViewBattle) Heal(heal int) SelfPointOfViewBattle {
-	currentDamage := spovb.SelfFighters[0].CurrentDamage()
+func (battle Battle) Heal(heal int) Battle {
+	if battle.P1Fighters[0].IsFaint() {
+		return battle
+	}
+
+	currentDamage := battle.P1Fighters[0].CurrentDamage()
 
 	if currentDamage < heal {
 		heal = currentDamage
 	}
 
-	spovb.SelfFighters[0].State.CurrentHP += State_(heal)
-	return spovb
+	battle.P1Fighters[0].CurrentHP += heal
+	return battle
 }
 
-func (spovb SelfPointOfViewBattle) RankFluctuation(fluctuationRank *Rank) SelfPointOfViewBattle {
-  rank := spovb.SelfFighters[0].Rank
-  newRank := rank.Add(fluctuationRank)
+func (battle Battle) RankFluctuation(fluctuationRank *Rank) Battle {
+	if battle.P1Fighters[0].IsFaint() {
+		return battle
+	}
 
-	if spovb.SelfFighters[0].Item == "しろいハーブ" && newRank.InDown() {
+	rank := battle.P1Fighters[0].Rank
+	newRank := rank.Add(fluctuationRank)
+
+	if battle.P1Fighters[0].Item == "しろいハーブ" && newRank.InDown() {
 		newRank = newRank.ResetDown()
 	}
 
-  spovb.SelfFighters[0].Rank = newRank.Regulate()
-	return spovb
+	battle.P1Fighters[0].Rank = newRank.Regulate()
+	return battle
 }
 
-func (spovb SelfPointOfViewBattle) SitrusBerryHeal() SelfPointOfViewBattle {
-	if spovb.SelfFighters[0].Item != "オボンのみ" {
-		return spovb
+func (battle Battle) SitrusBerryHeal() Battle {
+	if battle.P1Fighters[0].Item != "オボンのみ" {
+		return battle
 	}
 
-	if spovb.SelfFighters[0].IsFaint() {
-		return spovb
+	if battle.P1Fighters[0].IsFaint() {
+		return battle
 	}
 
-	maxHP := spovb.SelfFighters[0].State.MaxHP
-	currentHP := spovb.SelfFighters[0].State.CurrentHP
+	maxHP := battle.P1Fighters[0].MaxHP
+	currentHP := battle.P1Fighters[0].CurrentHP
 
 	if int(currentHP) <= int(float64(maxHP)*1.0/2.0) {
 		heal := int(float64(maxHP) * (1.0 / 4.0))
-		spovb = spovb.Heal(heal)
+		battle = battle.Heal(heal)
 	}
 
-	return spovb
+	return battle
 }
 
-func (spovb SelfPointOfViewBattle) AfterContact() SelfPointOfViewBattle {
-	if spovb.OpponentFighters[0].Ability == "てつのトゲ" {
-		damage := int(float64(spovb.SelfFighters[0].State.MaxHP) * 1.0 / 8.0)
-		spovb = spovb.ToDamage(damage)
+func (battle Battle) AfterContact() Battle {
+	if battle.P2Fighters[0].Ability == "てつのトゲ" {
+		damage := int(float64(battle.P1Fighters[0].MaxHP) * 1.0 / 8.0)
+		battle = battle.Damage(damage)
 	}
 
-	if spovb.OpponentFighters[0].Item == "ゴツゴツメット" {
-		damage := int(float64(spovb.SelfFighters[0].State.MaxHP) * 1.0 / 6.0)
-		spovb = spovb.ToDamage(damage)
+	if battle.P2Fighters[0].Item == "ゴツゴツメット" {
+		damage := int(float64(battle.P1Fighters[0].MaxHP) * 1.0 / 6.0)
+		battle = battle.Damage(damage)
 	}
-	return spovb
+	return battle
 }
 
 //https://latest.pokewiki.net/%E3%83%90%E3%83%88%E3%83%AB%E4%B8%AD%E3%81%AE%E5%87%A6%E7%90%86%E3%81%AE%E9%A0%86%E7%95%AA
-func (spovb SelfPointOfViewBattle) MoveUse(moveName MoveName, random *rand.Rand) (SelfPointOfViewBattle, error) {
-	var err error
-	if spovb.SelfFighters[0].IsFaint() {
-		return spovb, nil
+func (battle Battle) MoveUse(moveName MoveName, random *rand.Rand) (Battle, error) {
+	if battle.P1Fighters[0].IsFaint() {
+		return battle, nil
 	}
 
 	if moveName == STRUGGLE {
-		spovb.SelfFighters[0].State.CurrentHP = 0
-		return spovb, nil
+		battle.P1Fighters[0].CurrentHP = 0
+		return battle, nil
 	}
 
 	moveData := MOVEDEX[moveName]
 
-	if _, ok := spovb.SelfFighters[0].Moveset[moveName]; !ok {
-		errMsg := fmt.Sprintf("%v は %v を繰り出そうとしたが、覚えていない", spovb.SelfFighters[0].Name, moveName)
-		return SelfPointOfViewBattle{}, fmt.Errorf(errMsg)
+	if _, ok := battle.P1Fighters[0].Moveset[moveName]; !ok {
+		errMsg := fmt.Sprintf("%v は %v を繰り出そうとしたが、覚えていない", battle.P1Fighters[0].Name, moveName)
+		return Battle{}, fmt.Errorf(errMsg)
 	}
 
-	if spovb.SelfFighters[0].Moveset[moveName].Current <= 0 {
-		errMsg := fmt.Sprintf("%v は %v を繰り出そうとしたが、powerPointが0以下", spovb.SelfFighters[0].Name, moveName)
-		return SelfPointOfViewBattle{}, fmt.Errorf(errMsg)
+	if battle.P1Fighters[0].Moveset[moveName].Current <= 0 {
+		errMsg := fmt.Sprintf("%v は %v を繰り出そうとしたが、powerPointが0以下", battle.P1Fighters[0].Name, moveName)
+		return Battle{}, fmt.Errorf(errMsg)
 	}
 
-	choiceMoveName := spovb.SelfFighters[0].ChoiceMoveName
+	choiceMoveName := battle.P1Fighters[0].ChoiceMoveName
 	isChoiceState := choiceMoveName != ""
 
 	if isChoiceState && choiceMoveName != moveName {
 		errMsg := fmt.Sprintf("%vを選択したが、拘り状態な為、%vしか選択できない", moveName, choiceMoveName)
-		return SelfPointOfViewBattle{}, fmt.Errorf(errMsg)
+		return Battle{}, fmt.Errorf(errMsg)
 	}
 
-	isSleep := spovb.SelfFighters[0].StatusAilment.Type == SLEEP
-
-	if isSleep {
-		spovb.SelfFighters[0].StatusAilment.SleepRemainingTurn -= 1
-	}
-
-	if spovb.SelfFighters[0].StatusAilment.SleepRemainingTurn == 0 && isSleep {
-		spovb.SelfFighters[0].StatusAilment.Type = ""
-	}
-
-	if spovb.SelfFighters[0].StatusAilment.Type == SLEEP {
-		return spovb, nil
-	}
-
-	isParalysis := spovb.SelfFighters[0].StatusAilment.Type == PARALYSIS
-
-	if isParalysis && IsHit(25, random) {
-		return spovb, nil
-	}
-
-	isFreeze := spovb.SelfFighters[0].StatusAilment.Type == FREEZE
-	if isFreeze && IsHit(20, random) {
-		spovb.SelfFighters[0].StatusAilment.Type = ""
-	}
-
-	if spovb.SelfFighters[0].StatusAilment.Type == FREEZE {
-		return spovb, nil
-	}
-
-	copyMoveset := spovb.SelfFighters[0].Moveset.Copy()
+	copyMoveset := battle.P1Fighters[0].Moveset.Copy()
 	copyMoveset[moveName].Current -= 1
-	spovb.SelfFighters[0].Moveset = copyMoveset
+	battle.P1Fighters[0].Moveset = copyMoveset
 
-	if spovb.OpponentFighters[0].IsFaint() {
-		return spovb, nil
+	if battle.P2Fighters[0].IsFaint() {
+		return battle, nil
 	}
 
-	if spovb.SelfFighters[0].Item.IsChoice() {
-		spovb.SelfFighters[0].ChoiceMoveName = moveName
+	if battle.P1Fighters[0].Item.IsChoice() {
+		battle.P1Fighters[0].ChoiceMoveName = moveName
 	}
 
-	if spovb.OpponentFighters[0].Ability == "ふゆう" && moveData.Type == GROUND {
-		return spovb, nil
-	}
-
-	accuracy := spovb.Accuracy(moveName, moveData)
+	accuracy := moveData.Accuracy
 	if accuracy != -1 {
 		if !IsHit(moveData.Accuracy, random) {
-			return spovb, nil
+			return battle, nil
 		}
 	}
 
 	if moveData.Category == STATUS {
 		statusMove, ok := STATUS_MOVES[moveName]
 		if !ok {
-			return spovb, nil
+			return battle, nil
 		}
-		return statusMove(spovb, random), nil
+		return statusMove(battle, random), nil
 	}
 
 	attackNum, err := omw.RandomInt(moveData.MinAttackNum, moveData.MaxAttackNum+1, random)
 
 	if err != nil {
-		return SelfPointOfViewBattle{}, err
+		return Battle{}, err
 	}
 
 	for i := 0; i < attackNum; i++ {
-		isCritical := spovb.IsCritical(moveName, random)
-		finalDamage, err := NewFinalDamage(&spovb, moveName, isCritical, NewDamageR(random))
+		isCritical := battle.IsCritical(moveName, random)
+		finalDamage, err := NewFinalDamage(&battle, moveName, isCritical, NewRandomDamageBonus(random))
 
 		if err != nil {
-			return SelfPointOfViewBattle{}, err
+			return Battle{}, err
 		}
 
 		if finalDamage == 0 {
-			return spovb, nil
+			return battle, nil
 		}
 
-		realDamage := NewRealDamage(&spovb, finalDamage)
-		if spovb.OpponentFighters[0].IsFocusSashOk(int(finalDamage)) {
-			spovb.OpponentFighters[0].Item = ""
-		}
-
-		opovb := spovb.SwitchPointOfView()
-		opovb = opovb.ToDamage(int(realDamage))
-		spovb = opovb.SwitchPointOfView()
-
-		switch moveName {
-			case "れいとうビーム":
-				spovb.OpponentFighters[0].StatusAilment.Type = NewFreeze(10, random)
-			case "ギガドレイン":
-				spovb = spovb.Heal(int(realDamage) / 2)
-		}
+		battle = battle.Reverse()
+		battle = battle.Damage(int(finalDamage))
+		battle = battle.Reverse()
 
 		if moveData.Contact == "接触" {
-			spovb = spovb.AfterContact()
+			battle = battle.AfterContact()
 		}
 
-		if spovb.SelfFighters[0].IsFaint() || spovb.OpponentFighters[0].IsFaint() {
+		if battle.P1Fighters[0].IsFaint() || battle.P2Fighters[0].IsFaint() {
 			break
 		}
 	}
 
-	if spovb.SelfFighters[0].Item == "いのちのたま" {
-		damage := int(float64(spovb.SelfFighters[0].State.MaxHP) * 1.0 / 10.0)
-		spovb = spovb.ToDamage(damage)
+	if battle.P1Fighters[0].Item == "いのちのたま" {
+		damage := int(float64(battle.P1Fighters[0].MaxHP) * 1.0 / 10.0)
+		battle = battle.Damage(damage)
 	}
-	return spovb, nil
+	return battle, nil
 }
 
-func (spovb SelfPointOfViewBattle) AfterSentOut() SelfPointOfViewBattle {
-	spikesCount := spovb.SelfField.SpikesCount
-	if spikesCount > 0 {
-		damage := spovb.SelfFighters[0].SpikesDamage(spikesCount)
-		spovb = spovb.ToDamage(damage)
-	}
-
-	if spovb.SelfFighters[0].IsFaint() {
-		return spovb
-	}
-
-	toxicSpikesCount := spovb.SelfField.ToxicSpikesCount
-	if toxicSpikesCount > 0 {
-		types := spovb.SelfFighters[0].Types
-		isLevitate := spovb.SelfFighters[0].Ability == "ふゆう"
-		isHealthy := spovb.SelfFighters[0].StatusAilment.Type == ""
-
-		if types.In(POISON) {
-			spovb.SelfField.ToxicSpikesCount = 0
-		} else if !types.In(STEEL) && !isLevitate && !isHealthy {
-			spovb.SelfFighters[0].StatusAilment.Type = TOXIC_SPIKES_COUNT_TO_STATUS_AILMENT_[toxicSpikesCount]
-		}
-	}
-
-	if spovb.SelfField.IsStealthRock {
-		damage := spovb.SelfFighters[0].StealthRockDamage()
-		spovb = spovb.ToDamage(damage)
-	}
-
-	if spovb.SelfFighters[0].IsFaint() {
-		return spovb
-	}
-
-	ability := spovb.SelfFighters[0].Ability
-	var weather_ Weather_
-	var weatherRemainingTurn int
-
-	switch ability {
-		case "あめふらし":
-			weather_ = RAIN
-			weatherRemainingTurn = spovb.SelfFighters[0].RainActiveTurn()
-		case "ゆきふらし":
-			weather_ = HAIL
-			weatherRemainingTurn = spovb.SelfFighters[0].HailActiveTurn()
-		case "すなおこし":
-			weather_ = SANDSTORM
-			weatherRemainingTurn = spovb.SelfFighters[0].SandstormActiveTurn()
-		case "ひでり":
-			weather_ = SUNNY_DAY
-			weatherRemainingTurn = spovb.SelfFighters[0].SunnyDayActiveTurn()
-	}
-
-	spovb.ShareField.Weather.Type = weather_
-	spovb.ShareField.Weather.RemainingTurn = weatherRemainingTurn
-
-	return spovb
-}
-
-func (spovb SelfPointOfViewBattle) Switch(pokeName PokeName) (SelfPointOfViewBattle, error) {
-	index := spovb.SelfFighters.Index(pokeName)
+func (battle Battle) Switch(pokeName PokeName) (Battle, error) {
+	index := battle.P1Fighters.Index(pokeName)
 
 	if index == -1 {
 		errMsg := fmt.Sprintf("%vに交代しようとしたが、fightersの中に存在しない", pokeName)
-		return SelfPointOfViewBattle{}, fmt.Errorf(errMsg)
+		return Battle{}, fmt.Errorf(errMsg)
 	}
 
 	if index == 0 {
 		errMsg := fmt.Sprintf("%vに交代しようとしたが、既に場に出ている", pokeName)
-		return SelfPointOfViewBattle{}, fmt.Errorf(errMsg)
+		return Battle{}, fmt.Errorf(errMsg)
 	}
 
-	if spovb.SelfFighters[index].IsFaint() {
+	if battle.P1Fighters[index].IsFaint() {
 		errMsg := fmt.Sprintf("%vに交代しようとしたが、瀕死状態", pokeName)
-		return SelfPointOfViewBattle{}, fmt.Errorf(errMsg)
+		return Battle{}, fmt.Errorf(errMsg)
 	}
 
-	spovb.SelfFighters[0].Rank = Rank{}
-	spovb.SelfFighters[0].StatusAilment.BadPoisonElapsedTurn = 0
-	spovb.SelfFighters[0].ChoiceMoveName = ""
-	spovb.SelfFighters[0].IsLeechSeed = false
+	battle.P1Fighters[0].Rank = Rank{}
+	battle.P1Fighters[0].StatusAilment.BadPoisonElapsedTurn = 0
+	battle.P1Fighters[0].ChoiceMoveName = ""
+	battle.P1Fighters[0].IsLeechSeed = false
 
-	if spovb.SelfFighters[0].Ability == "しぜんかいふく" {
-		spovb.SelfFighters[0].StatusAilment.Type = ""
-	}
-
-	tmpFighters := spovb.SelfFighters
+	tmpFighters := battle.P1Fighters
 
 	if index == 1 {
-		spovb.SelfFighters[0] = tmpFighters[1]
-		spovb.SelfFighters[1] = tmpFighters[0]
-		spovb.SelfFighters[2] = tmpFighters[2]
+		battle.P1Fighters[0] = tmpFighters[1]
+		battle.P1Fighters[1] = tmpFighters[0]
+		battle.P1Fighters[2] = tmpFighters[2]
 	} else {
-		spovb.SelfFighters[0] = tmpFighters[2]
-		spovb.SelfFighters[1] = tmpFighters[1]
-		spovb.SelfFighters[2] = tmpFighters[0]
+		battle.P1Fighters[0] = tmpFighters[2]
+		battle.P1Fighters[1] = tmpFighters[1]
+		battle.P1Fighters[2] = tmpFighters[0]
 	}
 
-	return spovb.AfterSentOut(), nil
+	return battle, nil
 }
 
-func (spovb SelfPointOfViewBattle) Action(battleCommand BattleCommand, random *rand.Rand) (SelfPointOfViewBattle, error) {
-	if battleCommand.IsMoveName() || battleCommand == BattleCommand(STRUGGLE) {
-		return spovb.MoveUse(MoveName(battleCommand), random)
+func (battle Battle) P1Action(actionCommand ActionCommand, random *rand.Rand) (Battle, error) {
+	if actionCommand.IsMoveName() || actionCommand == ActionCommand(STRUGGLE) {
+		return battle.MoveUse(MoveName(actionCommand), random)
 	}
 
-	if battleCommand.IsPokeName() {
-		return spovb.Switch(PokeName(battleCommand))
+	if actionCommand.IsPokeName() {
+		return battle.Switch(PokeName(actionCommand))
 	}
 
-	errMsg := fmt.Sprintf("「%v」は、battleCommandとして不適", battleCommand)
-	return SelfPointOfViewBattle{}, fmt.Errorf(errMsg)
+	errMsg := fmt.Sprintf("「%v」は、actionCommandとして不適", actionCommand)
+	return Battle{}, fmt.Errorf(errMsg)
 }
 
-func (spovb *SelfPointOfViewBattle) NewBattle(p1BattleCommand BattleCommand) Battle {
-	return Battle{P1Fighters:spovb.SelfFighters, P2Fighters:spovb.OpponentFighters,
-		P1Field:spovb.SelfField, P2Field:spovb.OpponentField, P1Command:p1BattleCommand}
-}
+func (battle Battle) P2Action(actionCommand ActionCommand, random *rand.Rand) (Battle, error) {
+	var err error
+	battle = battle.Reverse()
 
-type Battle struct {
-	P1Fighters Fighters
-	P2Fighters Fighters
-
-	P1Field SelfField
-	P2Field SelfField
-	ShareField ShareField
-
-	P1Command BattleCommand
-}
-
-func (battle Battle) ReversePlayer() (Battle, error) {
-	if battle.P1Command != "" {
-		return Battle{}, fmt.Errorf("battle.ReversePlayerを呼び出す時のbattle.P1Commandは、ゼロ値でなければならない")
+	if actionCommand.IsMoveName() || actionCommand == ActionCommand(STRUGGLE) {
+		battle, err = battle.MoveUse(MoveName(actionCommand), random)
+		return battle.Reverse(), err
 	}
-	return Battle{P1Fighters:battle.P2Fighters, P2Fighters:battle.P1Fighters,
-		P1Field:battle.P2Field, P2Field:battle.P1Field, ShareField:battle.ShareField, P1Command:battle.P1Command}, nil
-}
 
-func (battle *Battle) NewP1PointOfViewBattle() SelfPointOfViewBattle {
-	return SelfPointOfViewBattle{
-		SelfFighters:battle.P1Fighters, OpponentFighters:battle.P2Fighters,
-		SelfField:battle.P1Field, OpponentField:battle.P2Field,
+	if actionCommand.IsPokeName() {
+		battle, err = battle.Switch(PokeName(actionCommand))
+		return battle.Reverse(), err
 	}
-}
 
-func (battle *Battle) NewP2PointOfViewBattle() SelfPointOfViewBattle {
-	return SelfPointOfViewBattle{
-		SelfFighters:battle.P2Fighters, OpponentFighters:battle.P1Fighters,
-		SelfField:battle.P2Field, OpponentField:battle.P1Field,
-	}
+	errMsg := fmt.Sprintf("「%v」は、actionCommandとして不適", actionCommand)
+	return Battle{}, fmt.Errorf(errMsg)
 }
 
 func (battle1 *Battle) Equal(battle2 *Battle) bool {
-	return battle1.P1Fighters.Equal(&battle2.P1Fighters) &&
-		battle1.P2Fighters.Equal(&battle2.P2Fighters) &&
-		battle1.P1Command == battle2.P1Command
+	result := battle1.P1Fighters.Equal(&battle2.P1Fighters) && battle1.P2Fighters.Equal(&battle2.P2Fighters)
+	return result
 }
 
 func (battle *Battle) FinalSpeedWinner() Winner {
-	p1PointOfViewBattle := battle.NewP1PointOfViewBattle()
-	p2PointOfViewBattle := battle.NewP2PointOfViewBattle()
-
-	p1FinalSpeed := NewFinalSpeed(&p1PointOfViewBattle)
-	p2FinalSpeed := NewFinalSpeed(&p2PointOfViewBattle)
+	p1FinalSpeed := NewFinalSpeed(battle)
+	reverseBattle := battle.Reverse()
+	p2FinalSpeed := NewFinalSpeed(&reverseBattle)
 
 	if p1FinalSpeed > p2FinalSpeed {
 		return WINNER_P1
@@ -437,9 +514,9 @@ func (battle *Battle) FinalSpeedWinner() Winner {
 	return DRAW
 }
 
-func (battle *Battle) PriorityWinner(p1BattleCommand, p2BattleCommand BattleCommand) Winner {
-	p1PriorityRank := p1BattleCommand.PriorityRank()
-	p2PriorityRank := p2BattleCommand.PriorityRank()
+func (battle *Battle) ActionPriorityWinner(action *Action) Winner {
+	p1PriorityRank := action.P1.PriorityRank()
+	p2PriorityRank := action.P2.PriorityRank()
 
 	if p1PriorityRank > p2PriorityRank {
 		return WINNER_P1
@@ -451,65 +528,53 @@ func (battle *Battle) PriorityWinner(p1BattleCommand, p2BattleCommand BattleComm
 	return DRAW
 }
 
-func (battle *Battle) IsP1FirstAction(p1BattleCommand, p2BattleCommand BattleCommand, random *rand.Rand) bool {
-	priorityWinner := battle.PriorityWinner(p1BattleCommand, p2BattleCommand)
+func (battle *Battle) FinalActionPriorityWinner(action *Action, random *rand.Rand) Winner {
+	actionCommandPriorityWinner := battle.ActionPriorityWinner(action)
 
-	if priorityWinner == WINNER_P1 {
-		return true
+	if actionCommandPriorityWinner == WINNER_P1 {
+		return WINNER_P1
 	}
 
-	if priorityWinner == WINNER_P2 {
-		return false
+	if actionCommandPriorityWinner == WINNER_P2 {
+		return WINNER_P2
 	}
 
 	finalSpeedWinner := battle.FinalSpeedWinner()
 
 	if finalSpeedWinner == WINNER_P1 {
-		return true
+		return WINNER_P1
 	}
 
 	if finalSpeedWinner == WINNER_P2 {
-		return false
+		return WINNER_P2
 	}
 
-	return omw.RandomBool(random)
-}
-
-func (battle Battle) P1Action(battleCommand BattleCommand, random *rand.Rand) (Battle, error) {
-	var err error
-	p1PointOfViewBattle := battle.NewP1PointOfViewBattle()
-	p1PointOfViewBattle, err = p1PointOfViewBattle.Action(battleCommand, random)
-	return p1PointOfViewBattle.NewBattle(battle.P1Command), err
-}
-
-func (battle Battle) P2Action(battleCommand BattleCommand, random *rand.Rand) (Battle, error) {
-	var err error
-	p2PointOfViewBattle := battle.NewP2PointOfViewBattle()
-	p2PointOfViewBattle, err = p2PointOfViewBattle.Action(battleCommand, random)
-	p1PointOfViewBattle := p2PointOfViewBattle.SwitchPointOfView()
-	return p1PointOfViewBattle.NewBattle(battle.P1Command), err
+	if omw.RandomBool(random) {
+		return WINNER_P1
+	} else {
+		return WINNER_P2
+	}
 }
 
 func (battle Battle) TurnEnd(random *rand.Rand) Battle {
 	//https://wiki.xn--rckteqa2e.com/wiki/%E3%82%BF%E3%83%BC%E3%83%B3#5..E3.82.BF.E3.83.BC.E3.83.B3.E7.B5.82.E4.BA.86.E6.99.82.E3.81.AE.E5.87.A6.E7.90.86
-	p1First := func(battle Battle, f func(SelfPointOfViewBattle) SelfPointOfViewBattle) Battle {
-		p1PointOfViewBattle := battle.NewP1PointOfViewBattle()
-		p1PointOfViewBattle = f(p1PointOfViewBattle)
-		p2PointOfViewBattle := p1PointOfViewBattle.SwitchPointOfView()
-		p2PointOfViewBattle = f(p2PointOfViewBattle)
-		p1PointOfViewBattle = p2PointOfViewBattle.SwitchPointOfView()
-		return p1PointOfViewBattle.NewBattle(battle.P1Command)
+	p1First := func(battle Battle, f func(Battle) Battle) Battle {
+		battle = f(battle)
+		battle = battle.Reverse()
+		battle = f(battle)
+		battle = battle.Reverse()
+		return battle
 	}
 
-	p2First := func(battle Battle, f func(SelfPointOfViewBattle) SelfPointOfViewBattle) Battle {
-		p2PointOfViewBattle := battle.NewP2PointOfViewBattle()
-		p2PointOfViewBattle = f(p2PointOfViewBattle)
-		p1PointOfViewBattle := p2PointOfViewBattle.SwitchPointOfView()
-		p1PointOfViewBattle = f(p1PointOfViewBattle)
-		return p1PointOfViewBattle.NewBattle(battle.P1Command)
+	p2First := func(battle Battle, f func(Battle) Battle) Battle {
+		battle = battle.Reverse()
+		battle = f(battle)
+		battle = battle.Reverse()
+		battle = f(battle)
+		return battle
 	}
 
-	run := func(fs []func(SelfPointOfViewBattle) SelfPointOfViewBattle) Battle {
+	run := func(fs []func(Battle) Battle) Battle {
 		finalSpeedWinner := battle.FinalSpeedWinner()
 
 		for _, f := range fs {
@@ -528,51 +593,105 @@ func (battle Battle) TurnEnd(random *rand.Rand) Battle {
 		return battle
 	}
 
-	battle = run([]func(SelfPointOfViewBattle)SelfPointOfViewBattle{TurnEndLeftovers, TurnEndBlackSludge})
-	battle = run([]func(SelfPointOfViewBattle)SelfPointOfViewBattle{TurnEndWeather})
-	battle = run([]func(SelfPointOfViewBattle)SelfPointOfViewBattle{TurnEndHailDamage, TurnEndSandstoremDamage})
-	battle = run([]func(SelfPointOfViewBattle)SelfPointOfViewBattle{TurnEndDrySkin, TurnEndSolarPower, TurnEndRainDish, TurnEndIceBody})
-	battle = run([]func(SelfPointOfViewBattle)SelfPointOfViewBattle{TurnEndRainDish})
-	battle = run([]func(SelfPointOfViewBattle)SelfPointOfViewBattle{TurnEndLeechSeed})
-	battle = run([]func(SelfPointOfViewBattle)SelfPointOfViewBattle{TurnEndBadPoison})
-	battle = run([]func(SelfPointOfViewBattle)SelfPointOfViewBattle{TurnEndBurn})
+	battle = run([]func(Battle) Battle{TurnEndLeftovers, TurnEndBlackSludge})
+	battle = run([]func(Battle) Battle{TurnEndLeechSeed})
+	battle = run([]func(Battle) Battle{TurnEndBadPoison})
 	return battle
 }
 
-func (battle Battle) Run(battleCommand BattleCommand, random *rand.Rand) (Battle, error) {
+func (battle *Battle) IsP1OnlyAction() bool {
+	isP1Faint := battle.P1Fighters[0].IsFaint()
+	isP2Faint := battle.P2Fighters[0].IsFaint()
+	return isP1Faint && !isP2Faint
+}
+
+func (battle *Battle) IsP2OnlyAction() bool {
+	isP1Faint := battle.P1Fighters[0].IsFaint()
+	isP2Faint := battle.P2Fighters[0].IsFaint()
+	return !isP1Faint && isP2Faint
+}
+
+func (battle *Battle) IsP1AndP2Action() bool {
+	isP1Faint := battle.P1Fighters[0].IsFaint()
+	isP2Faint := battle.P2Fighters[0].IsFaint()
+	return isP1Faint == isP2Faint
+}
+
+func (battle *Battle) LegalActions() Actions {
+  p1LegalActionCommands := battle.P1Fighters.LegalActionCommands()
+  p2LegalActionCommands := battle.P2Fighters.LegalActionCommands()
+
+  var result Actions
+
+  if battle.IsP1OnlyAction() {
+    result = make(Actions, len(p1LegalActionCommands))
+    for i, actionCommand := range p1LegalActionCommands {
+      result[i] = Action{P1:actionCommand, P2:""}
+    }
+  } else if battle.IsP2OnlyAction() {
+    result = make(Actions, len(p2LegalActionCommands))
+    for i, actionCommand := range p2LegalActionCommands {
+      result[i] = Action{P1:"", P2:actionCommand}
+    }
+  } else {
+    result = make(Actions, 0, len(p1LegalActionCommands) * len(p2LegalActionCommands))
+    for _, p1ActionCommand := range p1LegalActionCommands {
+      for _, p2ActionCommand := range p2LegalActionCommands {
+        result = append(result, Action{P1:p1ActionCommand, P2:p2ActionCommand})
+      }
+    }
+  }
+	if len(result) == 0 {
+		fmt.Println(p1LegalActionCommands, p2LegalActionCommands)
+	}
+	return result
+}
+
+func (battle Battle) Push(action *Action, random *rand.Rand) (Battle, error) {
 	var err error
 
-	if battle.P1Fighters[0].IsFaint() {
-		return battle.P1Action(battleCommand, random)
+	isP1Faint := battle.P1Fighters[0].IsFaint()
+	isP2Faint := battle.P2Fighters[0].IsFaint()
+
+	if isP1Faint && !isP2Faint {
+		if !action.IsP1Only() {
+			return Battle{}, fmt.Errorf("p1のみが行動出来る状態で、p2のコマンドが渡された")
+		}
+		return battle.P1Action(action.P1, random)
 	}
 
-	if battle.P2Fighters[0].IsFaint() {
-		return battle.P2Action(battleCommand, random)
+	if !isP1Faint && isP2Faint {
+		if !action.IsP2Only() {
+			return Battle{}, fmt.Errorf("p2のみが行動出来る状態で、p1のコマンドが渡された")
+		}
+		return battle.P2Action(action.P2, random)
 	}
 
-	if battle.P1Command == BattleCommand("") {
-		battle.P1Command = battleCommand
-		return battle, nil
+	if isP1Faint && isP2Faint {
+		battle, err = battle.P1Action(action.P1, random)
+		if err != nil {
+			return Battle{}, err
+		}
+
+		battle, err = battle.P2Action(action.P2, random)
+		return battle, err
 	}
 
-	isP1FirstAction := battle.IsP1FirstAction(battle.P1Command, battleCommand, random)
+	finalActionPriorityWinner := battle.FinalActionPriorityWinner(action, random)
 
 	var isP1Action []bool
-	var actionOrderBattleCommands []BattleCommand
 
-	if isP1FirstAction {
+	if finalActionPriorityWinner == WINNER_P1 {
 		isP1Action = []bool{true, false}
-		actionOrderBattleCommands = []BattleCommand{battle.P1Command, battleCommand}
 	} else {
 		isP1Action = []bool{false, true}
-		actionOrderBattleCommands = []BattleCommand{battleCommand, battle.P1Command}
 	}
 
-	for i, iBattleCommand := range actionOrderBattleCommands {
-		if isP1Action[i] {
-			battle, err = battle.P1Action(iBattleCommand, random)
+	for _, isP1 := range isP1Action {
+		if isP1 {
+			battle, err = battle.P1Action(action.P1, random)
 		} else {
-			battle, err = battle.P2Action(iBattleCommand, random)
+			battle, err = battle.P2Action(action.P2, random)
 		}
 
 		if err != nil {
@@ -581,20 +700,7 @@ func (battle Battle) Run(battleCommand BattleCommand, random *rand.Rand) (Battle
 	}
 
 	battle = battle.TurnEnd(random)
-	battle.P1Command = BattleCommand("")
 	return battle, err
-}
-
-func (battle *Battle) IsP1Phase() bool {
-	if battle.P1Fighters[0].IsFaint() {
-		return true
-	}
-
-	if battle.P2Fighters[0].IsFaint() {
-		return false
-	}
-
-	return battle.P1Command == ""
 }
 
 func (battle *Battle) IsGameEnd() bool {
@@ -618,36 +724,16 @@ func (battle *Battle) Winner() (Winner, error) {
 	}
 }
 
-func (battle Battle) RepeatRun(p1BattleCommand, p2BattleCommand BattleCommand, repeatNum int, random *rand.Rand) (Battles, error) {
-	result := make(Battles, repeatNum)
-	for i := 0; i < repeatNum; i++ {
-		tmp, err := battle.Run(p1BattleCommand, random)
-		if err != nil {
-			return Battles{}, err
-		}
-
-		resultBattle, err := tmp.Run(p2BattleCommand, random)
-		if err != nil {
-			return Battles{}, err
-		}
-		result[i] = resultBattle
-	}
-	return result, nil
+type Winner struct {
+	IsP1 bool
+	IsP2 bool
 }
 
-type Battles []Battle
+var (
+	WINNER_P1 = Winner{IsP1: true, IsP2: false}
+	WINNER_P2 = Winner{IsP1: false, IsP2: true}
+	DRAW      = Winner{IsP1: false, IsP2: false}
+)
 
-func (battles Battles) Filter(f func(battle Battle) bool) Battles {
-	result := make(Battles, 0)
-	for _, battle := range battles {
-		if f(battle) {
-			result = append(result, battle)
-		}
-	}
-	return result
-}
-
-func (battles Battles) FilterPercent(f func(battle Battle) bool) float64 {
-	filteredBattles := battles.Filter(f)
-	return float64(len(filteredBattles)) / float64(len(battles))
-}
+var WINNER_TO_SIGMOID_REWARD = map[Winner]float64{WINNER_P1: 1.0, WINNER_P2: 0.0, DRAW: 0.5}
+var WINNET_TO_TANH_REWARD = map[Winner]float64{WINNER_P1:1.0, WINNER_P2:-1.0, DRAW:0.0}

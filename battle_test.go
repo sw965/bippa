@@ -2,66 +2,58 @@ package bippa
 
 import (
   "testing"
+  "fmt"
+  "math"
   "math/rand"
-  "github.com/seehuhn/mt19937"
   "time"
+  "github.com/seehuhn/mt19937"
 )
 
-var mtRandom = rand.New(mt19937.New())
-
-func init() {
-  mtRandom.Seed(time.Now().UnixNano())
+func NewHusigibana() Pokemon {
+  pokemon, err := NewPokemon("フシギバナ", "おだやか", "しんりょく", "♀", "くろいヘドロ",
+    MoveNames{"つるのムチ"}, PointUps{MAX_POINT_UP},
+    &ALL_MAX_INDIVIDUAL, &Effort{HP:252, Atk:252, Speed:4})
+  if err != nil {
+    panic(err)
+  }
+  return pokemon
 }
 
-func TestGigaDrain(t *testing.T) {
-  p1Fighters := Fighters{
-    TEST_POKEMONS["フシギバナ"](),
-    TEST_POKEMONS["リザードン"](),
-    TEST_POKEMONS["カメックス"](),
+func NewRiza_don() Pokemon {
+  pokemon, err := NewPokemon("リザードン", "ひかえめ", "もうか", "♂", "いのちのたま",
+                        MoveNames{"ひのこ"}, PointUps{MAX_POINT_UP},
+                        &ALL_MAX_INDIVIDUAL, &Effort{HP:252, SpAtk:252, Speed:4})
+  if err != nil {
+    panic(err)
   }
+  return pokemon
+}
 
-  p2Fighters := Fighters{
-    TEST_POKEMONS["カメックス"](),
-    TEST_POKEMONS["リザードン"](),
-    TEST_POKEMONS["フシギバナ"](),
+func NewKamekkusu() Pokemon {
+  pokemon, err := NewPokemon("カメックス", "ひかえめ", "げきりゅう", "♂", "オボンのみ",
+    MoveNames{"みずでっぽう"}, PointUps{MAX_POINT_UP},
+    &ALL_MAX_INDIVIDUAL, &Effort{HP:252, SpAtk:252, Speed:4})
+  if err != nil {
+    panic(err)
   }
+  return pokemon
+}
 
-  testSimuNum := 12800
-  p1Fighters[0].State.CurrentHP = 1
-  initTestBattle := Battle{P1Fighters:p1Fighters, P2Fighters:p2Fighters}
-  battleResults, err := initTestBattle.RepeatRun("ギガドレイン", "からをやぶる", testSimuNum, mtRandom)
+func Test(t *testing.T) {
+  p1Fighters := Fighters{NewHusigibana(), NewRiza_don(), NewKamekkusu()}
+  p2Fighters := Fighters{NewKamekkusu(), NewRiza_don(), NewHusigibana()}
+  battle := Battle{P1Fighters:p1Fighters, P2Fighters:p2Fighters}
+  mtRandom := rand.New(mt19937.New())
+  mtRandom.Seed(time.Now().UnixNano())
+  randomPlayoutEval := NewRandomPlayoutEval(NewRandomInstructionTrainer(mtRandom), mtRandom)
+  allNodes, err := RunDMCTS(battle, 5600, math.Sqrt(2), &randomPlayoutEval, mtRandom)
 
   if err != nil {
     panic(err)
   }
 
-  //条件付確率 p2のカメックスのCurrentHPが81(ギガドレインのダメージが74)であるという前提
-  //初期HP + ギガドレインの回復量 + くろいヘドロの回復量
-  p1GigaDrainHeal40Percent := battleResults.Filter(
-    func(battle Battle) bool {
-      return battle.P2Fighters[0].State.CurrentHP == 81
-    },
-  ).FilterPercent(
-    func(battle Battle) bool {
-      return battle.P1Fighters[0].State.CurrentHP == (1 + 37 + 11)
-    },
-  )
-
-  if p1GigaDrainHeal40Percent != 1.0 {
-    t.Errorf("テスト失敗")
-  }
-
-  p1GigaDrainHeal67Percent := battleResults.Filter(
-    func(battle Battle) bool {
-      return battle.P2Fighters[0].State.CurrentHP == 21
-    },
-  ).FilterPercent(
-    func(battle Battle) bool {
-      return battle.P1Fighters[0].State.CurrentHP == (1 + 67 + 11)
-    },
-  )
-
-  if p1GigaDrainHeal67Percent != 1.0 {
-    t.Errorf("テスト失敗")
+  for action, decoupledUCT := range allNodes[0].DecoupledUCTs {
+    fmt.Println(action)
+    fmt.Println(decoupledUCT)
   }
 }

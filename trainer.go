@@ -5,65 +5,28 @@ import (
 	"math/rand"
 )
 
-type Trainer func(*Battle) (BattleCommand, error)
+type Trainer func(*Battle) (Action, error)
 
 func NewRandomInstructionTrainer(random *rand.Rand) Trainer {
-	result := func(battle *Battle) (BattleCommand, error) {
-		availableBattleCommands := battle.P1Fighters.NewAvailableBattleCommands()
-		return availableBattleCommands.RandomChoice(random), nil
+	result := func(battle *Battle) (Action, error) {
+		legalActions := battle.LegalActions()
+		return legalActions.RandomChoice(random), nil
 	}
 	return result
 }
 
-func NewRandomAttackOnlyInstructionTrainer(random *rand.Rand) Trainer {
-	result := func(battle *Battle) (BattleCommand, error) {
-		if battle.P1Fighters[0].IsFaint() {
-			availableBattleCommands := battle.P1Fighters.NewAvailableBattleCommands()
-			return availableBattleCommands.RandomChoice(random), nil
-		} else {
-			availableMoveNames := battle.P1Fighters.NewAvailableMoveNames()
-			return BattleCommand(availableMoveNames.RandomChoice(random)), nil
-		}
-	}
-	return result
-}
-
-func (p1Trainer Trainer) OneGame(p2Trainer Trainer, battle Battle, random *rand.Rand) (Battle, error) {
-	var err error
-	var battleCommand BattleCommand
-
+func (trainer Trainer) OneGame(battle Battle, random *rand.Rand) (Battle, error) {
 	if battle.IsGameEnd() {
 		return Battle{}, fmt.Errorf("既にゲームが終了している状態でtrainer.OneGame関数を呼び出した")
 	}
 
 	for {
-		if battle.IsP1Phase() {
-			battleCommand, err = p1Trainer(&battle)
-		} else {
-			p1BattleCommand := battle.P1Command
-			battle.P1Command = ""
-
-			battle, err = battle.ReversePlayer()
-			if err != nil {
-				return Battle{}, err
-			}
-
-			battleCommand, err = p2Trainer(&battle)
-
-			battle, err = battle.ReversePlayer()
-			if err != nil {
-				return Battle{}, err
-			}
-
-			battle.P1Command = p1BattleCommand
-		}
-
+		action, err := trainer(&battle)
 		if err != nil {
 			return Battle{}, err
 		}
 
-		battle, err = battle.Run(battleCommand, random)
-
+		battle, err = battle.Push(&action, random)
 		if err != nil {
 			return Battle{}, err
 		}
