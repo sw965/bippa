@@ -33,13 +33,16 @@ func NewTeam(pokemons []Pokemon) (Team, error) {
 		return Team{}, fmt.Errorf("同じポケモンを、チームに入れる事は出来ない")
 	}
 
-	teamLength := len(team)
-
-	if MIN_TEAM_LENGTH <= teamLength && MAX_TEAM_LENGTH >= teamLength {
+	if team.IsValidLength() {
 		return team, nil
 	} else {
 		return Team{}, fmt.Errorf("チームは、%v匹～%v匹で構成されていなければならない", MIN_TEAM_LENGTH, MAX_TEAM_LENGTH)
 	}
+}
+
+func (team Team) IsValidLength() bool {
+	length := len(team)
+	return MIN_TEAM_LENGTH <= length && length <= MAX_TEAM_LENGTH
 }
 
 const (
@@ -98,7 +101,9 @@ func (fighters *Fighters) LegalActionMoveNames() MoveNames {
 	var result MoveNames
 
 	if fighters[0].ChoiceMoveName != "" {
-		result = MoveNames{fighters[0].ChoiceMoveName}
+		if tmpResult.In(fighters[0].ChoiceMoveName) {
+			result = MoveNames{fighters[0].ChoiceMoveName}
+		}
 	} else if fighters[0].Item == "とつげきチョッキ" {
 		for _, moveName := range tmpResult {
 			if MOVEDEX[moveName].Category != STATUS {
@@ -125,17 +130,17 @@ func (fighters *Fighters) LegalActionPokeNames() []PokeName {
 	return result
 }
 
-func (fighters *Fighters) LegalActionCommands() ActionCommands {
+func (fighters *Fighters) LegalActions() Actions {
 	legalActionMoveNames := fighters.LegalActionMoveNames()
 	legalActionPokeNames := fighters.LegalActionPokeNames()
-	result := make(ActionCommands, 0, len(legalActionMoveNames) + len(legalActionPokeNames))
+	result := make(Actions, 0, len(legalActionMoveNames) + len(legalActionPokeNames))
 
 	for _, moveName := range legalActionMoveNames {
-		result = append(result, ActionCommand(moveName))
+		result = append(result, Action(moveName))
 	}
 
 	for _, pokeName := range legalActionPokeNames {
-		result = append(result, ActionCommand(pokeName))
+		result = append(result, Action(pokeName))
 	}
 	return result
 }
@@ -185,46 +190,26 @@ func NewFinalSpeed(battle *Battle) FinalSpeed {
 	return FinalSpeed(result)
 }
 
-type ActionCommand string
+type Action string
 
-func (actionCommand ActionCommand) IsMoveName() bool {
-	_, ok := MOVEDEX[MoveName(actionCommand)]
+func (action Action) IsMoveName() bool {
+	_, ok := MOVEDEX[MoveName(action)]
 	return ok
 }
 
-func (actionCommand ActionCommand) IsPokeName() bool {
-	_, ok := POKEDEX[PokeName(actionCommand)]
+func (action Action) IsPokeName() bool {
+	_, ok := POKEDEX[PokeName(action)]
 	return ok
 }
 
-func (actionCommand ActionCommand) PriorityRank() int {
-	if actionCommand == ActionCommand(STRUGGLE) {
+func (action Action) PriorityRank() int {
+	if action == Action(STRUGGLE) {
 		return 0
-	} else if actionCommand.IsMoveName() {
-		return MOVEDEX[MoveName(actionCommand)].PriorityRank
+	} else if action.IsMoveName() {
+		return MOVEDEX[MoveName(action)].PriorityRank
 	} else {
 		return 999
 	}
-}
-
-type ActionCommands []ActionCommand
-
-func (actionCommands ActionCommands) RandomChoice(random *rand.Rand) ActionCommand {
-	index := random.Intn(len(actionCommands))
-	return actionCommands[index]
-}
-
-type Action struct {
-	P1 ActionCommand
-	P2 ActionCommand
-}
-
-func (action *Action) IsP1Only() bool {
-	return action.P1 != "" && action.P2 == ""
-}
-
-func (action *Action) IsP2Only() bool {
-	return action.P1 == "" && action.P2 != ""
 }
 
 type Actions []Action
@@ -237,10 +222,11 @@ func (actions Actions) RandomChoice(random *rand.Rand) Action {
 type Battle struct {
 	P1Fighters Fighters
 	P2Fighters Fighters
+	P1Command Action
 }
 
 func (battle *Battle) Reverse() Battle {
-	return Battle{P1Fighters: battle.P2Fighters, P2Fighters: battle.P1Fighters}
+	return Battle{P1Fighters: battle.P2Fighters, P2Fighters: battle.P1Fighters, P1Command:battle.P1Command}
 }
 
 func (battle *Battle) IsCritical(moveName MoveName, random *rand.Rand) bool {
@@ -255,10 +241,9 @@ func (battle Battle) Damage(damage int) Battle {
 	}
 
 	currentHP := battle.P1Fighters[0].CurrentHP
-	intCurrentHP := int(currentHP)
 
-	if damage > intCurrentHP {
-		damage = intCurrentHP
+	if damage > currentHP {
+		damage = currentHP
 	}
 
 	battle.P1Fighters[0].CurrentHP -= damage
@@ -309,10 +294,10 @@ func (battle Battle) SitrusBerryHeal() Battle {
 	currentHP := battle.P1Fighters[0].CurrentHP
 
 	if int(currentHP) <= int(float64(maxHP)*1.0/2.0) {
+		battle.P1Fighters[0].Item = ITEM_EMPTY
 		heal := int(float64(maxHP) * (1.0 / 4.0))
 		battle = battle.Heal(heal)
 	}
-
 	return battle
 }
 
@@ -336,6 +321,9 @@ func (battle Battle) MoveUse(moveName MoveName, random *rand.Rand) (Battle, erro
 	}
 
 	if moveName == STRUGGLE {
+		if battle.P2Fighters[0].IsFaint() {
+			return battle, nil
+		}
 		battle.P1Fighters[0].CurrentHP = 0
 		return battle, nil
 	}
@@ -463,40 +451,39 @@ func (battle Battle) Switch(pokeName PokeName) (Battle, error) {
 	return battle, nil
 }
 
-func (battle Battle) P1Action(actionCommand ActionCommand, random *rand.Rand) (Battle, error) {
-	if actionCommand.IsMoveName() || actionCommand == ActionCommand(STRUGGLE) {
-		return battle.MoveUse(MoveName(actionCommand), random)
+func (battle Battle) P1Action(action Action, random *rand.Rand) (Battle, error) {
+	if action.IsMoveName() || action == Action(STRUGGLE) {
+		return battle.MoveUse(MoveName(action), random)
 	}
 
-	if actionCommand.IsPokeName() {
-		return battle.Switch(PokeName(actionCommand))
+	if action.IsPokeName() {
+		return battle.Switch(PokeName(action))
 	}
 
-	errMsg := fmt.Sprintf("「%v」は、actionCommandとして不適", actionCommand)
+	errMsg := fmt.Sprintf("「%v」は、actionとして不適", action)
 	return Battle{}, fmt.Errorf(errMsg)
 }
 
-func (battle Battle) P2Action(actionCommand ActionCommand, random *rand.Rand) (Battle, error) {
+func (battle Battle) P2Action(action Action, random *rand.Rand) (Battle, error) {
 	var err error
 	battle = battle.Reverse()
 
-	if actionCommand.IsMoveName() || actionCommand == ActionCommand(STRUGGLE) {
-		battle, err = battle.MoveUse(MoveName(actionCommand), random)
+	if action.IsMoveName() || action == Action(STRUGGLE) {
+		battle, err = battle.MoveUse(MoveName(action), random)
 		return battle.Reverse(), err
 	}
 
-	if actionCommand.IsPokeName() {
-		battle, err = battle.Switch(PokeName(actionCommand))
+	if action.IsPokeName() {
+		battle, err = battle.Switch(PokeName(action))
 		return battle.Reverse(), err
 	}
 
-	errMsg := fmt.Sprintf("「%v」は、actionCommandとして不適", actionCommand)
+	errMsg := fmt.Sprintf("「%v」は、actionとして不適", action)
 	return Battle{}, fmt.Errorf(errMsg)
 }
 
 func (battle1 *Battle) Equal(battle2 *Battle) bool {
-	result := battle1.P1Fighters.Equal(&battle2.P1Fighters) && battle1.P2Fighters.Equal(&battle2.P2Fighters)
-	return result
+	return battle1.P1Fighters.Equal(&battle2.P1Fighters) && battle1.P2Fighters.Equal(&battle2.P2Fighters) && battle1.P1Command == battle2.P1Command
 }
 
 func (battle *Battle) FinalSpeedWinner() Winner {
@@ -514,9 +501,9 @@ func (battle *Battle) FinalSpeedWinner() Winner {
 	return DRAW
 }
 
-func (battle *Battle) ActionPriorityWinner(action *Action) Winner {
-	p1PriorityRank := action.P1.PriorityRank()
-	p2PriorityRank := action.P2.PriorityRank()
+func (battle *Battle) ActionPriorityRankWinner(p1Action, p2Action Action) Winner {
+	p1PriorityRank := p1Action.PriorityRank()
+	p2PriorityRank := p2Action.PriorityRank()
 
 	if p1PriorityRank > p2PriorityRank {
 		return WINNER_P1
@@ -528,14 +515,14 @@ func (battle *Battle) ActionPriorityWinner(action *Action) Winner {
 	return DRAW
 }
 
-func (battle *Battle) FinalActionPriorityWinner(action *Action, random *rand.Rand) Winner {
-	actionCommandPriorityWinner := battle.ActionPriorityWinner(action)
+func (battle *Battle) FinalActionPriorityWinner(p1Action, p2Action Action, random *rand.Rand) Winner {
+	actionPriorityRankWinner := battle.ActionPriorityRankWinner(p1Action, p2Action)
 
-	if actionCommandPriorityWinner == WINNER_P1 {
+	if actionPriorityRankWinner == WINNER_P1 {
 		return WINNER_P1
 	}
 
-	if actionCommandPriorityWinner == WINNER_P2 {
+	if actionPriorityRankWinner == WINNER_P2 {
 		return WINNER_P2
 	}
 
@@ -599,99 +586,51 @@ func (battle Battle) TurnEnd(random *rand.Rand) Battle {
 	return battle
 }
 
-func (battle *Battle) IsP1OnlyAction() bool {
-	isP1Faint := battle.P1Fighters[0].IsFaint()
-	isP2Faint := battle.P2Fighters[0].IsFaint()
-	return isP1Faint && !isP2Faint
-}
-
-func (battle *Battle) IsP2OnlyAction() bool {
-	isP1Faint := battle.P1Fighters[0].IsFaint()
-	isP2Faint := battle.P2Fighters[0].IsFaint()
-	return !isP1Faint && isP2Faint
-}
-
-func (battle *Battle) IsP1AndP2Action() bool {
-	isP1Faint := battle.P1Fighters[0].IsFaint()
-	isP2Faint := battle.P2Fighters[0].IsFaint()
-	return isP1Faint == isP2Faint
-}
-
-func (battle *Battle) LegalActions() Actions {
-  p1LegalActionCommands := battle.P1Fighters.LegalActionCommands()
-  p2LegalActionCommands := battle.P2Fighters.LegalActionCommands()
-
-  var result Actions
-
-  if battle.IsP1OnlyAction() {
-    result = make(Actions, len(p1LegalActionCommands))
-    for i, actionCommand := range p1LegalActionCommands {
-      result[i] = Action{P1:actionCommand, P2:""}
-    }
-  } else if battle.IsP2OnlyAction() {
-    result = make(Actions, len(p2LegalActionCommands))
-    for i, actionCommand := range p2LegalActionCommands {
-      result[i] = Action{P1:"", P2:actionCommand}
-    }
-  } else {
-    result = make(Actions, 0, len(p1LegalActionCommands) * len(p2LegalActionCommands))
-    for _, p1ActionCommand := range p1LegalActionCommands {
-      for _, p2ActionCommand := range p2LegalActionCommands {
-        result = append(result, Action{P1:p1ActionCommand, P2:p2ActionCommand})
-      }
-    }
-  }
-	if len(result) == 0 {
-		fmt.Println(p1LegalActionCommands, p2LegalActionCommands)
-	}
-	return result
-}
-
-func (battle Battle) Push(action *Action, random *rand.Rand) (Battle, error) {
-	var err error
-
-	isP1Faint := battle.P1Fighters[0].IsFaint()
-	isP2Faint := battle.P2Fighters[0].IsFaint()
-
-	if isP1Faint && !isP2Faint {
-		if !action.IsP1Only() {
-			return Battle{}, fmt.Errorf("p1のみが行動出来る状態で、p2のコマンドが渡された")
-		}
-		return battle.P1Action(action.P1, random)
+func (battle *Battle) IsP1Phase() bool {
+	if battle.P1Fighters[0].IsFaint() {
+		return true
 	}
 
-	if !isP1Faint && isP2Faint {
-		if !action.IsP2Only() {
-			return Battle{}, fmt.Errorf("p2のみが行動出来る状態で、p1のコマンドが渡された")
-		}
-		return battle.P2Action(action.P2, random)
+	if battle.P2Fighters[0].IsFaint() {
+		return false
 	}
 
-	if isP1Faint && isP2Faint {
-		battle, err = battle.P1Action(action.P1, random)
-		if err != nil {
-			return Battle{}, err
-		}
+	return battle.P1Command == ""
+}
 
-		battle, err = battle.P2Action(action.P2, random)
-		return battle, err
+func (battle Battle) Push(action Action, random *rand.Rand) (Battle, error) {
+	if battle.P1Fighters[0].IsFaint() {
+		return battle.P1Action(action, random)
 	}
 
-	finalActionPriorityWinner := battle.FinalActionPriorityWinner(action, random)
+	if battle.P2Fighters[0].IsFaint() {
+		return battle.P2Action(action, random)
+	}
+
+	if battle.P1Command == "" {
+		battle.P1Command = action
+		return battle, nil
+	}
+
+	p2Action := action
+	finalActionPriorityWinner := battle.FinalActionPriorityWinner(battle.P1Command, p2Action, random)
 
 	var isP1Action []bool
 
 	if finalActionPriorityWinner == WINNER_P1 {
+		//fmt.Println("p1First")
 		isP1Action = []bool{true, false}
 	} else {
+		//fmt.Println("p2First")
 		isP1Action = []bool{false, true}
 	}
 
+	var err error
 	for _, isP1 := range isP1Action {
 		if isP1 {
-			battle, err = battle.P1Action(action.P1, random)
+			battle, err = battle.P1Action(battle.P1Command, random)
 		} else {
-			battle, err = battle.P2Action(action.P2, random)
+			battle, err = battle.P2Action(p2Action, random)
 		}
 
 		if err != nil {
@@ -699,7 +638,12 @@ func (battle Battle) Push(action *Action, random *rand.Rand) (Battle, error) {
 		}
 	}
 
+	if battle.IsGameEnd() {
+		return battle, nil
+	}
+
 	battle = battle.TurnEnd(random)
+	battle.P1Command = ""
 	return battle, err
 }
 

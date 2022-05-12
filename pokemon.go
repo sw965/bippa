@@ -191,13 +191,17 @@ func (gender Gender) IsValid(pokeName PokeName) bool {
 
 type Item string
 
+const (
+	ITEM_EMPTY = "なし"
+)
+
 func (item Item) IsValid() bool {
 	for _, iItem := range ALL_ITEMS {
 		if iItem == item {
 			return true
 		}
 	}
-	return item == "なし"
+	return item == ITEM_EMPTY
 }
 
 func (item Item) IsChoice() bool {
@@ -367,6 +371,15 @@ const (
 )
 
 type MoveNames []MoveName
+
+func (moveNames MoveNames) In(moveName MoveName) bool {
+	for _, iMoveName := range moveNames {
+		if iMoveName == moveName {
+			return true
+		}
+	}
+	return false
+}
 
 const (
 	MIN_MOVESET_LENGTH = 1
