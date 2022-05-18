@@ -212,11 +212,21 @@ func NewRandomDamageBonus(random *rand.Rand) RandomDamageBonus {
 
 type RandomDamageBonuses []RandomDamageBonus
 
+func (randomDamageBonuses RandomDamageBonuses) Average() RandomDamageBonus {
+	sum := RandomDamageBonus(0.0)
+	for _, randomDamageBonus := range randomDamageBonuses {
+		sum += randomDamageBonus
+	}
+	return RandomDamageBonus(sum) / RandomDamageBonus(RANDOM_DAMAGE_BONUSES_LENGTH)
+}
+
 var RANDOM_DAMAGE_BONUSES = RandomDamageBonuses{
 	0.85, 0.86, 0.87, 0.88, 0.89, 0.9, 0.91, 0.92, 0.93, 0.94, 0.95, 0.96, 0.97, 0.98, 0.99, 1.0,
 }
 
 var RANDOM_DAMAGE_BONUSES_LENGTH = len(RANDOM_DAMAGE_BONUSES)
+
+var RANDOM_DAMAGE_BONUSES_AVERAGE = RANDOM_DAMAGE_BONUSES.Average()
 
 type DamageBonus int
 

@@ -86,7 +86,17 @@ func (fighters *Fighters) IsAllFaint() bool {
 	return true
 }
 
-func (fighters *Fighters) LegalActionMoveNames() MoveNames {
+func (fighters *Fighters) FaintNum() int {
+	result := 0
+	for _, pokemon := range fighters {
+		if pokemon.IsFaint() {
+			result += 1
+		}
+	}
+	return result
+}
+
+func (fighters *Fighters) LegalActionCmdMoveNames() MoveNames {
 	if fighters[0].IsFaint() {
 		return MoveNames{}
 	}
@@ -120,7 +130,7 @@ func (fighters *Fighters) LegalActionMoveNames() MoveNames {
 	return result
 }
 
-func (fighters *Fighters) LegalActionPokeNames() []PokeName {
+func (fighters *Fighters) LegalActionCmdPokeNames() []PokeName {
 	result := make([]PokeName, 0)
 	for _, pokemon := range fighters[1:] {
 		if !pokemon.IsFaint() {
@@ -130,17 +140,17 @@ func (fighters *Fighters) LegalActionPokeNames() []PokeName {
 	return result
 }
 
-func (fighters *Fighters) LegalActions() Actions {
-	legalActionMoveNames := fighters.LegalActionMoveNames()
-	legalActionPokeNames := fighters.LegalActionPokeNames()
-	result := make(Actions, 0, len(legalActionMoveNames) + len(legalActionPokeNames))
+func (fighters *Fighters) LegalActionCmds() ActionCmds {
+	legalActionCmdMoveNames := fighters.LegalActionCmdMoveNames()
+	legalActionCmdPokeNames := fighters.LegalActionCmdPokeNames()
+	result := make(ActionCmds, 0, len(legalActionCmdMoveNames) + len(legalActionCmdPokeNames))
 
-	for _, moveName := range legalActionMoveNames {
-		result = append(result, Action(moveName))
+	for _, moveName := range legalActionCmdMoveNames {
+		result = append(result, ActionCmd(moveName))
 	}
 
-	for _, pokeName := range legalActionPokeNames {
-		result = append(result, Action(pokeName))
+	for _, pokeName := range legalActionCmdPokeNames {
+		result = append(result, ActionCmd(pokeName))
 	}
 	return result
 }
@@ -190,49 +200,58 @@ func NewFinalSpeed(battle *Battle) FinalSpeed {
 	return FinalSpeed(result)
 }
 
-type Action string
+type ActionCmd string
 
-func (action Action) IsMoveName() bool {
-	_, ok := MOVEDEX[MoveName(action)]
+func (actionCmd ActionCmd) IsMoveName() bool {
+	_, ok := MOVEDEX[MoveName(actionCmd)]
 	return ok
 }
 
-func (action Action) IsPokeName() bool {
-	_, ok := POKEDEX[PokeName(action)]
+func (actionCmd ActionCmd) IsPokeName() bool {
+	_, ok := POKEDEX[PokeName(actionCmd)]
 	return ok
 }
 
-func (action Action) PriorityRank() int {
-	if action == Action(STRUGGLE) {
+func (actionCmd ActionCmd) PriorityRank() int {
+	if actionCmd == ActionCmd(STRUGGLE) {
 		return 0
-	} else if action.IsMoveName() {
-		return MOVEDEX[MoveName(action)].PriorityRank
+	} else if actionCmd.IsMoveName() {
+		return MOVEDEX[MoveName(actionCmd)].PriorityRank
 	} else {
 		return 999
 	}
 }
 
-type Actions []Action
+type ActionCmds []ActionCmd
 
-func (actions Actions) RandomChoice(random *rand.Rand) Action {
-	index := random.Intn(len(actions))
-	return actions[index]
+func (actionCmds ActionCmds) RandomChoice(random *rand.Rand) ActionCmd {
+	index := random.Intn(len(actionCmds))
+	return actionCmds[index]
 }
 
 type Battle struct {
 	P1Fighters Fighters
 	P2Fighters Fighters
-	P1Command Action
+	P1ActionCmd ActionCmd
 }
 
 func (battle *Battle) Reverse() Battle {
-	return Battle{P1Fighters: battle.P2Fighters, P2Fighters: battle.P1Fighters, P1Command:battle.P1Command}
+	return Battle{P1Fighters: battle.P2Fighters, P2Fighters: battle.P1Fighters, P1ActionCmd:battle.P1ActionCmd}
+}
+
+func (battle *Battle) Accuracy(moveName MoveName) int {
+	return MOVEDEX[moveName].Accuracy
+}
+
+func (battle *Battle) CriticalN(moveName MoveName) int {
+	criticalRank := MOVEDEX[moveName].CriticalRank
+	return CRITICAL_N[criticalRank]
 }
 
 func (battle *Battle) IsCritical(moveName MoveName, random *rand.Rand) bool {
 	//https://wiki.xn--rckteqa2e.com/wiki/%E6%80%A5%E6%89%80
-	criticalRank := MOVEDEX[moveName].CriticalRank
-	return random.Intn(CRITICAL_N[criticalRank]) == 0
+	criticalN := battle.CriticalN(moveName)
+	return random.Intn(criticalN) == 0
 }
 
 func (battle Battle) Damage(damage int) Battle {
@@ -274,6 +293,7 @@ func (battle Battle) RankFluctuation(fluctuationRank *Rank) Battle {
 	newRank := rank.Add(fluctuationRank)
 
 	if battle.P1Fighters[0].Item == "しろいハーブ" && newRank.InDown() {
+		battle.P1Fighters[0].Item = ITEM_EMPTY
 		newRank = newRank.ResetDown()
 	}
 
@@ -451,39 +471,39 @@ func (battle Battle) Switch(pokeName PokeName) (Battle, error) {
 	return battle, nil
 }
 
-func (battle Battle) P1Action(action Action, random *rand.Rand) (Battle, error) {
-	if action.IsMoveName() || action == Action(STRUGGLE) {
-		return battle.MoveUse(MoveName(action), random)
+func (battle Battle) P1Action(actionCmd ActionCmd, random *rand.Rand) (Battle, error) {
+	if actionCmd.IsMoveName() || actionCmd == ActionCmd(STRUGGLE) {
+		return battle.MoveUse(MoveName(actionCmd), random)
 	}
 
-	if action.IsPokeName() {
-		return battle.Switch(PokeName(action))
+	if actionCmd.IsPokeName() {
+		return battle.Switch(PokeName(actionCmd))
 	}
 
-	errMsg := fmt.Sprintf("「%v」は、actionとして不適", action)
+	errMsg := fmt.Sprintf("「%v」は、actionCmdとして不適", actionCmd)
 	return Battle{}, fmt.Errorf(errMsg)
 }
 
-func (battle Battle) P2Action(action Action, random *rand.Rand) (Battle, error) {
+func (battle Battle) P2Action(actionCmd ActionCmd, random *rand.Rand) (Battle, error) {
 	var err error
 	battle = battle.Reverse()
 
-	if action.IsMoveName() || action == Action(STRUGGLE) {
-		battle, err = battle.MoveUse(MoveName(action), random)
+	if actionCmd.IsMoveName() || actionCmd == ActionCmd(STRUGGLE) {
+		battle, err = battle.MoveUse(MoveName(actionCmd), random)
 		return battle.Reverse(), err
 	}
 
-	if action.IsPokeName() {
-		battle, err = battle.Switch(PokeName(action))
+	if actionCmd.IsPokeName() {
+		battle, err = battle.Switch(PokeName(actionCmd))
 		return battle.Reverse(), err
 	}
 
-	errMsg := fmt.Sprintf("「%v」は、actionとして不適", action)
+	errMsg := fmt.Sprintf("「%v」は、actionCmdとして不適", actionCmd)
 	return Battle{}, fmt.Errorf(errMsg)
 }
 
 func (battle1 *Battle) Equal(battle2 *Battle) bool {
-	return battle1.P1Fighters.Equal(&battle2.P1Fighters) && battle1.P2Fighters.Equal(&battle2.P2Fighters) && battle1.P1Command == battle2.P1Command
+	return battle1.P1Fighters.Equal(&battle2.P1Fighters) && battle1.P2Fighters.Equal(&battle2.P2Fighters) && battle1.P1ActionCmd == battle2.P1ActionCmd
 }
 
 func (battle *Battle) FinalSpeedWinner() Winner {
@@ -501,9 +521,9 @@ func (battle *Battle) FinalSpeedWinner() Winner {
 	return DRAW
 }
 
-func (battle *Battle) ActionPriorityRankWinner(p1Action, p2Action Action) Winner {
-	p1PriorityRank := p1Action.PriorityRank()
-	p2PriorityRank := p2Action.PriorityRank()
+func (battle *Battle) ActionCmdPriorityRankWinner(p1ActionCmd, p2ActionCmd ActionCmd) Winner {
+	p1PriorityRank := p1ActionCmd.PriorityRank()
+	p2PriorityRank := p2ActionCmd.PriorityRank()
 
 	if p1PriorityRank > p2PriorityRank {
 		return WINNER_P1
@@ -515,14 +535,14 @@ func (battle *Battle) ActionPriorityRankWinner(p1Action, p2Action Action) Winner
 	return DRAW
 }
 
-func (battle *Battle) FinalActionPriorityWinner(p1Action, p2Action Action, random *rand.Rand) Winner {
-	actionPriorityRankWinner := battle.ActionPriorityRankWinner(p1Action, p2Action)
+func (battle *Battle) ActionPriorityWinner(p1ActionCmd, p2ActionCmd ActionCmd, random *rand.Rand) Winner {
+	actionCmdPriorityRankWinner := battle.ActionCmdPriorityRankWinner(p1ActionCmd, p2ActionCmd)
 
-	if actionPriorityRankWinner == WINNER_P1 {
+	if actionCmdPriorityRankWinner == WINNER_P1 {
 		return WINNER_P1
 	}
 
-	if actionPriorityRankWinner == WINNER_P2 {
+	if actionCmdPriorityRankWinner == WINNER_P2 {
 		return WINNER_P2
 	}
 
@@ -595,29 +615,29 @@ func (battle *Battle) IsP1Phase() bool {
 		return false
 	}
 
-	return battle.P1Command == ""
+	return battle.P1ActionCmd == ""
 }
 
-func (battle Battle) Push(action Action, random *rand.Rand) (Battle, error) {
+func (battle Battle) Push(actionCmd ActionCmd, random *rand.Rand) (Battle, error) {
 	if battle.P1Fighters[0].IsFaint() {
-		return battle.P1Action(action, random)
+		return battle.P1Action(actionCmd, random)
 	}
 
 	if battle.P2Fighters[0].IsFaint() {
-		return battle.P2Action(action, random)
+		return battle.P2Action(actionCmd, random)
 	}
 
-	if battle.P1Command == "" {
-		battle.P1Command = action
+	if battle.P1ActionCmd == "" {
+		battle.P1ActionCmd = actionCmd
 		return battle, nil
 	}
 
-	p2Action := action
-	finalActionPriorityWinner := battle.FinalActionPriorityWinner(battle.P1Command, p2Action, random)
+	p2ActionCmd := actionCmd
+	actionPriorityWinner := battle.ActionPriorityWinner(battle.P1ActionCmd, p2ActionCmd, random)
 
 	var isP1Action []bool
 
-	if finalActionPriorityWinner == WINNER_P1 {
+	if actionPriorityWinner == WINNER_P1 {
 		//fmt.Println("p1First")
 		isP1Action = []bool{true, false}
 	} else {
@@ -628,9 +648,9 @@ func (battle Battle) Push(action Action, random *rand.Rand) (Battle, error) {
 	var err error
 	for _, isP1 := range isP1Action {
 		if isP1 {
-			battle, err = battle.P1Action(battle.P1Command, random)
+			battle, err = battle.P1Action(battle.P1ActionCmd, random)
 		} else {
-			battle, err = battle.P2Action(p2Action, random)
+			battle, err = battle.P2Action(p2ActionCmd, random)
 		}
 
 		if err != nil {
@@ -643,7 +663,7 @@ func (battle Battle) Push(action Action, random *rand.Rand) (Battle, error) {
 	}
 
 	battle = battle.TurnEnd(random)
-	battle.P1Command = ""
+	battle.P1ActionCmd = ""
 	return battle, err
 }
 
@@ -666,6 +686,32 @@ func (battle *Battle) Winner() (Winner, error) {
 	} else {
 		return WINNER_P1, nil
 	}
+}
+
+func (battle *Battle) IsOneOnOne() bool {
+	if battle.P1Fighters[0].IsFaint() {
+		return false
+	}
+
+	if battle.P2Fighters[0].IsFaint() {
+		return false
+	}
+	return battle.P1Fighters[1].IsFaint() && battle.P1Fighters[2].IsFaint() && battle.P2Fighters[1].IsFaint() && battle.P2Fighters[2].IsFaint()
+}
+
+func (battle *Battle) FaintAttackDamageMoveNames(isCritical bool, randomDamageBonus RandomDamageBonus) MoveNames {
+	var result MoveNames
+	for moveName, powerPoint := range battle.P1Fighters[0].Moveset {
+		moveData := MOVEDEX[moveName]
+		if moveData.Category == STATUS || powerPoint.Current == 0 {
+			continue
+		}
+		finalDamage, _ := NewFinalDamage(battle, moveName, isCritical, randomDamageBonus)
+		if battle.P2Fighters[0].CurrentHP <= int(finalDamage) {
+			result = append(result, moveName)
+		}
+	}
+	return result
 }
 
 type Winner struct {

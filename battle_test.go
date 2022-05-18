@@ -3,11 +3,44 @@ package bippa
 import (
   "testing"
   "fmt"
-  "math"
-  "math/rand"
-  "time"
-  "github.com/seehuhn/mt19937"
+  // "math"
+  // "math/rand"
+  // "time"
+  // "github.com/seehuhn/mt19937"
 )
+
+func NewHerakurosu() Pokemon {
+  pokemon, err := NewPokemon("ヘラクロス", "いじっぱり", "こんじょう", "♂", "こだわりハチマキ",
+    MoveNames{"インファイト", "かわらわり"}, PointUps{MAX_POINT_UP, MAX_POINT_UP},
+    &ALL_MAX_INDIVIDUAL, &Effort{HP:252, Atk:252, Speed:4},
+  )
+  if err != nil {
+    panic(err)
+  }
+  return pokemon
+}
+
+func NewGenga() Pokemon {
+  pokemon, err := NewPokemon("ゲンガー", "ひかえめ", "のろわれボディ", "♀", "くろいヘドロ",
+    MoveNames{"シャドーボール", "きあいだま"}, PointUps{MAX_POINT_UP, MAX_POINT_UP},
+    &ALL_MAX_INDIVIDUAL, &Effort{HP:252, SpAtk:252, Speed:4},
+  )
+  if err != nil {
+    panic(err)
+  }
+  return pokemon
+}
+
+func NewKureseria() Pokemon {
+  pokemon, err := NewPokemon("クレセリア", "ずぶとい", "ふゆう", "♀", "ゴツゴツメット",
+    MoveNames{"つきのひかり", "れいとうビーム"}, PointUps{MAX_POINT_UP, MAX_POINT_UP},
+    &ALL_MAX_INDIVIDUAL, &Effort{HP:252, Def:252, Speed:4},
+  )
+  if err != nil {
+    panic(err)
+  }
+  return pokemon
+}
 
 func NewParusixen() Pokemon {
   pokemon, err := NewPokemon("パルシェン", "いじっぱり", "スキルリンク", "♂", "いのちのたま",
@@ -45,7 +78,7 @@ func NewGaburiasu() Pokemon {
 
 func NewHapinasu() Pokemon {
   pokemon, err := NewPokemon("ハピナス", "ひかえめ", "てんのめぐみ", "♀", "たべのこし",
-    MoveNames{"シャドーボール", "タマゴうみ", "10まんボルト", "かえんほうしゃ"}, PointUps{MAX_POINT_UP, MAX_POINT_UP, MAX_POINT_UP, MAX_POINT_UP},
+    MoveNames{"シャドーボール", "タマゴうみ", "10まんボルト"}, PointUps{MAX_POINT_UP, MAX_POINT_UP, MAX_POINT_UP},
     &ALL_MAX_INDIVIDUAL, &Effort{SpAtk:252, SpDef:252, Speed:4},
   )
   if err != nil {
@@ -68,7 +101,7 @@ func NewRateosu() Pokemon {
 
 func NewHusigibana() Pokemon {
   pokemon, err := NewPokemon("フシギバナ", "おだやか", "しんりょく", "♀", "なし",
-    MoveNames{"エナジーボール", "やどりぎのタネ"}, PointUps{MAX_POINT_UP, MAX_POINT_UP},
+    MoveNames{"エナジーボール"}, PointUps{MAX_POINT_UP},
     &ALL_MAX_INDIVIDUAL, &Effort{HP:252, SpDef:252, Speed:4})
   if err != nil {
     panic(err)
@@ -88,7 +121,7 @@ func NewRiza_don() Pokemon {
 
 func NewKamekkusu() Pokemon {
   pokemon, err := NewPokemon("カメックス", "ひかえめ", "げきりゅう", "♂", "なし",
-    MoveNames{"みずでっぽう", "れいとうビーム"}, PointUps{MAX_POINT_UP, MAX_POINT_UP},
+    MoveNames{"みずでっぽう"}, PointUps{MAX_POINT_UP},
     &ALL_MAX_INDIVIDUAL, &Effort{HP:252, SpAtk:252, Speed:4})
   if err != nil {
     panic(err)
@@ -136,86 +169,68 @@ func TestPush(t *testing.T) {
   // fmt.Println(battle.P2Fighters[2].CurrentHP)
 }
 
-func randomInstructionTrainer(random *rand.Rand) Trainer {
-	result := func(battle *Battle) (Action, error) {
-    if battle.P1Fighters[0].Rank.Atk >= 2 && !battle.P1Fighters[0].IsFaint() {
-      if battle.P2Fighters[0].Name == "ガブリアス" {
-        return "つららばり", nil
-      } else if battle.P2Fighters[0].Name == "カメックス" {
-        return "ロックブラスト", nil
-      } else {
-        return "つららばり", nil
-      }
-    }
-
-    if int(float64(battle.P1Fighters[0].MaxHP) * 0.5) >= battle.P1Fighters[0].CurrentHP && battle.P1Fighters[0].Name == "エアームド" {
-      return "はねやすめ", nil
-    }
-		legalActions := battle.P1Fighters.LegalActions()
-		return legalActions.RandomChoice(random), nil
-	}
-	return result
-}
-
 func Test(t *testing.T) {
-  p1Fighters := Fighters{NewEamudo(), NewKamekkusu(), NewRiza_don()}
-  p2Fighters := Fighters{NewGaburiasu(), NewRiza_don(), NewHusigibana()}
-
-  //p1Fighters[0].CurrentHP = 0
-  p1Fighters[1].CurrentHP = 0
-  p1Fighters[2].CurrentHP = 0
-
-  //p2Fighters[0].CurrentHP = 200
-  p2Fighters[1].CurrentHP = 0
-  p2Fighters[2].CurrentHP = 0
-
-  battle := Battle{P1Fighters:p1Fighters, P2Fighters:p2Fighters}
-  // battle.P1Fighters[1].CurrentHP = 0
-  // battle.P1Fighters[2].CurrentHP = 0
-  // battle.P2Fighters[1].CurrentHP = 0
-  // battle.P2Fighters[2].CurrentHP = 0
+  moveNames := MoveNames{"なみのり", "しんそく", "バレットパンチ", "れいとうビーム", "ねこだまし"}
+  fmt.Println(moveNames.Sort(func(moveName MoveName) int {return MOVEDEX[moveName].PriorityRank}))
+  // p1Fighters := Fighters{NewHusigibana(), NewKamekkusu(), NewRiza_don()}
+  // p2Fighters := Fighters{NewKamekkusu(), NewRiza_don(), NewHusigibana()}
   //
-  mtRandom := rand.New(mt19937.New())
-  mtRandom.Seed(time.Now().UnixNano())
-  // trainer := NewRandomInstructionTrainer(mtRandom)
-  // gameNum := 128000
-  // p1Count := 0
-  // p2Count := 0
+  // //p1Fighters[0].CurrentHP = 0
+  // p1Fighters[1].CurrentHP = 0
+  // p1Fighters[2].CurrentHP = 0
   //
-  // for i := 0; i < gameNum; i++ {
-  //   gameEndBattle, err := trainer.OneGame(trainer, battle, mtRandom)
-  //   if err != nil {
-  //     panic(err)
-  //   }
+  // //p2Fighters[0].CurrentHP = 200
+  // p2Fighters[1].CurrentHP = 0
+  // p2Fighters[2].CurrentHP = 0
   //
-  //   winner, err := gameEndBattle.Winner()
-  //   if err != nil {
-  //     panic(err)
-  //   }
+  // battle := Battle{P1Fighters:p2Fighters, P2Fighters:p1Fighters}
   //
-  //   if winner == WINNER_P1 {
-  //     p1Count += 1
-  //   }
+  // // battle.P1Fighters[1].CurrentHP = 0
+  // // battle.P1Fighters[2].CurrentHP = 0
+  // // battle.P2Fighters[1].CurrentHP = 0
+  // // battle.P2Fighters[2].CurrentHP = 0
+  // //
+  // mtRandom := rand.New(mt19937.New())
+  // mtRandom.Seed(time.Now().UnixNano())
+  // // trainer := NewRandomInstructionTrainer(mtRandom)
+  // // gameNum := 128000
+  // // p1Count := 0
+  // // p2Count := 0
+  // //
+  // // for i := 0; i < gameNum; i++ {
+  // //   gameEndBattle, err := trainer.OneGame(trainer, battle, mtRandom)
+  // //   if err != nil {
+  // //     panic(err)
+  // //   }
+  // //
+  // //   winner, err := gameEndBattle.Winner()
+  // //   if err != nil {
+  // //     panic(err)
+  // //   }
+  // //
+  // //   if winner == WINNER_P1 {
+  // //     p1Count += 1
+  // //   }
+  // //
+  // //   if winner == WINNER_P2 {
+  // //     p2Count += 1
+  // //   }
+  // // }
+  // // fmt.Println(float64(p1Count) / float64(gameNum))
+  // // fmt.Println(float64(p2Count) / float64(gameNum))
   //
-  //   if winner == WINNER_P2 {
-  //     p2Count += 1
-  //   }
+  // randomPlayoutEval := NewRandomPlayoutEval(NewRandomInstructionTrainer(mtRandom), mtRandom)
+  // allNodes, err := RunMCTS(battle, 19600, math.Sqrt(2), &randomPlayoutEval, mtRandom)
+  //
+  // if err != nil {
+  //   panic(err)
   // }
-  // fmt.Println(float64(p1Count) / float64(gameNum))
-  // fmt.Println(float64(p2Count) / float64(gameNum))
-
-  randomPlayoutEval := NewRandomPlayoutEval(randomInstructionTrainer(mtRandom), mtRandom)
-  allNodes, err := RunMCTS(battle, 19600, math.Sqrt(2), &randomPlayoutEval, mtRandom)
-
-  if err != nil {
-    panic(err)
-  }
-
-  fmt.Println(allNodes[0].AverageReward())
-
-  for action, ucb1 := range allNodes[0].ActionUCB1s {
-    fmt.Println(action)
-    fmt.Println(ucb1)
-    fmt.Println(ucb1.AverageReward())
-  }
+  //
+  // fmt.Println(allNodes[0].AverageReward())
+  //
+  // for actionCmd, ucb1 := range allNodes[0].ActionCmdUCB1s {
+  //   fmt.Println(actionCmd)
+  //   fmt.Println(ucb1)
+  //   fmt.Println(ucb1.AverageReward())
+  // }
 }

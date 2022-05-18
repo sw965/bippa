@@ -22,31 +22,31 @@ func (ucb1 *UpperConfidenceBound1) Get(totalTrial int, X float64) float64 {
   return averageReward + (X * math.Sqrt(2 * math.Log(floatTotalTrial) / floatTrial))
 }
 
-type ActionUCB1s map[Action]*UpperConfidenceBound1
+type ActionCmdUCB1s map[ActionCmd]*UpperConfidenceBound1
 
-func (actionUCB1s ActionUCB1s) Keys() Actions {
-  result := make(Actions, 0, len(actionUCB1s))
-  for action, _ := range actionUCB1s {
-    result = append(result, action)
+func (actionCmdUCB1s ActionCmdUCB1s) Keys() ActionCmds {
+  result := make(ActionCmds, 0, len(actionCmdUCB1s))
+  for actionCmd, _ := range actionCmdUCB1s {
+    result = append(result, actionCmd)
   }
   return result
 }
 
-func (actionUCB1s ActionUCB1s) TotalTrial() int {
+func (actionCmdUCB1s ActionCmdUCB1s) TotalTrial() int {
   result := 0
-  for _, ucb1 := range actionUCB1s {
+  for _, ucb1 := range actionCmdUCB1s {
     result += ucb1.Trial
   }
   return result
 }
 
-func (actionUCB1s ActionUCB1s) Max(X float64) float64 {
-  totalTrial := actionUCB1s.TotalTrial()
-  actions := actionUCB1s.Keys()
-  result := actionUCB1s[actions[0]].Get(totalTrial, X)
+func (actionCmdUCB1s ActionCmdUCB1s) Max(X float64) float64 {
+  totalTrial := actionCmdUCB1s.TotalTrial()
+  actionCmds := actionCmdUCB1s.Keys()
+  result := actionCmdUCB1s[actionCmds[0]].Get(totalTrial, X)
 
-  for _, action := range actions[1:] {
-    ucb1v := actionUCB1s[action].Get(totalTrial, X)
+  for _, actionCmd := range actionCmds[1:] {
+    ucb1v := actionCmdUCB1s[actionCmd].Get(totalTrial, X)
     if ucb1v > result {
       result = ucb1v
     }
@@ -54,26 +54,26 @@ func (actionUCB1s ActionUCB1s) Max(X float64) float64 {
   return result
 }
 
-func (actionUCB1s ActionUCB1s) MaxActions(X float64) Actions {
-  max := actionUCB1s.Max(X)
-  totalTrial := actionUCB1s.TotalTrial()
-  result := make(Actions, 0)
+func (actionCmdUCB1s ActionCmdUCB1s) MaxActionCmds(X float64) ActionCmds {
+  max := actionCmdUCB1s.Max(X)
+  totalTrial := actionCmdUCB1s.TotalTrial()
+  result := make(ActionCmds, 0)
 
-  for action, ucb1 := range actionUCB1s {
+  for actionCmd, ucb1 := range actionCmdUCB1s {
     ucb1v := ucb1.Get(totalTrial, X)
     if ucb1v == max {
-      result = append(result, action)
+      result = append(result, actionCmd)
     }
   }
   return result
 }
 
-func (actionUCB1s ActionUCB1s) MaxTrial() int {
-  actions := actionUCB1s.Keys()
-  result := actionUCB1s[actions[0]].Trial
+func (actionCmdUCB1s ActionCmdUCB1s) MaxTrial() int {
+  actionCmds := actionCmdUCB1s.Keys()
+  result := actionCmdUCB1s[actionCmds[0]].Trial
 
-  for _, action := range actions[1:] {
-    trial := actionUCB1s[action].Trial
+  for _, actionCmd := range actionCmds[1:] {
+    trial := actionCmdUCB1s[actionCmd].Trial
     if trial > result {
       result = trial
     }
@@ -81,13 +81,13 @@ func (actionUCB1s ActionUCB1s) MaxTrial() int {
   return result
 }
 
-func (actionUCB1s ActionUCB1s) MaxTrialActions() Actions {
-  maxTrial := actionUCB1s.MaxTrial()
-  result := make(Actions, 0)
-  for action, ucb1 := range actionUCB1s {
+func (actionCmdUCB1s ActionCmdUCB1s) MaxTrialActionCmds() ActionCmds {
+  maxTrial := actionCmdUCB1s.MaxTrial()
+  result := make(ActionCmds, 0)
+  for actionCmd, ucb1 := range actionCmdUCB1s {
     trial := ucb1.Trial
     if trial == maxTrial {
-      result = append(result, action)
+      result = append(result, actionCmd)
     }
   }
   return result
@@ -95,8 +95,8 @@ func (actionUCB1s ActionUCB1s) MaxTrialActions() Actions {
 
 type Node struct {
   Battle *Battle
-  LegalActions Actions
-  ActionUCB1s ActionUCB1s
+  LegalActionCmds ActionCmds
+  ActionCmdUCB1s ActionCmdUCB1s
   IsAllExpansion bool
   NextNodes Nodes
   IsP1Node bool
@@ -113,18 +113,18 @@ func NewNodePointer(battle *Battle) *Node {
     fighters = battle.P2Fighters
   }
 
-  legalActions := fighters.LegalActions()
-  return &Node{Battle:battle, LegalActions:legalActions, ActionUCB1s:ActionUCB1s{},
+  legalActionCmds := fighters.LegalActionCmds()
+  return &Node{Battle:battle, LegalActionCmds:legalActionCmds, ActionCmdUCB1s:ActionCmdUCB1s{},
                IsAllExpansion:false, IsP1Node:isP1Phase, SelectCount:0}
 }
 
-func (node *Node) NoExpansionActions() Actions {
-  legalActions := node.LegalActions
-  result := make(Actions, 0, len(legalActions) - len(node.ActionUCB1s))
+func (node *Node) NoExpansionActionCmds() ActionCmds {
+  legalActionCmds := node.LegalActionCmds
+  result := make(ActionCmds, 0, len(legalActionCmds) - len(node.ActionCmdUCB1s))
 
-  for _, action := range legalActions {
-    if _, ok := node.ActionUCB1s[action]; !ok {
-      result = append(result, action)
+  for _, actionCmd := range legalActionCmds {
+    if _, ok := node.ActionCmdUCB1s[actionCmd]; !ok {
+      result = append(result, actionCmd)
     }
   }
   return result
@@ -140,12 +140,12 @@ func (node *Node) Select(battle Battle, allNodes Nodes, X float64, random *rand.
       break
     }
 
-    maxUCBActions := node.ActionUCB1s.MaxActions(X)
-    selectAction := maxUCBActions.RandomChoice(random)
-    selects = append(selects, Select{Node:node, Action:selectAction})
+    maxUCBActionCmds := node.ActionCmdUCB1s.MaxActionCmds(X)
+    selectActionCmd := maxUCBActionCmds.RandomChoice(random)
+    selects = append(selects, Select{Node:node, ActionCmd:selectActionCmd})
     node.SelectCount += 1
 
-    battle, err = battle.Push(selectAction, random)
+    battle, err = battle.Push(selectActionCmd, random)
     if err != nil {
       return &Node{}, Battle{}, Nodes{}, Selects{}, false, err
     }
@@ -189,20 +189,20 @@ func (node *Node) ExpansionWithEvalY(battle Battle, eval *Eval, selects Selects,
     return 0.0, Selects{}, fmt.Errorf("展開済みのNodeである")
   }
 
-  noExpansionAction := node.NoExpansionActions().RandomChoice(random)
+  noExpansionActionCmd := node.NoExpansionActionCmds().RandomChoice(random)
   var err error
 
-  //ランダムに選択した未展開Actionでバトルを進める
-  battle, err = battle.Push(noExpansionAction, random)
+  //ランダムに選択した未展開ActionCmdでバトルを進める
+  battle, err = battle.Push(noExpansionActionCmd, random)
   if err != nil {
     return 0.0, Selects{}, err
   }
 
-  //ランダムに選択した未展開ActionのUCBParamを新しく作り、selectsに追加する
-  node.ActionUCB1s[noExpansionAction] = &UpperConfidenceBound1{}
-  selects = append(selects, Select{Node:node, Action:noExpansionAction})
+  //ランダムに選択した未展開ActionCmdのUCBParamを新しく作り、selectsに追加する
+  node.ActionCmdUCB1s[noExpansionActionCmd] = &UpperConfidenceBound1{}
+  selects = append(selects, Select{Node:node, ActionCmd:noExpansionActionCmd})
 
-  if len(node.ActionUCB1s) == len(node.LegalActions) {
+  if len(node.ActionCmdUCB1s) == len(node.LegalActionCmds) {
     node.IsAllExpansion = true
   }
 
@@ -213,10 +213,10 @@ func (node *Node) ExpansionWithEvalY(battle Battle, eval *Eval, selects Selects,
 
 func (node *Node) AverageReward() float64 {
   accumReward := 0.0
-  for _, ucb1 := range node.ActionUCB1s {
+  for _, ucb1 := range node.ActionCmdUCB1s {
     accumReward += ucb1.AccumReward
   }
-  return float64(accumReward) / float64(node.ActionUCB1s.TotalTrial())
+  return float64(accumReward) / float64(node.ActionCmdUCB1s.TotalTrial())
 }
 
 type Nodes []*Node
@@ -232,7 +232,7 @@ func (nodes Nodes) Find(battle *Battle) (*Node, error) {
 
 type Select struct {
   Node *Node
-  Action Action
+  ActionCmd ActionCmd
 }
 
 type Selects []Select
@@ -240,14 +240,14 @@ type Selects []Select
 func (selects Selects) Backward(evalY float64, eval *Eval) {
   for _, select_ := range selects {
     node := select_.Node
-    action := select_.Action
+    actionCmd := select_.ActionCmd
 
     if node.IsP1Node {
-      node.ActionUCB1s[action].AccumReward += evalY
+      node.ActionCmdUCB1s[actionCmd].AccumReward += evalY
     } else {
-      node.ActionUCB1s[action].AccumReward += eval.Reverse(evalY)
+      node.ActionCmdUCB1s[actionCmd].AccumReward += eval.Reverse(evalY)
     }
-    node.ActionUCB1s[action].Trial += 1
+    node.ActionCmdUCB1s[actionCmd].Trial += 1
     node.SelectCount = 0
   }
 }
@@ -292,14 +292,20 @@ func RunMCTS(rootBattle Battle, simuNum int, X float64, eval *Eval, random *rand
 }
 
 func NewMCTSTrainer(simuNum int, X float64, eval *Eval, random *rand.Rand) Trainer {
-  result := func(battle *Battle) (Action, error) {
+  result := func(battle *Battle) (ActionCmd, error) {
+    legalActionCmds := battle.P1Fighters.LegalActionCmds()
+
+    if len(legalActionCmds) == 1 {
+      return legalActionCmds[0], nil
+    }
+
     allNodes, err := RunMCTS(*battle, simuNum, X, eval, random)
 
     if err != nil {
       return "", err
     }
 
-    return allNodes[0].ActionUCB1s.MaxTrialActions().RandomChoice(random), nil
+    return allNodes[0].ActionCmdUCB1s.MaxTrialActionCmds().RandomChoice(random), nil
   }
   return result
 }

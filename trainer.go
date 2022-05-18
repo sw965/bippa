@@ -5,23 +5,27 @@ import (
 	"math/rand"
 )
 
-type Trainer func(*Battle) (Action, error)
+type Trainer func(*Battle) (ActionCmd, error)
 
 func NewRandomInstructionTrainer(random *rand.Rand) Trainer {
-	result := func(battle *Battle) (Action, error) {
-		legalActions := battle.P1Fighters.LegalActions()
-		return legalActions.RandomChoice(random), nil
+	result := func(battle *Battle) (ActionCmd, error) {
+		legalActionCmds := battle.P1Fighters.LegalActionCmds()
+		return legalActionCmds.RandomChoice(random), nil
 	}
 	return result
 }
 
-// func NewGoodTrainer(random *rand.Rand) Trainer {
-// 	result := func(battle *Battle) (Action, error) {
-// 		if battle.P1Fighters[0].IsLeechSeed {
-//
-// 		}
-// 	}
-// }
+func NewExpertTrainer(random *rand.Rand) Trainer {
+	result := func(battle *Battle) (ActionCmd, error) {
+		legalActionCmds := battle.P1Fighters.LegalActionCmds()
+		if len(legalActionCmds) == 1 {
+			return legalActionCmds[0], nil
+		}
+		//知識に該当する選択肢がない場合は、ランダムで行動する
+		return legalActionCmds.RandomChoice(random), nil
+	}
+	return result
+}
 
 func (p1Trainer Trainer) OneGame(p2Trainer Trainer, battle Battle, random *rand.Rand) (Battle, error) {
 	if battle.IsGameEnd() {
@@ -29,25 +33,25 @@ func (p1Trainer Trainer) OneGame(p2Trainer Trainer, battle Battle, random *rand.
 	}
 
 	var err error
-	var action Action
+	var actionCmd ActionCmd
 
 	for {
 		if battle.IsP1Phase() {
-			action, err = p1Trainer(&battle)
+			actionCmd, err = p1Trainer(&battle)
 		} else {
-			p1Command := battle.P1Command
-			battle.P1Command = ""
+			p1ActionCmd := battle.P1ActionCmd
+			battle.P1ActionCmd = ""
 			battle = battle.Reverse()
-			action, err = p2Trainer(&battle)
+			actionCmd, err = p2Trainer(&battle)
 			battle = battle.Reverse()
-			battle.P1Command = p1Command
+			battle.P1ActionCmd = p1ActionCmd
 		}
 
 		if err != nil {
 			return Battle{}, err
 		}
 
-		battle, err = battle.Push(action, random)
+		battle, err = battle.Push(actionCmd, random)
 		if err != nil {
 			return Battle{}, err
 		}

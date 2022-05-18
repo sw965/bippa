@@ -1,9 +1,5 @@
 package bippa
 
-// import (
-// 	"fmt"
-// )
-
 //https://wiki.xn--rckteqa2e.com/wiki/%E3%82%BF%E3%83%BC%E3%83%B3#5..E3.82.BF.E3.83.BC.E3.83.B3.E7.B5.82.E4.BA.86.E6.99.82.E3.81.AE.E5.87.A6.E7.90.86
 func TurnEndLeftovers(battle Battle) Battle {
 	if battle.P1Fighters[0].Item != "たべのこし" {

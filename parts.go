@@ -381,6 +381,26 @@ func (moveNames MoveNames) In(moveName MoveName) bool {
 	return false
 }
 
+func (moveNames MoveNames) Copy() MoveNames {
+	result := make(MoveNames, len(moveNames))
+	for i, moveName := range moveNames {
+		result[i] = moveName
+	}
+	return result
+}
+
+func (moveNames MoveNames) Sort(f func(moveName MoveName) int) MoveNames {
+	result := moveNames.Copy()
+	for i := 0; i < len(result) - 1; i++ {
+		for j := 0; j < len(result) - i - 1; j++ {
+			if f(result[j]) < f(result[j + 1]) {
+				result[j], result[j + 1] = result[j + 1], result[j]
+			}
+		}
+	}
+	return result
+}
+
 const (
 	MIN_MOVESET_LENGTH = 1
 	MAX_MOVESET_LENGTH = 4
@@ -449,6 +469,14 @@ func NewMoveset(pokeName PokeName, moveNames MoveNames, pointUps []PointUp) (Mov
 	} else {
 		return Moveset{}, fmt.Errorf("覚えさせる技の数が、%v～%vの範囲外", MIN_MOVESET_LENGTH, MAX_MOVESET_LENGTH)
 	}
+}
+
+func (moveset Moveset) Keys() MoveNames {
+	result := make(MoveNames, 0, len(moveset))
+	for k, _ := range moveset {
+		result = append(result, k)
+	}
+	return result
 }
 
 func (moveset Moveset) Copy() Moveset {
@@ -691,4 +719,18 @@ func (pokemon *Pokemon) BadPoisonDamage() int {
 	} else {
 		return damage
 	}
+}
+
+func (pokemon *Pokemon) IsFullAttack() bool {
+	for moveName, _ := range pokemon.Moveset {
+		if moveName == "カウンター" || moveName == "ミラーコート" {
+			return false
+		}
+
+		moveData := MOVEDEX[moveName]
+		if moveData.Category == STATUS {
+			return false
+		}
+	}
+	return true
 }
