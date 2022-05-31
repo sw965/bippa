@@ -2,10 +2,10 @@ package bippa
 
 import (
 	"encoding/json"
+	"github.com/sw965/omw"
 	"io/ioutil"
 	"os"
 	"strings"
-	"github.com/sw965/omw"
 )
 
 var (
@@ -15,10 +15,10 @@ var (
 	NATUREDEX_PATH = DATA_PATH + "naturedex.json"
 	TYPEDEX_PATH   = DATA_PATH + "typedex.json"
 
-	ALL_POKE_NAMES_PATH        = DATA_PATH + "all_poke_names.txt"
-	ALL_NATURES_PATH           = DATA_PATH + "all_natures.txt"
-	ALL_MOVE_NAMES_PATH        = DATA_PATH + "all_move_names.txt"
-	ALL_ITEMS_PATH             = DATA_PATH + "all_items.txt"
+	ALL_POKE_NAMES_PATH = DATA_PATH + "all_poke_names.txt"
+	ALL_NATURES_PATH    = DATA_PATH + "all_natures.txt"
+	ALL_MOVE_NAMES_PATH = DATA_PATH + "all_move_names.txt"
+	ALL_ITEMS_PATH      = DATA_PATH + "all_items.txt"
 )
 
 type PokeData struct {
@@ -27,7 +27,7 @@ type PokeData struct {
 	AllAbilities    Abilities
 
 	Gender string
-	Types      Types
+	Types  Types
 
 	BaseHP    int
 	BaseAtk   int

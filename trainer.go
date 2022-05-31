@@ -15,18 +15,6 @@ func NewRandomInstructionTrainer(random *rand.Rand) Trainer {
 	return result
 }
 
-func NewExpertTrainer(random *rand.Rand) Trainer {
-	result := func(battle *Battle) (ActionCmd, error) {
-		legalActionCmds := battle.P1Fighters.LegalActionCmds()
-		if len(legalActionCmds) == 1 {
-			return legalActionCmds[0], nil
-		}
-		//知識に該当する選択肢がない場合は、ランダムで行動する
-		return legalActionCmds.RandomChoice(random), nil
-	}
-	return result
-}
-
 func (p1Trainer Trainer) OneGame(p2Trainer Trainer, battle Battle, random *rand.Rand) (Battle, error) {
 	if battle.IsGameEnd() {
 		return Battle{}, fmt.Errorf("既にゲームが終了している状態でtrainer.OneGame関数を呼び出した")

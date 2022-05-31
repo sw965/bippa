@@ -145,8 +145,8 @@ var ALL_MAX_INDIVIDUAL = Individual{
 type EffortVal int
 
 var (
-	MIN_EFFORT_VAL    = EffortVal(0)
-	MAX_EFFORT_VAL    = EffortVal(252)
+	MIN_EFFORT_VAL     = EffortVal(0)
+	MAX_EFFORT_VAL     = EffortVal(252)
 	MAX_SUM_EFFORT_VAL = EffortVal(510)
 )
 
@@ -391,10 +391,10 @@ func (moveNames MoveNames) Copy() MoveNames {
 
 func (moveNames MoveNames) Sort(f func(moveName MoveName) int) MoveNames {
 	result := moveNames.Copy()
-	for i := 0; i < len(result) - 1; i++ {
-		for j := 0; j < len(result) - i - 1; j++ {
-			if f(result[j]) < f(result[j + 1]) {
-				result[j], result[j + 1] = result[j + 1], result[j]
+	for i := 0; i < len(result)-1; i++ {
+		for j := 0; j < len(result)-i-1; j++ {
+			if f(result[j]) < f(result[j+1]) {
+				result[j], result[j+1] = result[j+1], result[j]
 			}
 		}
 	}
@@ -514,13 +514,13 @@ type Pokemon struct {
 	Individual Individual
 	Effort     Effort
 
-	MaxHP int
+	MaxHP     int
 	CurrentHP int
-	Atk int
-	Def int
-	SpAtk int
-	SpDef int
-	Speed int
+	Atk       int
+	Def       int
+	SpAtk     int
+	SpDef     int
+	Speed     int
 
 	StatusAilment  StatusAilment
 	Rank           Rank
@@ -591,7 +591,7 @@ func NewPokemon(pokeName PokeName, nature Nature, ability Ability, gender Gender
 
 	return Pokemon{Name: pokeName, Nature: nature, Ability: ability, Gender: gender, Item: item, Moveset: moveset,
 		Individual: *individual, Effort: *effort,
-		MaxHP:hp, CurrentHP:hp, Atk:atk, Def:def, SpAtk:spAtk, SpDef:spDef, Speed:speed,
+		MaxHP: hp, CurrentHP: hp, Atk: atk, Def: def, SpAtk: spAtk, SpDef: spDef, Speed: speed,
 		Types: pokeData.Types, Level: DEFAULT_LEVEL}, nil
 }
 

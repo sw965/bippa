@@ -56,14 +56,14 @@ type AttackBonus int
 func NewAttackBonus(battle *Battle, moveName MoveName) (AttackBonus, error) {
 	moveData := MOVEDEX[moveName]
 	switch moveData.Category {
-		case PHYSICS:
-			physicsAttackBonus := NewPhysicsAttackBonus(battle)
-			return AttackBonus(physicsAttackBonus), nil
-		case SPECIAL:
-			specialAttackBonus := NewSpecialAttackBonus(battle)
-			return AttackBonus(specialAttackBonus), nil
-		default:
-			return 0, fmt.Errorf("物理/特殊技でなければならない")
+	case PHYSICS:
+		physicsAttackBonus := NewPhysicsAttackBonus(battle)
+		return AttackBonus(physicsAttackBonus), nil
+	case SPECIAL:
+		specialAttackBonus := NewSpecialAttackBonus(battle)
+		return AttackBonus(specialAttackBonus), nil
+	default:
+		return 0, fmt.Errorf("物理/特殊技でなければならない")
 	}
 }
 
@@ -220,13 +220,24 @@ func (randomDamageBonuses RandomDamageBonuses) Average() RandomDamageBonus {
 	return RandomDamageBonus(sum) / RandomDamageBonus(RANDOM_DAMAGE_BONUSES_LENGTH)
 }
 
+func (randomDamageBonuses RandomDamageBonuses) Max() RandomDamageBonus {
+	result := randomDamageBonuses[0]
+	for _, v := range randomDamageBonuses[1:] {
+		if v > result {
+			result = v
+		}
+	}
+	return result
+}
+
 var RANDOM_DAMAGE_BONUSES = RandomDamageBonuses{
 	0.85, 0.86, 0.87, 0.88, 0.89, 0.9, 0.91, 0.92, 0.93, 0.94, 0.95, 0.96, 0.97, 0.98, 0.99, 1.0,
 }
 
 var RANDOM_DAMAGE_BONUSES_LENGTH = len(RANDOM_DAMAGE_BONUSES)
 
-var RANDOM_DAMAGE_BONUSES_AVERAGE = RANDOM_DAMAGE_BONUSES.Average()
+var MAX_RANDOM_DAMAGE_BONUS = RANDOM_DAMAGE_BONUSES.Max()
+var AVERAGE_RANDOM_DAMAGE_BONUS = RANDOM_DAMAGE_BONUSES.Average()
 
 type DamageBonus int
 

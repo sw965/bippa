@@ -1,10 +1,10 @@
 package bippa
 
 import (
-	"fmt"
 	"encoding/json"
-	"io/ioutil"
+	"fmt"
 	"github.com/sw965/omw"
+	"io/ioutil"
 	"math/rand"
 )
 
@@ -86,12 +86,10 @@ func (fighters *Fighters) IsAllFaint() bool {
 	return true
 }
 
-func (fighters *Fighters) FaintNum() int {
-	result := 0
-	for _, pokemon := range fighters {
-		if pokemon.IsFaint() {
-			result += 1
-		}
+func (fighters *Fighters) FaintList() []bool {
+	result := make([]bool, FIGHTERS_LENGTH)
+	for i, pokemon := range fighters {
+		result[i] = pokemon.IsFaint()
 	}
 	return result
 }
@@ -143,7 +141,7 @@ func (fighters *Fighters) LegalActionCmdPokeNames() []PokeName {
 func (fighters *Fighters) LegalActionCmds() ActionCmds {
 	legalActionCmdMoveNames := fighters.LegalActionCmdMoveNames()
 	legalActionCmdPokeNames := fighters.LegalActionCmdPokeNames()
-	result := make(ActionCmds, 0, len(legalActionCmdMoveNames) + len(legalActionCmdPokeNames))
+	result := make(ActionCmds, 0, len(legalActionCmdMoveNames)+len(legalActionCmdPokeNames))
 
 	for _, moveName := range legalActionCmdMoveNames {
 		result = append(result, ActionCmd(moveName))
@@ -230,13 +228,13 @@ func (actionCmds ActionCmds) RandomChoice(random *rand.Rand) ActionCmd {
 }
 
 type Battle struct {
-	P1Fighters Fighters
-	P2Fighters Fighters
+	P1Fighters  Fighters
+	P2Fighters  Fighters
 	P1ActionCmd ActionCmd
 }
 
 func (battle *Battle) Reverse() Battle {
-	return Battle{P1Fighters: battle.P2Fighters, P2Fighters: battle.P1Fighters, P1ActionCmd:battle.P1ActionCmd}
+	return Battle{P1Fighters: battle.P2Fighters, P2Fighters: battle.P1Fighters, P1ActionCmd: battle.P1ActionCmd}
 }
 
 func (battle *Battle) Accuracy(moveName MoveName) int {
@@ -688,30 +686,147 @@ func (battle *Battle) Winner() (Winner, error) {
 	}
 }
 
-func (battle *Battle) IsOneOnOne() bool {
-	if battle.P1Fighters[0].IsFaint() {
-		return false
-	}
+func (battle *Battle) AttackDamageProbabilityDistribution(moveName MoveName) (map[int]float64, error) {
+	accuracyPercent := float64(battle.Accuracy(moveName)) / 100.0
+	randomDamageBonusPercent := 1.0 / float64(RANDOM_DAMAGE_BONUSES_LENGTH)
+	criticalPercent := 1.0 / float64(battle.CriticalN(moveName))
+	boolToCriticalPercent := map[bool]float64{true: criticalPercent, false: 1.0 - criticalPercent}
+	result := map[int]float64{0: 1.0 - accuracyPercent}
 
-	if battle.P2Fighters[0].IsFaint() {
-		return false
+	for _, randomDamageBonus := range RANDOM_DAMAGE_BONUSES {
+		for _, isCritical := range []bool{true, false} {
+			finalDamage, err := NewFinalDamage(battle, moveName, isCritical, randomDamageBonus)
+			p := accuracyPercent * randomDamageBonusPercent * boolToCriticalPercent[isCritical]
+			if err != nil {
+				return result, err
+			}
+
+			if _, ok := result[int(finalDamage)]; ok {
+				//確率の加法定理
+				result[int(finalDamage)] += p
+			} else {
+				result[int(finalDamage)] = p
+			}
+		}
 	}
-	return battle.P1Fighters[1].IsFaint() && battle.P1Fighters[2].IsFaint() && battle.P2Fighters[1].IsFaint() && battle.P2Fighters[2].IsFaint()
+	return result, nil
 }
 
-func (battle *Battle) FaintAttackDamageMoveNames(isCritical bool, randomDamageBonus RandomDamageBonus) MoveNames {
-	var result MoveNames
-	for moveName, powerPoint := range battle.P1Fighters[0].Moveset {
-		moveData := MOVEDEX[moveName]
-		if moveData.Category == STATUS || powerPoint.Current == 0 {
+func (battle *Battle) AttackDamageExpectedValue(moveName MoveName) (int, error) {
+	probabilityDistribution, err := battle.AttackDamageProbabilityDistribution(moveName)
+	result := 0.0
+	for damage, p := range probabilityDistribution {
+		result += (float64(damage) * p)
+	}
+	return int(result), err
+}
+
+func (battle *Battle) MaxAttackDamageExpectedValue() (int, error) {
+	result := 0
+	for moveName, _ := range battle.P1Fighters[0].Moveset {
+
+		if MOVEDEX[moveName].Category == STATUS {
 			continue
 		}
-		finalDamage, _ := NewFinalDamage(battle, moveName, isCritical, randomDamageBonus)
-		if battle.P2Fighters[0].CurrentHP <= int(finalDamage) {
-			result = append(result, moveName)
+
+		adev, err := battle.AttackDamageExpectedValue(moveName)
+		if err != nil {
+			return 0, err
+		}
+
+		if adev > result {
+			result = adev
 		}
 	}
-	return result
+	return result, nil
+}
+
+func (battle *Battle) NotBadEvalX() ([]float64, error) {
+	bins := 8
+	result := make([]float64, 0, (3 * FIGHTERS_LENGTH * FIGHTERS_LENGTH) + bins * bins * FIGHTERS_LENGTH * FIGHTERS_LENGTH)
+
+	for _, p1Pokemon := range battle.P1Fighters {
+		for _, p2Pokemon := range battle.P2Fighters {
+			isP1Faint := p1Pokemon.IsFaint()
+			isP2Faint := p2Pokemon.IsFaint()
+
+			var x []float64
+			if isP1Faint && !isP2Faint {
+				x = []float64{1, 0, 0}
+			} else if !isP1Faint && isP2Faint {
+				x = []float64{0, 1, 0}
+			} else if isP1Faint && isP2Faint {
+				x = []float64{0, 0, 1}
+			} else {
+				x = []float64{0, 0, 0}
+			}
+			result = append(result, x...)
+		}
+	}
+
+	p1Fighterses := []Fighters{
+		Fighters{battle.P1Fighters[0], battle.P1Fighters[1], battle.P1Fighters[2]},
+		Fighters{battle.P1Fighters[1], battle.P1Fighters[0], battle.P1Fighters[2]},
+		Fighters{battle.P1Fighters[2], battle.P1Fighters[1], battle.P1Fighters[0]},
+	}
+
+	p2Fighterses := []Fighters{
+		Fighters{battle.P2Fighters[0], battle.P2Fighters[1], battle.P2Fighters[2]},
+		Fighters{battle.P2Fighters[1], battle.P2Fighters[0], battle.P2Fighters[2]},
+		Fighters{battle.P2Fighters[2], battle.P2Fighters[1], battle.P2Fighters[0]},
+	}
+
+	width := 1.0 / float64(bins)
+
+	for _, p1Fighters := range p1Fighterses {
+		for _, p2Fighters := range p2Fighterses {
+			x := make([]float64, bins * bins)
+			if p1Fighters[0].IsFaint() || p2Fighters[0].IsFaint() {
+				result = append(result, x...)
+				continue
+			}
+
+			battle := Battle{P1Fighters:p1Fighters, P2Fighters:p2Fighters}
+
+			p1MaxAttackDamageExpectedValue, err := battle.MaxAttackDamageExpectedValue()
+			if err != nil {
+				return []float64{}, err
+			}
+
+			p1AttackDamageRatio := float64(p1MaxAttackDamageExpectedValue) / float64(p2Fighters[0].CurrentHP)
+			if p1AttackDamageRatio > 1.0 {
+				p1AttackDamageRatio = 1.0
+			}
+
+			reverseBattle := battle.Reverse()
+			p2MaxAttackDamageExpectedValue, err := reverseBattle.MaxAttackDamageExpectedValue()
+			if err != nil {
+				return []float64{}, err
+			}
+
+			p2AttackDamageRatio := float64(p2MaxAttackDamageExpectedValue) / float64(p1Fighters[0].CurrentHP)
+			if p2AttackDamageRatio > 1.0 {
+				p2AttackDamageRatio = 1.0
+			}
+
+			BreakLabel:
+			for i := 0; i < bins; i++ {
+				for j := 0; j < bins; j++ {
+					p1LowerLimit := (float64(i) * width)
+					p1UpperLimit := (float64(i + 1) * width)
+					p2LowerLimit := (float64(j) * width)
+					p2UpperLimit := (float64(j + 1) * width)
+					if (p1LowerLimit <= p1AttackDamageRatio) && (p1AttackDamageRatio <= p1UpperLimit) &&
+					   (p2LowerLimit <= p2AttackDamageRatio) && (p2AttackDamageRatio <= p2UpperLimit) {
+						x[(bins * i) + j] = 1
+					  result = append(result, x...)
+						break BreakLabel
+					}
+				}
+			}
+		}
+	}
+	return result, nil
 }
 
 type Winner struct {
@@ -726,4 +841,4 @@ var (
 )
 
 var WINNER_TO_SIGMOID_REWARD = map[Winner]float64{WINNER_P1: 1.0, WINNER_P2: 0.0, DRAW: 0.5}
-var WINNET_TO_TANH_REWARD = map[Winner]float64{WINNER_P1:1.0, WINNER_P2:-1.0, DRAW:0.0}
+var WINNET_TO_TANH_REWARD = map[Winner]float64{WINNER_P1: 1.0, WINNER_P2: -1.0, DRAW: 0.0}
