@@ -450,7 +450,7 @@ func (battle Battle) Switch(pokeName PokeName) (Battle, error) {
 	}
 
 	battle.P1Fighters[0].Rank = Rank{}
-	battle.P1Fighters[0].StatusAilment.BadPoisonElapsedTurn = 0
+	battle.P1Fighters[0].BadPoisonElapsedTurn = 0
 	battle.P1Fighters[0].ChoiceMoveName = ""
 	battle.P1Fighters[0].IsLeechSeed = false
 
@@ -636,10 +636,8 @@ func (battle Battle) Push(actionCmd ActionCmd, random *rand.Rand) (Battle, error
 	var isP1Action []bool
 
 	if actionPriorityWinner == WINNER_P1 {
-		//fmt.Println("p1First")
 		isP1Action = []bool{true, false}
 	} else {
-		//fmt.Println("p2First")
 		isP1Action = []bool{false, true}
 	}
 
@@ -712,119 +710,63 @@ func (battle *Battle) AttackDamageProbabilityDistribution(moveName MoveName) (ma
 	return result, nil
 }
 
-func (battle *Battle) AttackDamageExpectedValue(moveName MoveName) (int, error) {
-	probabilityDistribution, err := battle.AttackDamageProbabilityDistribution(moveName)
-	result := 0.0
-	for damage, p := range probabilityDistribution {
-		result += (float64(damage) * p)
-	}
-	return int(result), err
+func (battle *Battle) AttackDamageHPRatioExpected(adpd map[int]float64, f func(*Pokemon)int) float64 {
+  result := 0.0
+  for damage, percent := range adpd {
+    attackDamageRatio := float64(damage) / float64(f(&battle.P2Fighters[0]))
+    if attackDamageRatio > 1.0 {
+      attackDamageRatio = 1.0
+    }
+    result += attackDamageRatio * percent
+  }
+	return result
 }
 
-func (battle *Battle) MaxAttackDamageExpectedValue() (int, error) {
-	result := 0
-	for moveName, _ := range battle.P1Fighters[0].Moveset {
+func (battle *Battle) AttackDamageMaxHPRatioExpected(adpd map[int]float64) float64 {
+	return battle.AttackDamageHPRatioExpected(adpd, func(pokemon *Pokemon) int {return pokemon.MaxHP})
+}
 
+func (battle *Battle) AttackDamageCurrentHPRatioExpected(adpd map[int]float64) float64 {
+	return battle.AttackDamageHPRatioExpected(adpd, func(pokemon *Pokemon) int {return pokemon.CurrentHP})
+}
+
+func (battle *Battle) MaxAttackDamageHPRatioExpected(f func(map[int]float64) float64) (float64, error) {
+	result := 0.0
+	for moveName, _ := range battle.P1Fighters[0].Moveset {
 		if MOVEDEX[moveName].Category == STATUS {
 			continue
 		}
 
-		adev, err := battle.AttackDamageExpectedValue(moveName)
+		adpd, err := battle.AttackDamageProbabilityDistribution(moveName)
 		if err != nil {
-			return 0, err
+			return 0.0, err
 		}
 
-		if adev > result {
-			result = adev
+		attackDamageHPRatioExpected := f(adpd)
+		if attackDamageHPRatioExpected > result {
+			result = attackDamageHPRatioExpected
 		}
 	}
 	return result, nil
 }
 
-func (battle *Battle) NotBadEvalX() ([]float64, error) {
-	bins := 8
-	result := make([]float64, 0, (3 * FIGHTERS_LENGTH * FIGHTERS_LENGTH) + bins * bins * FIGHTERS_LENGTH * FIGHTERS_LENGTH)
+func (battle *Battle) MaxAttackDamageMaxHPRatioExpected() (float64, error) {
+	return battle.MaxAttackDamageHPRatioExpected(battle.AttackDamageMaxHPRatioExpected)
+}
 
-	for _, p1Pokemon := range battle.P1Fighters {
-		for _, p2Pokemon := range battle.P2Fighters {
-			isP1Faint := p1Pokemon.IsFaint()
-			isP2Faint := p2Pokemon.IsFaint()
+func (battle *Battle) MaxAttackDamageCurrentHPRatioExpected() (float64, error) {
+	return battle.MaxAttackDamageHPRatioExpected(battle.AttackDamageCurrentHPRatioExpected)
+}
 
-			var x []float64
-			if isP1Faint && !isP2Faint {
-				x = []float64{1, 0, 0}
-			} else if !isP1Faint && isP2Faint {
-				x = []float64{0, 1, 0}
-			} else if isP1Faint && isP2Faint {
-				x = []float64{0, 0, 1}
-			} else {
-				x = []float64{0, 0, 0}
-			}
-			result = append(result, x...)
-		}
+func (battle *Battle) ExpectedAttackDamage(moveName MoveName) (float64, error) {
+	adpd, err := battle.AttackDamageProbabilityDistribution(moveName)
+	if err != nil {
+		return 0.0, err
 	}
 
-	p1Fighterses := []Fighters{
-		Fighters{battle.P1Fighters[0], battle.P1Fighters[1], battle.P1Fighters[2]},
-		Fighters{battle.P1Fighters[1], battle.P1Fighters[0], battle.P1Fighters[2]},
-		Fighters{battle.P1Fighters[2], battle.P1Fighters[1], battle.P1Fighters[0]},
-	}
-
-	p2Fighterses := []Fighters{
-		Fighters{battle.P2Fighters[0], battle.P2Fighters[1], battle.P2Fighters[2]},
-		Fighters{battle.P2Fighters[1], battle.P2Fighters[0], battle.P2Fighters[2]},
-		Fighters{battle.P2Fighters[2], battle.P2Fighters[1], battle.P2Fighters[0]},
-	}
-
-	width := 1.0 / float64(bins)
-
-	for _, p1Fighters := range p1Fighterses {
-		for _, p2Fighters := range p2Fighterses {
-			x := make([]float64, bins * bins)
-			if p1Fighters[0].IsFaint() || p2Fighters[0].IsFaint() {
-				result = append(result, x...)
-				continue
-			}
-
-			battle := Battle{P1Fighters:p1Fighters, P2Fighters:p2Fighters}
-
-			p1MaxAttackDamageExpectedValue, err := battle.MaxAttackDamageExpectedValue()
-			if err != nil {
-				return []float64{}, err
-			}
-
-			p1AttackDamageRatio := float64(p1MaxAttackDamageExpectedValue) / float64(p2Fighters[0].CurrentHP)
-			if p1AttackDamageRatio > 1.0 {
-				p1AttackDamageRatio = 1.0
-			}
-
-			reverseBattle := battle.Reverse()
-			p2MaxAttackDamageExpectedValue, err := reverseBattle.MaxAttackDamageExpectedValue()
-			if err != nil {
-				return []float64{}, err
-			}
-
-			p2AttackDamageRatio := float64(p2MaxAttackDamageExpectedValue) / float64(p1Fighters[0].CurrentHP)
-			if p2AttackDamageRatio > 1.0 {
-				p2AttackDamageRatio = 1.0
-			}
-
-			BreakLabel:
-			for i := 0; i < bins; i++ {
-				for j := 0; j < bins; j++ {
-					p1LowerLimit := (float64(i) * width)
-					p1UpperLimit := (float64(i + 1) * width)
-					p2LowerLimit := (float64(j) * width)
-					p2UpperLimit := (float64(j + 1) * width)
-					if (p1LowerLimit <= p1AttackDamageRatio) && (p1AttackDamageRatio <= p1UpperLimit) &&
-					   (p2LowerLimit <= p2AttackDamageRatio) && (p2AttackDamageRatio <= p2UpperLimit) {
-						x[(bins * i) + j] = 1
-					  result = append(result, x...)
-						break BreakLabel
-					}
-				}
-			}
-		}
+	result := 0.0
+	for damage, percent := range adpd {
+		result += float64(damage) * percent
 	}
 	return result, nil
 }
@@ -840,5 +782,4 @@ var (
 	DRAW      = Winner{IsP1: false, IsP2: false}
 )
 
-var WINNER_TO_SIGMOID_REWARD = map[Winner]float64{WINNER_P1: 1.0, WINNER_P2: 0.0, DRAW: 0.5}
-var WINNET_TO_TANH_REWARD = map[Winner]float64{WINNER_P1: 1.0, WINNER_P2: -1.0, DRAW: 0.0}
+var WINNER_TO_REWARD = map[Winner]float64{WINNER_P1: 1.0, WINNER_P2: 0.0, DRAW: 0.5}

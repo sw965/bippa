@@ -210,23 +210,16 @@ func (item Item) IsChoice() bool {
 
 type Items []Item
 
-type StatusAilmentType string
+type StatusAilment string
 
 const (
-	NORMAL_POISON = StatusAilmentType("どく")
-	BAD_POISON    = StatusAilmentType("もうどく")
-	SLEEP         = StatusAilmentType("ねむり")
-	BURN          = StatusAilmentType("やけど")
-	PARALYSIS     = StatusAilmentType("まひ")
-	FREEZE        = StatusAilmentType("こおり")
+	NORMAL_POISON = StatusAilment("どく")
+	BAD_POISON    = StatusAilment("もうどく")
+	SLEEP         = StatusAilment("ねむり")
+	BURN          = StatusAilment("やけど")
+	PARALYSIS     = StatusAilment("まひ")
+	FREEZE        = StatusAilment("こおり")
 )
-
-type StatusAilmentTypes []StatusAilmentType
-
-type StatusAilment struct {
-	Type                 StatusAilmentType
-	BadPoisonElapsedTurn int
-}
 
 type RankVal int
 
@@ -381,26 +374,6 @@ func (moveNames MoveNames) In(moveName MoveName) bool {
 	return false
 }
 
-func (moveNames MoveNames) Copy() MoveNames {
-	result := make(MoveNames, len(moveNames))
-	for i, moveName := range moveNames {
-		result[i] = moveName
-	}
-	return result
-}
-
-func (moveNames MoveNames) Sort(f func(moveName MoveName) int) MoveNames {
-	result := moveNames.Copy()
-	for i := 0; i < len(result)-1; i++ {
-		for j := 0; j < len(result)-i-1; j++ {
-			if f(result[j]) < f(result[j+1]) {
-				result[j], result[j+1] = result[j+1], result[j]
-			}
-		}
-	}
-	return result
-}
-
 const (
 	MIN_MOVESET_LENGTH = 1
 	MAX_MOVESET_LENGTH = 4
@@ -494,7 +467,11 @@ func (moveset1 Moveset) Equal(moveset2 Moveset) bool {
 		if !ok {
 			return false
 		}
-		if powerPoint1 != powerPoint2 {
+		if powerPoint1.Max != powerPoint2.Max {
+			return false
+		}
+
+		if powerPoint1.Current != powerPoint2.Current {
 			return false
 		}
 	}
@@ -505,9 +482,9 @@ type Pokemon struct {
 	Name    PokeName
 	Types   Types
 	Level   Level
+	Gender  Gender
 	Nature  Nature
 	Ability Ability
-	Gender  Gender
 	Item    Item
 	Moveset Moveset
 
@@ -523,6 +500,7 @@ type Pokemon struct {
 	Speed     int
 
 	StatusAilment  StatusAilment
+	BadPoisonElapsedTurn int
 	Rank           Rank
 	ChoiceMoveName MoveName
 
@@ -670,6 +648,10 @@ func (pokemon1 *Pokemon) Equal(pokemon2 *Pokemon) bool {
 		return false
 	}
 
+	if pokemon1.BadPoisonElapsedTurn != pokemon2.BadPoisonElapsedTurn {
+		return false
+	}
+
 	if pokemon1.ChoiceMoveName != pokemon2.ChoiceMoveName {
 		return false
 	}
@@ -713,24 +695,10 @@ func (pokemon *Pokemon) EffectivenessBonus(moveName MoveName) EffectivenessBonus
 }
 
 func (pokemon *Pokemon) BadPoisonDamage() int {
-	damage := int(float64(pokemon.MaxHP) * float64(pokemon.StatusAilment.BadPoisonElapsedTurn) / 16.0)
+	damage := int(float64(pokemon.MaxHP) * float64(pokemon.BadPoisonElapsedTurn) / 16.0)
 	if damage < 1 {
 		return 1
 	} else {
 		return damage
 	}
-}
-
-func (pokemon *Pokemon) IsFullAttack() bool {
-	for moveName, _ := range pokemon.Moveset {
-		if moveName == "カウンター" || moveName == "ミラーコート" {
-			return false
-		}
-
-		moveData := MOVEDEX[moveName]
-		if moveData.Category == STATUS {
-			return false
-		}
-	}
-	return true
 }

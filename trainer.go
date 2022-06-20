@@ -15,9 +15,9 @@ func NewRandomInstructionTrainer(random *rand.Rand) Trainer {
 	return result
 }
 
-func (p1Trainer Trainer) OneGame(p2Trainer Trainer, battle Battle, random *rand.Rand) (Battle, error) {
+func (p1Trainer Trainer) Playout(p2Trainer Trainer, battle Battle, random *rand.Rand) (Winner, error) {
 	if battle.IsGameEnd() {
-		return Battle{}, fmt.Errorf("既にゲームが終了している状態でtrainer.OneGame関数を呼び出した")
+		return Winner{}, fmt.Errorf("既にゲームが終了している状態でtrainer.OneGame関数を呼び出した")
 	}
 
 	var err error
@@ -36,17 +36,17 @@ func (p1Trainer Trainer) OneGame(p2Trainer Trainer, battle Battle, random *rand.
 		}
 
 		if err != nil {
-			return Battle{}, err
+			return Winner{}, err
 		}
 
 		battle, err = battle.Push(actionCmd, random)
 		if err != nil {
-			return Battle{}, err
+			return Winner{}, err
 		}
 
 		if battle.IsGameEnd() {
 			break
 		}
 	}
-	return battle, nil
+	return battle.Winner()
 }

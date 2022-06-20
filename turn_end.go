@@ -60,12 +60,12 @@ func TurnEndLeechSeed(battle Battle) Battle {
 }
 
 func TurnEndBadPoison(battle Battle) Battle {
-	if battle.P1Fighters[0].StatusAilment.Type != BAD_POISON {
+	if battle.P1Fighters[0].StatusAilment != BAD_POISON {
 		return battle
 	}
 
-	if battle.P1Fighters[0].StatusAilment.BadPoisonElapsedTurn < 16 {
-		battle.P1Fighters[0].StatusAilment.BadPoisonElapsedTurn += 1
+	if battle.P1Fighters[0].BadPoisonElapsedTurn < 16 {
+		battle.P1Fighters[0].BadPoisonElapsedTurn += 1
 	}
 
 	damage := battle.P1Fighters[0].BadPoisonDamage()

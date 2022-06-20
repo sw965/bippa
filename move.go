@@ -68,7 +68,7 @@ func NewMilkDrink(battle Battle, _ *rand.Rand) Battle {
 
 //どくどく
 func NewToxic(battle Battle, _ *rand.Rand) Battle {
-	if battle.P2Fighters[0].StatusAilment.Type != "" {
+	if battle.P2Fighters[0].StatusAilment != "" {
 		return battle
 	}
 
@@ -80,7 +80,7 @@ func NewToxic(battle Battle, _ *rand.Rand) Battle {
 		return battle
 	}
 
-	battle.P2Fighters[0].StatusAilment.Type = BAD_POISON
+	battle.P2Fighters[0].StatusAilment = BAD_POISON
 	return battle
 }
 
