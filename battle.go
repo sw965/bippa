@@ -15,50 +15,6 @@ func IsHit(n int, random *rand.Rand) bool {
 type CriticalRank int
 
 const (
-	MIN_TEAM_LENGTH = 3
-	MAX_TEAM_LENGTH = 6
-)
-
-type Team []Pokemon
-
-func NewTeam(pokemons []Pokemon) (Team, error) {
-	team := Team(pokemons)
-
-	pokeNames := make(PokeNames, len(team))
-	for i, pokemon := range pokemons {
-		pokeNames[i] = pokemon.Name
-	}
-
-	if !pokeNames.IsUnique() {
-		return Team{}, fmt.Errorf("同じポケモンを、チームに入れる事は出来ない")
-	}
-
-	if team.IsValidLength() {
-		return team, nil
-	} else {
-		return Team{}, fmt.Errorf("チームは、%v匹～%v匹で構成されていなければならない", MIN_TEAM_LENGTH, MAX_TEAM_LENGTH)
-	}
-}
-
-func (team Team) IsValidLength() bool {
-	length := len(team)
-	return MIN_TEAM_LENGTH <= length && length <= MAX_TEAM_LENGTH
-}
-
-func (team Team) Padding() Team {
-	result := make(Team, 0, len(team))
-	for _, pokemon := range team {
-		result = append(result, pokemon)
-	}
-
-	padNum := MAX_TEAM_LENGTH - len(team)
-	for i := 0; i < padNum; i++ {
-		result = append(result, NewEmptyPokemon())
-	}
-	return result
-}
-
-const (
 	FIGHTERS_LENGTH = 3
 )
 

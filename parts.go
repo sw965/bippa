@@ -26,293 +26,11 @@ func CalcState(baseState int, individualVal IndividualVal, effortVal EffortVal, 
 	return int(float64(result) * float64(natureBonus))
 }
 
-var (
-	MAX_HP = CalcHp(MAX_BASE_HP, MAX_INDIVIDUAL_VAL, MAX_EFFORT_VAL)
-	MAX_ATK = CalcState(MAX_BASE_ATK, MAX_INDIVIDUAL_VAL, MAX_EFFORT_VAL, UP_NATURE_BONUS)
-	MAX_DEF = CalcState(MAX_BASE_DEF, MAX_INDIVIDUAL_VAL, MAX_EFFORT_VAL, UP_NATURE_BONUS)
-	MAX_SP_ATK = CalcState(MAX_BASE_SP_ATK, MAX_INDIVIDUAL_VAL, MAX_EFFORT_VAL, UP_NATURE_BONUS)
-	MAX_SP_DEF = CalcState(MAX_BASE_SP_DEF, MAX_INDIVIDUAL_VAL, MAX_EFFORT_VAL, UP_NATURE_BONUS)
-	MAX_SPEED = CalcState(MAX_BASE_SPEED, MAX_INDIVIDUAL_VAL, MAX_EFFORT_VAL, UP_NATURE_BONUS)
-)
-
-type PokeName string
-
-const (
-	EMPTY_POKE_NAME = PokeName("なし")
-)
-
-func (pokeName PokeName) OnehotBinary() []int {
-	var index int
-	if pokeName != EMPTY_POKE_NAME {
-		index = ALL_POKE_NAMES.Index(pokeName) + 1
-	}
-	return omw.OnehotBinary(index, ALL_POKE_NAMES_LENGTH + 1)
-}
- 
-type PokeNames []PokeName
-
-func (pokeNames PokeNames) Index(pokeName PokeName) int {
-	for i, iPokeName := range pokeNames {
-		if iPokeName == pokeName {
-			return i
-		}
-	}
-	return -1
-} 
-
-func (pokeNames PokeNames) Count(pokeName PokeName) int {
-	result := 0
-	for _, iPokeName := range pokeNames {
-		if iPokeName == pokeName {
-			result += 1
-		}
-	}
-	return result
-}
-
-func (pokeNames PokeNames) IsUnique() bool {
-	for _, pokeName := range pokeNames {
-		if pokeNames.Count(pokeName) != 1 {
-			return false
-		}
-	}
-	return true
-}
-
-type Type string
-type Types []Type
-
-func (types Types) In(type_ Type) bool {
-	for _, iType := range types {
-		if iType == type_ {
-			return true
-		}
-	}
-	return false
-}
-
-const (
-	NORMAL   = Type("ノーマル")
-	FIRE     = Type("ほのお")
-	WATER    = Type("みず")
-	GRASS    = Type("くさ")
-	ELECTRIC = Type("でんき")
-	ICE      = Type("こおり")
-	FIGHTING = Type("かくとう")
-	POISON   = Type("どく")
-	GROUND   = Type("じめん")
-	FLYING   = Type("ひこう")
-	PSYCHIC  = Type("エスパー")
-	BUG      = Type("むし")
-	ROCK     = Type("いわ")
-	GHOST    = Type("ゴースト")
-	DRAGON   = Type("ドラゴン")
-	DARK     = Type("あく")
-	STEEL    = Type("はがね")
-	FAIRY    = Type("フェアリー")
-)
-
 type Level int
 
 const (
 	DEFAULT_LEVEL = Level(50)
 )
-
-type Nature string
-
-func (nature Nature) OnehotBinary() []int {
-	index := ALL_NATURES.Index(nature)
-	return omw.OnehotBinary(index, ALL_NATURES_LENGTH)
-}
-
-type Natures []Nature
-
-func (natures Natures) Index(nature Nature) int {
-	for i, iNature := range natures {
-		if iNature == nature {
-			return i
-		}
-	}
-	return -1
-}
-
-type NatureBonus float64
-
-const (
-	NO_NATURE_BONUS = NatureBonus(1.0)
-	UP_NATURE_BONUS = NatureBonus(1.1)
-	DOWN_NATURE_BONUS = NatureBonus(0.9)
-)
-
-type Ability string
-
-func (ability Ability) IsValid(pokeName PokeName) bool {
-	for _, iAbility := range POKEDEX[pokeName].AllAbilities {
-		if iAbility == ability {
-			return true
-		}
-	}
-	return false
-}
-
-func (ability Ability) OnehotBinary() []int {
-	index := ALL_ABILITIES.Index(ability)
-	return omw.OnehotBinary(index, ALL_ABILITIES_LENGTH)
-}
-
-type Abilities []Ability
-
-func (abilities Abilities) In(ability Ability) bool {
-	for _, iAbility := range abilities {
-		if iAbility == ability {
-			return true
-		}
-	}
-	return false
-}
-
-func (abilities Abilities) Index(ability Ability) int {
-	for i, iAbility := range abilities {
-		if iAbility == ability {
-			return i
-		}
-	}
-	return -1
-}
-
-type IndividualVal int
-
-const (
-	MIN_INDIVIDUAL_VAL = IndividualVal(0)
-	MAX_INDIVIDUAL_VAL = IndividualVal(31)
-)
-
-func (individualVal IndividualVal) IsValid() bool {
-	return individualVal >= MIN_INDIVIDUAL_VAL && individualVal <= MAX_INDIVIDUAL_VAL
-}
-
-type Individual struct {
-	HP    IndividualVal
-	Atk   IndividualVal
-	Def   IndividualVal
-	SpAtk IndividualVal
-	SpDef IndividualVal
-	Speed IndividualVal
-}
-
-var ALL_MIN_INDIVIDUAL = Individual{
-	HP: MIN_INDIVIDUAL_VAL, Atk: MIN_INDIVIDUAL_VAL, Def: MIN_INDIVIDUAL_VAL,
-	SpAtk: MIN_INDIVIDUAL_VAL, SpDef: MIN_INDIVIDUAL_VAL, Speed: MIN_INDIVIDUAL_VAL,
-}
-
-var ALL_MAX_INDIVIDUAL = Individual{
-	HP: MAX_INDIVIDUAL_VAL, Atk: MAX_INDIVIDUAL_VAL, Def: MAX_INDIVIDUAL_VAL,
-	SpAtk: MAX_INDIVIDUAL_VAL, SpDef: MAX_INDIVIDUAL_VAL, Speed: MAX_INDIVIDUAL_VAL,
-}
-
-type EffortVal int
-
-var (
-	MIN_EFFORT_VAL     = EffortVal(0)
-	MAX_EFFORT_VAL     = EffortVal(252)
-	MAX_SUM_EFFORT_VAL = EffortVal(510)
-)
-
-type Effort struct {
-	HP    EffortVal
-	Atk   EffortVal
-	Def   EffortVal
-	SpAtk EffortVal
-	SpDef EffortVal
-	Speed EffortVal
-}
-
-func (effort *Effort) Sum() EffortVal {
-	return effort.HP + effort.Atk + effort.Def + effort.SpAtk + effort.SpDef + effort.Speed
-}
-
-type Gender string
-
-const (
-	MALE    = Gender("♂")
-	FEMALE  = Gender("♀")
-	UNKNOWN = Gender("不明")
-)
-
-func (gender Gender) IsValid(pokeName PokeName) bool {
-	genderData := POKEDEX[pokeName].Gender
-
-	if genderData == "♂♀両方" {
-		return gender == MALE || gender == FEMALE
-	}
-
-	if genderData == "♂のみ" {
-		return gender == MALE
-	}
-
-	if genderData == "♀のみ" {
-		return gender == FEMALE
-	}
-
-	return gender == UNKNOWN
-}
-
-func (gender Gender) OnehotBinary() []int {
-	index := ALL_GENDERS.Index(gender)
-	return omw.OnehotBinary(index, ALL_GENDERS_LENGTH)
-}
-
-type Genders []Gender
-
-var ALL_GENDERS = Genders{MALE, FEMALE, UNKNOWN}
-var ALL_GENDERS_LENGTH = len(ALL_GENDERS)
-
-func (genders Genders) Index(gender Gender) int {
-	for i, iGender := range genders {
-		if iGender == gender {
-			return i
-		}
-	}
-	return -1
-}
-
-type Item string
-
-const (
-	EMPTY_ITEM = Item("なし")
-)
-
-func (item Item) IsValid() bool {
-	for _, iItem := range ALL_ITEMS {
-		if iItem == item {
-			return true
-		}
-	}
-	return item == EMPTY_ITEM
-}
-
-func (item Item) IsChoice() bool {
-	return item == "こだわりハチマキ" || item == "こだわりメガネ" || item == "こだわりスカーフ"
-}
-
-func (item Item) OnehotBinary() []int {
-	var index int
-	if item != EMPTY_ITEM {
-		index = ALL_ITEMS.Index(item) + 1
-	}
-	return omw.OnehotBinary(index, ALL_ITEMS_LENGTH + 1)
-}
-
-type Items []Item
-
-func (items Items) Index(item Item) int {
-	for i, iItem := range items {
-		if iItem == item {
-			return i
-		}
-	}
-	return -1
-}
 
 type StatusAilment string
 
@@ -461,65 +179,6 @@ func (rank *Rank) ResetDown() Rank {
 
 type RankBonus float64
 
-type MoveName string
-
-const (
-	EMPTY_MOVE_NAME = MoveName("なし")
-	STRUGGLE = MoveName("わるあがき")
-)
-
-func (moveName MoveName) OnehotBinary() []int {
-	var index int
-	if moveName != EMPTY_MOVE_NAME {
-		index = ALL_MOVE_NAMES.Index(moveName) + 1
-	}
-	return omw.OnehotBinary(index, ALL_MOVE_NAMES_LENGTH + 1)
-}
-
-type MoveNames []MoveName
-
-func (moveNames MoveNames) Count(moveName MoveName) int {
-	result := 0
-	for _, iMoveName := range moveNames {
-		if iMoveName == moveName {
-			result += 1
-		}
-	}
-	return result
-}
-
-func (moveNames MoveNames) In(moveName MoveName) bool {
-	for _, iMoveName := range moveNames {
-		if iMoveName == moveName {
-			return true
-		}
-	}
-	return false
-}
-
-func (moveNames MoveNames) Sort() MoveNames {
-	result := make(MoveNames, 0, len(moveNames))
-	for _, moveName := range ALL_MOVE_NAMES {
-		if moveNames.In(moveName) {
-			result = append(result, moveName)
-		}
-	}
-
-	for i := 0; i < moveNames.Count(EMPTY_MOVE_NAME); i++ {
-		result = append(result, EMPTY_MOVE_NAME)
-	}
-	return result
-}
-
-func (moveNames MoveNames) Index(moveName MoveName) int {
-	for i, iMoveName := range moveNames {
-		if iMoveName == moveName {
-			return i
-		}
-	}
-	return -1
-}
-
 const (
 	MIN_MOVESET_LENGTH = 1
 	MAX_MOVESET_LENGTH = 4
@@ -532,10 +191,9 @@ var (
 	MAX_POINT_UP = PointUp(3)
 )
 
-func (pointUp PointUp) Binary() []int {
-	result := make([]int, ALL_POINT_UPS_LENGTH)
-	result[int(pointUp)] = 1
-	return result
+func (pointUp PointUp) OnehotBinary() []int {
+	index := ALL_POINT_UPS.Index(pointUp)
+	return omw.OnehotBinary(index, ALL_POINT_UPS_LENGTH)
 }
 
 type PointUps []PointUp
@@ -551,10 +209,21 @@ func NewMaxPointUps(length int) PointUps {
 	return result
 }
 
+func (pointUps PointUps) Index(pointUp PointUp) int {
+	for i, iPointUP := range pointUps {
+		if iPointUP == pointUp {
+			return i
+		}
+	}
+	return -1
+}
+
 type PowerPoint struct {
 	Max     int
 	Current int
 }
+
+var EMPTY_POWER_POINT = PowerPoint{Max:-1, Current:-1}
 
 func NewPowerPoint(basePP int, pointUp PointUp) PowerPoint {
 	v := (5.0 + float64(pointUp)) / 5.0
@@ -565,6 +234,8 @@ func NewPowerPoint(basePP int, pointUp PointUp) PowerPoint {
 type PowerPoints []PowerPoint
 
 type Moveset map[MoveName]*PowerPoint
+
+var EMPTY_MOVESET = Moveset{EMPTY_MOVE_NAME:&EMPTY_POWER_POINT}
 
 func NewMoveset(pokeName PokeName, moveNames MoveNames, pointUps []PointUp) (Moveset, error) {
 	for _, moveName := range moveNames {
@@ -744,9 +415,7 @@ func NewPokemon(pokeName PokeName, nature Nature, ability Ability, gender Gender
 }
 
 func NewEmptyPokemon() Pokemon {
-	result := Pokemon{}
-	result.Name = EMPTY_POKE_NAME
-	return result
+	return Pokemon{Name:EMPTY_POKE_NAME}
 }
 
 func (pokemon1 *Pokemon) Equal(pokemon2 *Pokemon) bool {
@@ -879,26 +548,15 @@ func (pokemon *Pokemon) BadPoisonDamage() int {
 	}
 }
 
-func (pokemon *Pokemon) MaxHPOnehotBinary() []int {
-	return omw.OnehotBinary(pokemon.MaxHP, MAX_HP)
-}
+type Pokemons []Pokemon
 
-func (pokemon *Pokemon) AtkOnehotBinary() []int {
-	return omw.OnehotBinary(pokemon.Atk, MAX_ATK)
-}
 
-func (pokemon *Pokemon) DefOnehotBinary() []int {
-	return omw.OnehotBinary(pokemon.Def, MAX_DEF)
-}
-
-func (pokemon *Pokemon) SpAtkOnehotBinary() []int {
-	return omw.OnehotBinary(pokemon.SpAtk, MAX_SP_ATK)
-}
-
-func (pokemon *Pokemon) SpDefOnehotBinary() []int {
-	return omw.OnehotBinary(pokemon.SpDef, MAX_SP_DEF)
-}
-
-func (pokemon *Pokemon) SpeedOnehotBinary() []int {
-	return omw.OnehotBinary(pokemon.Speed, MAX_SPEED)
+func (pokemons Pokemons) Filter(f func(Pokemon) bool) Pokemons {
+	result := make(Pokemons, 0, len(pokemons))
+	for _, pokemon := range pokemons {
+		if f(pokemon) {
+			result = append(result, pokemon)
+		}
+	}
+	return result
 }

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math/rand"
 	"math"
+	"github.com/sw965/crow"
 )
 
 type BattlePolicy func(*Battle) map[ActionCmd]float64
@@ -29,10 +30,8 @@ func (pucb *PolynomialUpperConfidenceBound) AverageReward() float64 {
 }
 
 func (pucb *PolynomialUpperConfidenceBound) Get(totalTrial int, X float64) float64 {
-	floatTotalTrial := float64(totalTrial)
-	floatTrial := float64(pucb.Trial + 1)
 	averageReward := pucb.AverageReward()
-	return averageReward + (X * pucb.P * math.Sqrt(floatTotalTrial) / floatTrial)
+	return crow.PolynomialUpperConfidenceBound(averageReward, pucb.P, totalTrial, pucb.Trial, X)
 }
 
 type ActionCmdPUCBs map[ActionCmd]*PolynomialUpperConfidenceBound
