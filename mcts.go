@@ -3,7 +3,6 @@ package bippa
 import (
 	"fmt"
 	"math/rand"
-	"math"
 	"github.com/sw965/crow"
 )
 

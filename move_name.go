@@ -28,6 +28,15 @@ func (moveNames MoveNames) In(moveName MoveName) bool {
 	return false
 }
 
+func (moveNames MoveNames) InAll(moveName ...MoveName) bool {
+	for _, iMoveName := range moveName {
+		if moveNames.In(iMoveName) {
+			return true
+		}
+	}
+	return false
+}
+
 func (moveNames MoveNames) Sort() MoveNames {
 	result := make(MoveNames, 0, len(moveNames))
 	for _, moveName := range ALL_MOVE_NAMES {
@@ -50,3 +59,5 @@ func (moveNames MoveNames) Index(moveName MoveName) int {
 	}
 	return -1
 }
+
+type MoveNameWithTier map[MoveName]Tier

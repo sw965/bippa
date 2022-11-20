@@ -322,7 +322,7 @@ func NewAttackDamageProbabilityDistribution(attackPokemon, defensePokemon *Pokem
 func (dpd DamageProbabilityDistribution) RatioExpected(v float64) float64 {
 	result := 0.0
 	for damage, percent := range dpd {
-	  attackDamageRatio := float64(damage) / v
+	  attackDamageRatio := float64(damage) / float64(v)
 	  if attackDamageRatio > 1.0 {
 		attackDamageRatio = 1.0
 	  }

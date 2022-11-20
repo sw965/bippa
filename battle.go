@@ -659,10 +659,13 @@ func (battle *Battle) NewFinalDamage(moveName MoveName, isCritical bool, randomD
 	return NewFinalDamage(&attackPokemon, &defensePokemon, moveName, isCritical, randomDamageBonus)
 }
 
-func (battle *Battle) AttackDamageProbabilityDistribution(moveName MoveName) (DamageProbabilityDistribution, error) {
-	accuracy := battle.Accuracy(moveName)
-	criticalN := battle.CriticalN(moveName)
-	return NewAttackDamageProbabilityDistribution(&battle.P1Fighters[0], &battle.P2Fighters[0], moveName, accuracy, criticalN)
+func (battle *Battle) CanSwitch(pokeName PokeName) bool {
+	for _, pokemon := range battle.P1Fighters[1:] {
+		if pokemon.Name == pokeName && !pokemon.IsFaint() {
+			return true
+		}
+	}
+	return false
 }
 
 type Winner struct {

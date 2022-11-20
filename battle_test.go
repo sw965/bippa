@@ -72,3 +72,19 @@ func TestPush(t *testing.T) {
 		t.Errorf("テスト失敗")
 	}
 }
+
+func TestAttackDamageProbabilityDistribution(t *testing.T) {
+	attackPokemon := NEW_RENTAL_POKEMONS["フシギバナ"]()
+	defensePokemon := NEW_RENTAL_POKEMONS["カメックス"]()
+	defensePokemon.Types = Types{"みず", "じめん"}
+	adpd, err := NewAttackDamageProbabilityDistribution(&attackPokemon, &defensePokemon, "ギガドレイン", 100, 16)
+	if err != nil {
+		panic(err)
+	}
+	expected := adpd.RatioExpected(float64(defensePokemon.CurrentHP))
+	fmt.Println(expected)
+
+	adpd, _ = NewAttackDamageProbabilityDistribution(&defensePokemon, &attackPokemon, "れいとうビーム", 100, 16)
+	expected = adpd.RatioExpected(float64(attackPokemon.CurrentHP))
+	fmt.Println(expected)
+}
