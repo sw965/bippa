@@ -17,7 +17,7 @@ var ALL_INDIVIDUAL_VALS = func() IndividualVals {
 	length := int(MAX_INDIVIDUAL_VAL + 1)
 	result := make(IndividualVals, length)
 	for i := 0; i < length; i++ {
-		result[i] =  IndividualVal(i)
+		result[i] = IndividualVal(i)
 	}
 	return result
 }()

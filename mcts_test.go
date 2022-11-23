@@ -17,12 +17,12 @@ func TestRunMCTS(t *testing.T) {
 	// p2Fighters := Fighters{NEW_RENTAL_POKEMONS["フシギバナ"](), NEW_RENTAL_POKEMONS["ゲンガー"](), NEW_RENTAL_POKEMONS["パルシェン"]()}
 	// battle := Battle{P1Fighters:p1Fighters, P2Fighters:p2Fighters}
 
-// 	battle.P1Fighters[0].CurrentHP = 1
-// 	battle.P1Fighters[1].CurrentHP = 0
-// 	battle.P1Fighters[2].CurrentHP = 0
+	// 	battle.P1Fighters[0].CurrentHP = 1
+	// 	battle.P1Fighters[1].CurrentHP = 0
+	// 	battle.P1Fighters[2].CurrentHP = 0
 
-// 	battle.P2Fighters[1].CurrentHP = 0
-// 	battle.P2Fighters[2].CurrentHP = 0
+	// 	battle.P2Fighters[1].CurrentHP = 0
+	// 	battle.P2Fighters[2].CurrentHP = 0
 
 	//randomInstructionTrainer := NewRandomInstructionTrainer(mtRandom)
 

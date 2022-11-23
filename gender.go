@@ -3,22 +3,22 @@ package bippa
 type Gender string
 
 const (
-	MALE    = Gender("♂")
-	FEMALE  = Gender("♀")
-	UNKNOWN = Gender("不明")
+	MALE         = Gender("♂")
+	FEMALE       = Gender("♀")
+	UNKNOWN      = Gender("不明")
 	EMPTY_GENDER = Gender("なし")
 )
 
 func (gender Gender) IsValid(pokeName PokeName) bool {
 	switch POKEDEX[pokeName].Gender {
-		case "♂♀両方":
-			return gender == MALE || gender == FEMALE
-		case "♂のみ":
-			return gender == MALE
-		case "♀のみ":
-			return gender == FEMALE
-		default:
-			return gender == UNKNOWN
+	case "♂♀両方":
+		return gender == MALE || gender == FEMALE
+	case "♂のみ":
+		return gender == MALE
+	case "♀のみ":
+		return gender == FEMALE
+	default:
+		return gender == UNKNOWN
 	}
 }
 

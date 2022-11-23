@@ -140,7 +140,7 @@ func ReadFighters(filePath string) (Fighters, error) {
 	return result, err
 }
 
-//https://wiki.xn--rckteqa2e.com/wiki/%E3%81%99%E3%81%B0%E3%82%84%E3%81%95#.E8.A9.B3.E7.B4.B0.E3.81.AA.E4.BB.95.E6.A7.98
+// https://wiki.xn--rckteqa2e.com/wiki/%E3%81%99%E3%81%B0%E3%82%84%E3%81%95#.E8.A9.B3.E7.B4.B0.E3.81.AA.E4.BB.95.E6.A7.98
 type SpeedBonus int
 
 const (
@@ -301,7 +301,7 @@ func (battle Battle) AfterContact() Battle {
 	return battle
 }
 
-//https://latest.pokewiki.net/%E3%83%90%E3%83%88%E3%83%AB%E4%B8%AD%E3%81%AE%E5%87%A6%E7%90%86%E3%81%AE%E9%A0%86%E7%95%AA
+// https://latest.pokewiki.net/%E3%83%90%E3%83%88%E3%83%AB%E4%B8%AD%E3%81%AE%E5%87%A6%E7%90%86%E3%81%AE%E9%A0%86%E7%95%AA
 func (battle Battle) MoveUse(moveName MoveName, random *rand.Rand) (Battle, error) {
 	if battle.P1Fighters[0].IsFaint() {
 		return battle, nil

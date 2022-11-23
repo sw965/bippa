@@ -25,10 +25,10 @@ type Pokemon struct {
 	SpDef     int
 	Speed     int
 
-	StatusAilment  StatusAilment
+	StatusAilment        StatusAilment
 	BadPoisonElapsedTurn int
-	Rank           Rank
-	ChoiceMoveName MoveName
+	Rank                 Rank
+	ChoiceMoveName       MoveName
 
 	IsLeechSeed bool
 }
@@ -100,7 +100,7 @@ func NewPokemon(pokeName PokeName, nature Nature, ability Ability, gender Gender
 }
 
 func NewEmptyPokemon() Pokemon {
-	return Pokemon{Name:EMPTY_POKE_NAME}
+	return Pokemon{Name: EMPTY_POKE_NAME}
 }
 
 func (pokemon1 *Pokemon) Equal(pokemon2 *Pokemon) bool {

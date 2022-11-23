@@ -1,10 +1,15 @@
 package bippa
 
+import (
+	"github.com/sw965/omw"
+	"math/rand"
+)
+
 type MoveName string
 
 const (
 	EMPTY_MOVE_NAME = MoveName("なし")
-	STRUGGLE = MoveName("わるあがき")
+	STRUGGLE        = MoveName("わるあがき")
 )
 
 type MoveNames []MoveName
@@ -61,3 +66,30 @@ func (moveNames MoveNames) Index(moveName MoveName) int {
 }
 
 type MoveNameWithTier map[MoveName]Tier
+
+func (moveNameWithTier MoveNameWithTier) Keys() MoveNames {
+	result := make(MoveNames, 0, len(moveNameWithTier))
+	for k, _ := range moveNameWithTier {
+		result = append(result, k)
+	}
+	return result
+}
+
+func (moveNameWithTier MoveNameWithTier) Items() (MoveNames, Tiers) {
+	keys := moveNameWithTier.Keys()
+	values := make(Tiers, len(moveNameWithTier))
+	for i, key := range keys {
+		values[i] = moveNameWithTier[key]
+	}
+	return keys, values
+}
+
+func (moveNameWithTier MoveNameWithTier) MoveNameRandomChoiceWithTierWeight(random *rand.Rand) MoveName {
+	keys, values := moveNameWithTier.Items()
+	weight := make([]float64, len(values))
+	for i, tier := range values {
+		weight[i] = TIER_WITH_SELECT_PERCENT[tier]
+	}
+	index := omw.RandomIntWithWeight(weight, random)
+	return keys[index]
+}

@@ -1,12 +1,12 @@
 package bippa
 
 import (
-	"testing"
 	"fmt"
-	"math/rand"
 	"github.com/seehuhn/mt19937"
-	"time"
 	"github.com/sw965/omw"
+	"math/rand"
+	"testing"
+	"time"
 )
 
 func TestPush(t *testing.T) {
@@ -40,13 +40,13 @@ func TestPush(t *testing.T) {
 	p2AttackDamageResults := make([]int, 1960)
 
 	for i := 0; i < testNum; i++ {
-		battle := Battle{P1Fighters:p1Fighters, P2Fighters:p2Fighters}
-		
+		battle := Battle{P1Fighters: p1Fighters, P2Fighters: p2Fighters}
+
 		battle, err := battle.Push("ギガドレイン", mtRandom)
 		if err != nil {
 			panic(err)
 		}
-	
+
 		battle, err = battle.Push("こおりのキバ", mtRandom)
 		if err != nil {
 			panic(err)
@@ -63,11 +63,11 @@ func TestPush(t *testing.T) {
 		p2AttackDamageResults[i] = p2AttackDamageResult
 	}
 
-	if !omw.IsSliceIntContains(expectedP1AttackDamages, p1AttackDamageResults...) {
+	if !omw.SliceIntContains(expectedP1AttackDamages, p1AttackDamageResults...) {
 		t.Errorf("テスト失敗")
 	}
 
-	if !omw.IsSliceIntContains(expectedP2AttackDamages, p2AttackDamageResults...) {
+	if !omw.SliceIntContains(expectedP2AttackDamages, p2AttackDamageResults...) {
 		fmt.Println(p2AttackDamageResults)
 		t.Errorf("テスト失敗")
 	}

@@ -2,7 +2,6 @@ package bippa
 
 import (
 	"fmt"
-	"github.com/sw965/omw"
 )
 
 func InLearnset(pokeName PokeName, moveName MoveName) bool {
@@ -191,11 +190,6 @@ var (
 	MAX_POINT_UP = PointUp(3)
 )
 
-func (pointUp PointUp) OnehotBinary() []int {
-	index := ALL_POINT_UPS.Index(pointUp)
-	return omw.OnehotBinary(index, ALL_POINT_UPS_LENGTH)
-}
-
 type PointUps []PointUp
 
 var ALL_POINT_UPS = PointUps{0, 1, 2, 3}
@@ -223,7 +217,7 @@ type PowerPoint struct {
 	Current int
 }
 
-var EMPTY_POWER_POINT = PowerPoint{Max:-1, Current:-1}
+var EMPTY_POWER_POINT = PowerPoint{Max: -1, Current: -1}
 
 func NewPowerPoint(basePP int, pointUp PointUp) PowerPoint {
 	v := (5.0 + float64(pointUp)) / 5.0
@@ -235,7 +229,7 @@ type PowerPoints []PowerPoint
 
 type Moveset map[MoveName]*PowerPoint
 
-var EMPTY_MOVESET = Moveset{EMPTY_MOVE_NAME:&EMPTY_POWER_POINT}
+var EMPTY_MOVESET = Moveset{EMPTY_MOVE_NAME: &EMPTY_POWER_POINT}
 
 func NewMoveset(pokeName PokeName, moveNames MoveNames, pointUps []PointUp) (Moveset, error) {
 	for _, moveName := range moveNames {

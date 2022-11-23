@@ -13,61 +13,61 @@ const (
 
 type StatusMove func(Battle, *rand.Rand) Battle
 
-//あさのひざし
+// あさのひざし
 func MorningSun(battle Battle, _ *rand.Rand) Battle {
 	heal := int(float64(battle.P1Fighters[0].MaxHP) * (1.0 / 2.0))
 	return battle.Heal(heal)
 }
 
-//こうごうせい
+// こうごうせい
 func Synthesis(battle Battle, _ *rand.Rand) Battle {
 	heal := int(float64(battle.P1Fighters[0].MaxHP) * (1.0 / 2.0))
 	return battle.Heal(heal)
 }
 
-//じこさいせい
+// じこさいせい
 func Recover(battle Battle, _ *rand.Rand) Battle {
 	heal := int(float64(battle.P1Fighters[0].MaxHP) * (1.0 / 2.0))
 	return battle.Heal(heal)
 }
 
-//すなあつめ
+// すなあつめ
 func ShoreUp(battle Battle, _ *rand.Rand) Battle {
 	heal := int(float64(battle.P1Fighters[0].MaxHP) * (1.0 / 2.0))
 	return battle.Heal(heal)
 }
 
-//タマゴうみ
+// タマゴうみ
 func SoftBoiled(battle Battle, _ *rand.Rand) Battle {
 	heal := int(float64(battle.P1Fighters[0].MaxHP) * (1.0 / 2.0))
 	return battle.Heal(heal)
 }
 
-//つきのひかり
+// つきのひかり
 func Moonlight(battle Battle, _ *rand.Rand) Battle {
 	heal := int(float64(battle.P1Fighters[0].MaxHP) * (1.0 / 2.0))
 	return battle.Heal(heal)
 }
 
-//なまける
+// なまける
 func SlackOff(battle Battle, _ *rand.Rand) Battle {
 	heal := int(float64(battle.P1Fighters[0].MaxHP) * (1.0 / 2.0))
 	return battle.Heal(heal)
 }
 
-//はねやすめ
+// はねやすめ
 func Roost(battle Battle, _ *rand.Rand) Battle {
 	heal := int(float64(battle.P1Fighters[0].MaxHP) * (1.0 / 2.0))
 	return battle.Heal(heal)
 }
 
-//ミルクのみ
+// ミルクのみ
 func MilkDrink(battle Battle, _ *rand.Rand) Battle {
 	heal := int(float64(battle.P1Fighters[0].MaxHP) * (1.0 / 2.0))
 	return battle.Heal(heal)
 }
 
-//どくどく
+// どくどく
 func Toxic(battle Battle, _ *rand.Rand) Battle {
 	if battle.P2Fighters[0].StatusAilment != "" {
 		return battle
@@ -85,7 +85,7 @@ func Toxic(battle Battle, _ *rand.Rand) Battle {
 	return battle
 }
 
-//やどりぎのタネ
+// やどりぎのタネ
 func LeechSeed(battle Battle, _ *rand.Rand) Battle {
 	if battle.P2Fighters[0].Types.In(GRASS) {
 		return battle
@@ -95,27 +95,27 @@ func LeechSeed(battle Battle, _ *rand.Rand) Battle {
 	return battle
 }
 
-//つるぎのまい
+// つるぎのまい
 func SwordsDance(battle Battle, _ *rand.Rand) Battle {
 	return battle.RankFluctuation(&Rank{Atk: 2})
 }
 
-//りゅうのまい
+// りゅうのまい
 func DragonDance(battle Battle, _ *rand.Rand) Battle {
 	return battle.RankFluctuation(&Rank{Atk: 1, Speed: 1})
 }
 
-//からをやぶる
+// からをやぶる
 func ShellSmash(battle Battle, _ *rand.Rand) Battle {
 	return battle.RankFluctuation(&Rank{Atk: 2, Def: -1, SpAtk: 2, SpDef: -1, Speed: 2})
 }
 
-//てっぺき
+// てっぺき
 func IronDefense(battle Battle, _ *rand.Rand) Battle {
 	return battle.RankFluctuation(&Rank{Def: 2})
 }
 
-//めいそう
+// めいそう
 func CalmMind(battle Battle, _ *rand.Rand) Battle {
 	return battle.RankFluctuation(&Rank{SpAtk: 1, SpDef: 1})
 }
@@ -142,7 +142,7 @@ func init() {
 	for moveName, _ := range STATUS_MOVES {
 		if _, ok := MOVEDEX[moveName]; !ok {
 			errMsg := fmt.Sprintf("STATUS_MOVES の Key に 存在する %v は たぶんタイピングミスってるんで、作者に連絡よろろん twitter @chuusotunamapai", moveName)
-		
+
 			fmt.Println(errMsg)
 		}
 	}

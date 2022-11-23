@@ -2,8 +2,8 @@ package bippa
 
 import (
 	"fmt"
-	"math/rand"
 	"github.com/sw965/crow"
+	"math/rand"
 )
 
 type BattlePolicy func(*Battle) map[ActionCmd]float64
@@ -19,13 +19,13 @@ func NoBattlePolicy(battle *Battle) map[ActionCmd]float64 {
 }
 
 type PolynomialUpperConfidenceBound struct {
-	P float64
+	P           float64
 	AccumReward float64
 	Trial       int
 }
 
 func (pucb *PolynomialUpperConfidenceBound) AverageReward() float64 {
-	return float64(pucb.AccumReward) / float64(pucb.Trial + 1)
+	return float64(pucb.AccumReward) / float64(pucb.Trial+1)
 }
 
 func (pucb *PolynomialUpperConfidenceBound) Get(totalTrial int, X float64) float64 {
@@ -109,7 +109,7 @@ type Node struct {
 	LegalActionCmds ActionCmds
 	ActionCmdPUCBs  ActionCmdPUCBs
 	NextNodes       Nodes
-	IsP1        bool
+	IsP1            bool
 	SelectCount     int
 }
 
@@ -135,7 +135,7 @@ func NewNodePointer(battle *Battle, battlePolicy BattlePolicy) *Node {
 	}
 
 	for _, actionCmd := range legalActionCmds {
-		actionCmdPUCBs[actionCmd] = &PolynomialUpperConfidenceBound{P:battlePolicyY[actionCmd]}
+		actionCmdPUCBs[actionCmd] = &PolynomialUpperConfidenceBound{P: battlePolicyY[actionCmd]}
 	}
 
 	return &Node{Battle: battle, LegalActionCmds: legalActionCmds, ActionCmdPUCBs: actionCmdPUCBs,

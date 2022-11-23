@@ -5,7 +5,7 @@ import (
 	"math/rand"
 )
 
-//小数点以下がが0.5以上ならば、繰り上げ
+// 小数点以下がが0.5以上ならば、繰り上げ
 func FiveOrMoreRounding(x float64) int {
 	afterTheDecimalPoint := float64(x) - float64(int(x))
 	if afterTheDecimalPoint >= 0.5 {
@@ -14,7 +14,7 @@ func FiveOrMoreRounding(x float64) int {
 	return int(x)
 }
 
-//小数点以下が0.5より大きいならば、繰り上げ
+// 小数点以下が0.5より大きいならば、繰り上げ
 func FiveOverRounding(x float64) int {
 	afterTheDecimalPoint := float64(x) - float64(int(x))
 	if afterTheDecimalPoint > 0.5 {
@@ -153,7 +153,7 @@ func NewFinalDefense(pokemon *Pokemon, moveName MoveName, isCritical bool) (Fina
 	return FinalDefense(result), nil
 }
 
-//https://latest.pokewiki.net/%E3%83%80%E3%83%A1%E3%83%BC%E3%82%B8%E8%A8%88%E7%AE%97%E5%BC%8F
+// https://latest.pokewiki.net/%E3%83%80%E3%83%A1%E3%83%BC%E3%82%B8%E8%A8%88%E7%AE%97%E5%BC%8F
 type PowerBonus int
 
 const (
@@ -202,7 +202,7 @@ var BOOL_TO_SAME_TYPE_ATTACK_BONUS = map[bool]SameTypeAttackBonus{
 
 type EffectivenessBonus float64
 
-//https://latest.pokewiki.net/%E3%83%80%E3%83%A1%E3%83%BC%E3%82%B8%E8%A8%88%E7%AE%97%E5%BC%8F
+// https://latest.pokewiki.net/%E3%83%80%E3%83%A1%E3%83%BC%E3%82%B8%E8%A8%88%E7%AE%97%E5%BC%8F
 type RandomDamageBonus float64
 
 func NewRandomDamageBonus(random *rand.Rand) RandomDamageBonus {
@@ -301,7 +301,7 @@ func NewAttackDamageProbabilityDistribution(attackPokemon, defensePokemon *Pokem
 	for _, randomDamageBonus := range RANDOM_DAMAGE_BONUSES {
 		for _, isCritical := range []bool{true, false} {
 			finalDamage, err := NewFinalDamage(attackPokemon, defensePokemon, moveName, isCritical, randomDamageBonus)
-			
+
 			if err != nil {
 				return result, err
 			}
@@ -322,11 +322,11 @@ func NewAttackDamageProbabilityDistribution(attackPokemon, defensePokemon *Pokem
 func (dpd DamageProbabilityDistribution) RatioExpected(v float64) float64 {
 	result := 0.0
 	for damage, percent := range dpd {
-	  attackDamageRatio := float64(damage) / float64(v)
-	  if attackDamageRatio > 1.0 {
-		attackDamageRatio = 1.0
-	  }
-	  result += attackDamageRatio * percent
+		attackDamageRatio := float64(damage) / float64(v)
+		if attackDamageRatio > 1.0 {
+			attackDamageRatio = 1.0
+		}
+		result += attackDamageRatio * percent
 	}
 	return result
 }

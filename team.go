@@ -46,7 +46,7 @@ func (team Team) Find(pokeName PokeName) (Pokemon, error) {
 
 	index := team.PokeNames().Index(pokeName)
 	if index == -1 {
-		errMsg := fmt.Sprintf("ポケモン名:%v は チームに存在しない", pokeName)
+		errMsg := fmt.Sprintf("ポケモン名 : %v は チームに存在しない", pokeName)
 		return Pokemon{}, fmt.Errorf(errMsg)
 	} else {
 		return team[index], nil

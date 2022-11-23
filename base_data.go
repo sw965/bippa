@@ -2,10 +2,10 @@ package bippa
 
 import (
 	"encoding/json"
+	"github.com/sw965/omw"
 	"io/ioutil"
 	"os"
 	"strings"
-	"github.com/sw965/omw"
 )
 
 var (
@@ -249,7 +249,6 @@ var ALL_ITEMS = func() Items {
 	}
 	return result
 }()
-
 
 var ALL_POKE_NAMES_LENGTH = len(ALL_POKE_NAMES)
 var ALL_ABILITIES_LENGTH = len(ALL_ABILITIES)

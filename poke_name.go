@@ -13,7 +13,7 @@ func IsEmptyPokeName(pokeName PokeName) bool {
 type PokeNames []PokeName
 
 var ALL_TEAM_POKE_NAMES = func() PokeNames {
-	result := make(PokeNames, 0, len(ALL_POKE_NAMES) + 1)
+	result := make(PokeNames, 0, len(ALL_POKE_NAMES)+1)
 	result = append(result, ALL_POKE_NAMES...)
 	result = append(result, EMPTY_POKE_NAME)
 	return result
@@ -36,7 +36,7 @@ func (pokeNames PokeNames) Index(pokeName PokeName) int {
 		}
 	}
 	return -1
-} 
+}
 
 func (pokeNames PokeNames) Count(pokeName PokeName) int {
 	result := 0
