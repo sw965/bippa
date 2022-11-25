@@ -81,35 +81,57 @@ func (tierWithFloat64 TierWithFloat64) TierRandomChoiceWithWeight(random *rand.R
 	return keys[index]
 }
 
+
 type PokemonBuildEvent struct {
-	Combination    func(*Pokemon, Team) []bool
-	All            bool
+	SelfItem Item
+	SelfMoveNames MoveNames
+	SelfNature Nature
 	CombinationNum int
 }
 
-func NewPokemonBuildSelfMoveNameEvent(moveName ...MoveName) PokemonBuildEvent {
-	combination := func(pokemon *Pokemon, team Team) []bool {
-		result := make([]bool, len(moveName))
-		for i, iMoveName := range moveName {
-			_, ok := pokemon.Moveset[iMoveName]
-			result[i] = ok
-		}
-		return result
+func (pbe *PokemonBuildEvent) Init() PokemonBuildEvent {
+	combinationNum := 0
+
+	if pbe.SelfItem != "" {
+		combinationNum += 1
 	}
-	return PokemonBuildEvent{Combination: combination}
+
+	combinationNum += len(pbe.SelfMoveNames)
+
+	if pbe.SelfNature != "" {
+		combinationNum += 1
+	}
+
+	return PokemonBuildEvent{SelfItem:pbe.SelfItem, SelfMoveNames:pbe.SelfMoveNames, SelfNature:pbe.SelfNature, CombinationNum:combinationNum}
 }
 
-func (pbe *PokemonBuildEvent) Output(pokemon *Pokemon, team Team) PokemonBuildEvent {
-	y := pbe.Combination(pokemon, team)
-	return PokemonBuildEvent{Combination: pbe.Combination, All: omw.All(y...), CombinationNum: len(y)}
+func (pbe *PokemonBuildEvent) All(pokemon *Pokemon, team Team) bool {
+	result := make([]bool, 0, pbe.CombinationNum)
+
+	if pbe.SelfItem != "" {
+		result = append(result, pokemon.Item == pbe.SelfItem)
+	}
+
+	if len(pbe.SelfMoveNames) != 0 {
+		for _, moveName := range pbe.SelfMoveNames {
+			_, ok := pokemon.Moveset[moveName]
+			result = append(result, ok)
+		}
+	}
+
+	if pbe.SelfNature != "" {
+		result = append(result, pokemon.Nature == pbe.SelfNature)
+	}
+
+	return omw.All(result...)
 }
 
 type PokemonBuildEvents []PokemonBuildEvent
 
-func (pbes PokemonBuildEvents) Output(pokemon *Pokemon, team Team) PokemonBuildEvents {
+func (pbes PokemonBuildEvents) Init() PokemonBuildEvents {
 	result := make(PokemonBuildEvents, len(pbes))
 	for i, pbe := range pbes {
-		result[i] = pbe.Output(pokemon, team)
+		result[i] = pbe.Init()
 	}
 	return result
 }
@@ -124,9 +146,9 @@ func (pbes PokemonBuildEvents) Filter(f func(*PokemonBuildEvent) bool) PokemonBu
 	return result
 }
 
-func (pbes PokemonBuildEvents) AnyAll() bool {
+func (pbes PokemonBuildEvents) AnyAll(pokemon *Pokemon, team Team) bool {
 	for _, pbe := range pbes {
-		if pbe.All {
+		if pbe.All(pokemon, team) {
 			return true
 		}
 	}
@@ -146,10 +168,10 @@ func (pbes PokemonBuildEvents) MaxCombinationNum() int {
 
 type PBEsWithTier map[Tier]PokemonBuildEvents
 
-func (pbesWithTier PBEsWithTier) Output(pokemon *Pokemon, team Team) PBEsWithTier {
+func (pbesWithTier PBEsWithTier) Init() PBEsWithTier {
 	result := PBEsWithTier{}
 	for tier, pbes := range pbesWithTier {
-		result[tier] = pbes.Output(pokemon, team)
+		result[tier] = pbes.Init()
 	}
 	return result
 }
@@ -180,63 +202,64 @@ func (pbesWithTier PBEsWithTier) MaxCombinationNum() int {
 }
 
 type PokemonBuildKnowledge struct {
-	Natures        Natures
+	Items Items
 	MoveNames      MoveNames
+	Natures        Natures
 	EventsWithTier PBEsWithTier
 }
 
 func NewVenusaurBuildKnowledge() PokemonBuildKnowledge {
 	moveNames := MoveNames{"ギガドレイン", "ヘドロばくだん", "だいちのちから", "やどりぎのタネ", "どくどく", "まもる", "こうごうせい"}
+	items := Items{"くろいヘドロ", "オボンのみ"}
 	natures := Natures{"しんちょう", "ずぶとい", "ひかえめ"}
 
 	tier1 := PokemonBuildEvents{
-		NewPokemonBuildSelfMoveNameEvent("ギガドレイン"),
-		NewPokemonBuildSelfMoveNameEvent("ギガドレイン", "ヘドロばくだん"),
-		NewPokemonBuildSelfMoveNameEvent("やどりぎのタネ", "まもる"),
-		NewPokemonBuildSelfMoveNameEvent("どくどく", "まもる"),
-		NewPokemonBuildSelfMoveNameEvent("ギガドレイン", "ヘドロばくだん", "どくどく", "まもる"),
-		NewPokemonBuildSelfMoveNameEvent("ギガドレイン", "ヘドロばくだん", "やどりぎのタネ", "まもる"),
+		PokemonBuildEvent{SelfMoveNames:MoveNames{"ギガドレイン"}},
+		PokemonBuildEvent{SelfMoveNames:MoveNames{"ギガドレイン", "ヘドロばくだん"}},
+		PokemonBuildEvent{SelfMoveNames:MoveNames{"やどりぎのタネ", "まもる"}},
+		PokemonBuildEvent{SelfMoveNames:MoveNames{"どくどく", "まもる"}},
+		PokemonBuildEvent{SelfMoveNames:MoveNames{"ギガドレイン", "ヘドロばくだん", "やどりぎのタネ", "まもる"}},
+		PokemonBuildEvent{SelfMoveNames:MoveNames{"ギガドレイン", "ヘドロばくだん", "どくどく", "まもる"}},
+		PokemonBuildEvent{SelfMoveNames:MoveNames{"ギガドレイン", "ヘドロばくだん", "だいちのちから", "こうごうせい"}},
 	}
 
 	tier2 := PokemonBuildEvents{
-		NewPokemonBuildSelfMoveNameEvent("ギガドレイン", "ヘドロばくだん", "こうごうせい", "どくどく"),
-		NewPokemonBuildSelfMoveNameEvent("ギガドレイン", "だいちのちから"),
-		NewPokemonBuildSelfMoveNameEvent("ヘドロばくだん", "だいちのちから"),
-		NewPokemonBuildSelfMoveNameEvent("ギガドレイン", "やどりぎのタネ"),
-		NewPokemonBuildSelfMoveNameEvent("ギガドレイン", "どくどく"),
+		PokemonBuildEvent{SelfMoveNames:MoveNames{"ギガドレイン", "ヘドロばくだん", "こうごうせい", "どくどく"}},
+		PokemonBuildEvent{SelfMoveNames:MoveNames{"ギガドレイン", "だいちのちから"}},
+		PokemonBuildEvent{SelfMoveNames:MoveNames{"ヘドロばくだん", "だいちのちから"}},
+		PokemonBuildEvent{SelfMoveNames:MoveNames{"ギガドレイン", "やどりぎのタネ"}},
+		PokemonBuildEvent{SelfMoveNames:MoveNames{"ギガドレイン", "どくどく"}},
 	}
 
-	tier3 := PokemonBuildEvents{
-		NewPokemonBuildSelfMoveNameEvent("ギガドレイン", "ヘドロばくだん", "だいちのちから", "こうごうせい"),
-	}
+	tier3 := PokemonBuildEvents{}
 
 	tier4 := PokemonBuildEvents{}
 
 	tier5 := PokemonBuildEvents{
-		NewPokemonBuildSelfMoveNameEvent("やどりぎのタネ", "どくどく", "まもる"),
-		NewPokemonBuildSelfMoveNameEvent("やどりぎのタネ", "どくどく"),
+		PokemonBuildEvent{SelfMoveNames:MoveNames{"やどりぎのタネ", "どくどく", "まもる"}},
+		PokemonBuildEvent{SelfMoveNames:MoveNames{"やどりぎのタネ", "どくどく"}},
 	}
 
 	tier6 := PokemonBuildEvents{
-		NewPokemonBuildSelfMoveNameEvent("ギガドレイン", "だいちのちから", "ヘドロばくだん", "やどりぎのタネ"),
+		PokemonBuildEvent{SelfMoveNames:MoveNames{"ギガドレイン", "だいちのちから", "ヘドロばくだん", "やどりぎのタネ"}},
 	}
 
-	eventsWithTier := PBEsWithTier{TIER1: tier1, TIER2: tier2, TIER3: tier3, TIER4: tier4, TIER5: tier5, TIER6: tier6}
-	return PokemonBuildKnowledge{Natures: natures, MoveNames: moveNames, EventsWithTier: eventsWithTier}
+	eventsWithTier := PBEsWithTier{TIER1: tier1, TIER2: tier2, TIER3: tier3, TIER4: tier4, TIER5: tier5, TIER6: tier6}.Init()
+	return PokemonBuildKnowledge{Items:items, MoveNames: moveNames, Natures: natures, EventsWithTier: eventsWithTier}
 }
 
-func (pbk PokemonBuildKnowledge) DiffCalcTier(pokemon *Pokemon, nextPokemon *Pokemon, team Team, random *rand.Rand) Tier {
-	pbesWithTier := pbk.EventsWithTier.Output(pokemon, team)
+func (pbk *PokemonBuildKnowledge) DiffCalcTier(pokemon, nextPokemon *Pokemon, team Team, random *rand.Rand) Tier {
+	//一つ前の状態(pokemon)が満たしている組み合わせを排除する(差分を見る為に)
+	pbesWithTier := pbk.EventsWithTier.Filter(func(tier Tier, pbe *PokemonBuildEvent) bool { return !pbe.All(pokemon, team) })
 
-	//既に条件を満たしている組み合わせを排除する
-	pbesWithTier = pbesWithTier.Filter(func(tier Tier, pbe *PokemonBuildEvent) bool { return !pbe.All })
-	pbesWithTier = pbesWithTier.Output(nextPokemon, team)
-
-	if pbesWithTier[TIER6].AnyAll() {
+	if pbesWithTier[TIER6].AnyAll(nextPokemon, team) {
 		return TIER6
 	}
 
-	pbesWithTier = pbesWithTier.Filter(func(tier Tier, pbe *PokemonBuildEvent) bool { return pbe.All })
+	//次の状態(nextPokemon)が満たしている組み合わせを取り出す
+	pbesWithTier = pbesWithTier.Filter(func(tier Tier, pbe *PokemonBuildEvent) bool { return pbe.All(nextPokemon, team) })
+
+	//組み合わせ数が最も多い事象を取り出す
 	maxCombinationNum := pbesWithTier.MaxCombinationNum()
 	pbesWithTier = pbesWithTier.Filter(func(tier Tier, pbe *PokemonBuildEvent) bool { return pbe.CombinationNum == maxCombinationNum })
 
@@ -282,7 +305,7 @@ func (pbk *PokemonBuildKnowledge) BuildMoveset(pokemon Pokemon, team Team, rando
 		}
 
 		if len(moveNameWithTier) == 0 {
-			errMsg := fmt.Sprintf("movesetKeys = %v の状態で、次の組み合わせが見つからなかった", pokemon.Moveset.Keys())
+			errMsg := fmt.Sprintf("pokemon.Moveset.Keys() = %v の状態で、次の組み合わせが見つからなかった", pokemon.Moveset.Keys())
 			return "", fmt.Errorf(errMsg)
 		}
 		return moveNameWithTier.MoveNameRandomChoiceWithTierWeight(random), nil
