@@ -14,186 +14,208 @@ const (
 	TIER3 = Tier(3)
 	TIER4 = Tier(4)
 	TIER5 = Tier(5)
-	TIER6 = Tier(6)
 )
+
+var TIER_SELECT_PERCENT = map[Tier]float64{
+	TIER1: 0.7,
+	TIER2: 0.15,
+	TIER3: 0.10,
+	TIER4: 0.04,
+	TIER5: 0.01,
+}
 
 type Tiers []Tier
 
-var ALL_TIERS = Tiers{TIER1, TIER2, TIER3, TIER4, TIER5, TIER6}
+var ALL_TIERS = Tiers{TIER1, TIER2, TIER3, TIER4, TIER5}
 
 func (tiers Tiers) RandomChoice(random *rand.Rand) Tier {
 	index := random.Intn(len(tiers))
 	return tiers[index]
 }
 
-type TierWithInt map[Tier]int
+func (tiers Tiers) SelectPercents() []float64 {
+	result := make([]float64, 0, len(tiers))
+	for _, tier := range tiers {
+		result = append(result, TIER_SELECT_PERCENT[tier])
+	}
+	return result
+}
 
-func (tierWithInt TierWithInt) Values() []int {
-	result := make([]int, 0, len(tierWithInt))
-	for _, v := range result {
+type TierCounter map[Tier]int
+
+func (tierWithCounter TierCounter) Values() []int {
+	result := make([]int, 0, len(tierWithCounter))
+	for _, v := range tierWithCounter {
 		result = append(result, v)
 	}
 	return result
 }
 
-func (tierWithInt TierWithInt) TiersOfMaxValue() Tiers {
-	result := make(Tiers, 0, len(tierWithInt))
-	maxValue := omw.MaxInt(tierWithInt.Values()...)
-
-	for tier, v := range tierWithInt {
-		if v == maxValue {
+func (tierWithCounter TierCounter) Tiers() Tiers {
+	length := omw.SumInt(tierWithCounter.Values()...)
+	result := make(Tiers, 0, length)
+	for tier, count := range tierWithCounter {
+		for i := 0; i < count; i++ {
 			result = append(result, tier)
 		}
 	}
 	return result
 }
 
-type TierWithFloat64 map[Tier]float64
-
-var TIER_WITH_SELECT_PERCENT = TierWithFloat64{
-	TIER1: 0.7,
-	TIER2: 0.2,
-	TIER3: 0.065,
-	TIER4: 0.025,
-	TIER5: 0.01,
-}
-
-func (tierWithFloat64 TierWithFloat64) Keys() Tiers {
-	result := make(Tiers, 0, len(tierWithFloat64))
-	for k, _ := range tierWithFloat64 {
-		result = append(result, k)
-	}
-	return result
-}
-
-func (tierWithFloat64 TierWithFloat64) Items() (Tiers, []float64) {
-	keys := tierWithFloat64.Keys()
-	values := make([]float64, len(tierWithFloat64))
-	for i, key := range keys {
-		values[i] = tierWithFloat64[key]
-	}
-	return keys, values
-}
-
-func (tierWithFloat64 TierWithFloat64) TierRandomChoiceWithWeight(random *rand.Rand) Tier {
-	keys, values := tierWithFloat64.Items()
-	index := omw.RandomIntWithWeight(values, random)
-	return keys[index]
-}
-
-
-type PokemonBuildEvent struct {
-	SelfItem Item
-	SelfMoveNames MoveNames
-	SelfNature Nature
+type PokemonBuildKnowledge struct {
+	SelfAbility    Ability
+	SelfItem       Item
+	SelfMoveNames  MoveNames
+	SelfNature     Nature
 	CombinationNum int
+	Tier           Tier
 }
 
-func (pbe *PokemonBuildEvent) Init() PokemonBuildEvent {
+func (pbk PokemonBuildKnowledge) Init() PokemonBuildKnowledge {
 	combinationNum := 0
 
-	if pbe.SelfItem != "" {
+	if pbk.SelfAbility != "" {
 		combinationNum += 1
 	}
 
-	combinationNum += len(pbe.SelfMoveNames)
-
-	if pbe.SelfNature != "" {
+	if pbk.SelfItem != "" {
 		combinationNum += 1
 	}
 
-	return PokemonBuildEvent{SelfItem:pbe.SelfItem, SelfMoveNames:pbe.SelfMoveNames, SelfNature:pbe.SelfNature, CombinationNum:combinationNum}
+	combinationNum += len(pbk.SelfMoveNames)
+
+	if pbk.SelfNature != "" {
+		combinationNum += 1
+	}
+	pbk.CombinationNum = combinationNum
+	return pbk
 }
 
-func (pbe *PokemonBuildEvent) All(pokemon *Pokemon, team Team) bool {
-	result := make([]bool, 0, pbe.CombinationNum)
+func (pbk *PokemonBuildKnowledge) All(pokemon *Pokemon, team Team) bool {
+	results := make([]bool, 0, pbk.CombinationNum)
 
-	if pbe.SelfItem != "" {
-		result = append(result, pokemon.Item == pbe.SelfItem)
+	if pbk.SelfAbility != "" {
+		results = append(results, pokemon.Ability == pbk.SelfAbility)
 	}
 
-	if len(pbe.SelfMoveNames) != 0 {
-		for _, moveName := range pbe.SelfMoveNames {
+	if pbk.SelfItem != "" {
+		results = append(results, pokemon.Item == pbk.SelfItem)
+	}
+
+	if len(pbk.SelfMoveNames) != 0 {
+		for _, moveName := range pbk.SelfMoveNames {
 			_, ok := pokemon.Moveset[moveName]
-			result = append(result, ok)
+			results = append(results, ok)
 		}
 	}
 
-	if pbe.SelfNature != "" {
-		result = append(result, pokemon.Nature == pbe.SelfNature)
+	if pbk.SelfNature != "" {
+		results = append(results, pokemon.Nature == pbk.SelfNature)
 	}
 
-	return omw.All(result...)
+	return omw.All(results...)
 }
 
-type PokemonBuildEvents []PokemonBuildEvent
+func (pbk1 *PokemonBuildKnowledge) NearlyEqual(pbk2 *PokemonBuildKnowledge) bool {
+	if pbk1.SelfAbility != pbk2.SelfAbility {
+		return false
+	}
 
-func (pbes PokemonBuildEvents) Init() PokemonBuildEvents {
-	result := make(PokemonBuildEvents, len(pbes))
-	for i, pbe := range pbes {
-		result[i] = pbe.Init()
+	if pbk1.SelfItem != pbk2.SelfItem {
+		return false
+	}
+
+	sortedMoveNames1 := pbk1.SelfMoveNames.Sort()
+	sortedMoveNames2 := pbk2.SelfMoveNames.Sort()
+
+	if !sortedMoveNames1.Equal(sortedMoveNames2) {
+		return false
+	}
+
+	if pbk1.SelfNature != pbk2.SelfNature {
+		return false
+	}
+	return true
+}
+
+type PokemonBuilder []PokemonBuildKnowledge
+
+func NewInitPokemonBuilder(selfAbilities Abilities, selfItems Items, selfMoveNames MoveNames, selfNatures Natures, random *rand.Rand) PokemonBuilder {
+	result := PokemonBuilder{}
+
+	for _, ability := range selfAbilities {
+		result = append(result, PokemonBuildKnowledge{SelfAbility: ability, Tier: ALL_TIERS.RandomChoice(random)}.Init())
+	}
+
+	for _, item := range selfItems {
+		result = append(result, PokemonBuildKnowledge{SelfItem: item, Tier: ALL_TIERS.RandomChoice(random)}.Init())
+	}
+
+	for _, moveName := range selfMoveNames {
+		result = append(result, PokemonBuildKnowledge{SelfMoveNames: MoveNames{moveName}, Tier: ALL_TIERS.RandomChoice(random)}.Init())
+	}
+
+	for _, nature := range selfNatures {
+		result = append(result, PokemonBuildKnowledge{SelfNature: nature, Tier: ALL_TIERS.RandomChoice(random)}.Init())
 	}
 	return result
 }
 
-func (pbes PokemonBuildEvents) Filter(f func(*PokemonBuildEvent) bool) PokemonBuildEvents {
-	result := make(PokemonBuildEvents, 0, len(pbes))
-	for _, pbe := range pbes {
-		if f(&pbe) {
-			result = append(result, pbe)
+func (pb PokemonBuilder) Init() PokemonBuilder {
+	result := PokemonBuilder{}
+	for tier, pbks := range pb {
+		result[tier] = pbks.Init()
+	}
+	return result
+}
+
+func (pb1 PokemonBuilder) Cross(pb2 PokemonBuilder, random *rand.Rand) PokemonBuilder {
+	length := len(pb1)
+	result := make(PokemonBuilder, length)
+	for i := 0; i < length; i++ {
+		if omw.RandomBool(random) {
+			result[i] = pb1[i]
+		} else {
+			result[i] = pb2[i]
 		}
 	}
 	return result
 }
 
-func (pbes PokemonBuildEvents) AnyAll(pokemon *Pokemon, team Team) bool {
-	for _, pbe := range pbes {
-		if pbe.All(pokemon, team) {
-			return true
-		}
+func (pb PokemonBuilder) Mutation(num int, random *rand.Rand) (PokemonBuilder, error) {
+	length := len(pb)
+	mutationIndices, err := omw.MakeRandomSliceInt(num, 0, length, random)
+
+	if err != nil {
+		return PokemonBuilder{}, err
 	}
-	return false
+
+	result := make(PokemonBuilder, length)
+	for i := 0; i < length; i++ {
+		result[i] = pb[i]
+	}
+
+	for _, index := range mutationIndices {
+		result[index].Tier = ALL_TIERS.RandomChoice(random)
+	}
+
+	return result, nil
 }
 
-func (pbes PokemonBuildEvents) MaxCombinationNum() int {
-	result := 0
-	for _, pbe := range pbes {
-		combinationNum := pbe.CombinationNum
-		if combinationNum > result {
-			result = combinationNum
+func (pb PokemonBuilder) Filter(f func(*PokemonBuildKnowledge) bool) PokemonBuilder {
+	result := make(PokemonBuilder, 0, len(pb))
+	for _, pbk := range pb {
+		if f(&pbk) {
+			result = append(result, pbk)
 		}
 	}
 	return result
 }
 
-type PBEsWithTier map[Tier]PokemonBuildEvents
-
-func (pbesWithTier PBEsWithTier) Init() PBEsWithTier {
-	result := PBEsWithTier{}
-	for tier, pbes := range pbesWithTier {
-		result[tier] = pbes.Init()
-	}
-	return result
-}
-
-func (pbesWithTier PBEsWithTier) Filter(f func(Tier, *PokemonBuildEvent) bool) PBEsWithTier {
-	result := PBEsWithTier{}
-	for tier, pbes := range pbesWithTier {
-		newPBEs := make(PokemonBuildEvents, 0, len(pbes))
-		for _, pbe := range pbes {
-			if f(tier, &pbe) {
-				newPBEs = append(newPBEs, pbe)
-			}
-		}
-		result[tier] = newPBEs
-	}
-	return result
-}
-
-func (pbesWithTier PBEsWithTier) MaxCombinationNum() int {
-	result := 0
-	for _, pbes := range pbesWithTier {
-		maxCombinationNum := pbes.MaxCombinationNum()
+func (pb PokemonBuilder) MaxCombinationNum() int {
+	result := pb[0].CombinationNum
+	for _, pbk := range pb[1:] {
+		maxCombinationNum := pbk.CombinationNum
 		if maxCombinationNum > result {
 			result = maxCombinationNum
 		}
@@ -201,92 +223,30 @@ func (pbesWithTier PBEsWithTier) MaxCombinationNum() int {
 	return result
 }
 
-type PokemonBuildKnowledge struct {
-	Items Items
-	MoveNames      MoveNames
-	Natures        Natures
-	EventsWithTier PBEsWithTier
-}
-
-func NewVenusaurBuildKnowledge() PokemonBuildKnowledge {
-	moveNames := MoveNames{"ギガドレイン", "ヘドロばくだん", "だいちのちから", "やどりぎのタネ", "どくどく", "まもる", "こうごうせい"}
-	items := Items{"くろいヘドロ", "オボンのみ"}
-	natures := Natures{"しんちょう", "ずぶとい", "ひかえめ"}
-
-	tier1 := PokemonBuildEvents{
-		PokemonBuildEvent{SelfMoveNames:MoveNames{"ギガドレイン"}},
-		PokemonBuildEvent{SelfMoveNames:MoveNames{"ギガドレイン", "ヘドロばくだん"}},
-		PokemonBuildEvent{SelfMoveNames:MoveNames{"やどりぎのタネ", "まもる"}},
-		PokemonBuildEvent{SelfMoveNames:MoveNames{"どくどく", "まもる"}},
-		PokemonBuildEvent{SelfMoveNames:MoveNames{"ギガドレイン", "ヘドロばくだん", "やどりぎのタネ", "まもる"}},
-		PokemonBuildEvent{SelfMoveNames:MoveNames{"ギガドレイン", "ヘドロばくだん", "どくどく", "まもる"}},
-		PokemonBuildEvent{SelfMoveNames:MoveNames{"ギガドレイン", "ヘドロばくだん", "だいちのちから", "こうごうせい"}},
-	}
-
-	tier2 := PokemonBuildEvents{
-		PokemonBuildEvent{SelfMoveNames:MoveNames{"ギガドレイン", "ヘドロばくだん", "こうごうせい", "どくどく"}},
-		PokemonBuildEvent{SelfMoveNames:MoveNames{"ギガドレイン", "だいちのちから"}},
-		PokemonBuildEvent{SelfMoveNames:MoveNames{"ヘドロばくだん", "だいちのちから"}},
-		PokemonBuildEvent{SelfMoveNames:MoveNames{"ギガドレイン", "やどりぎのタネ"}},
-		PokemonBuildEvent{SelfMoveNames:MoveNames{"ギガドレイン", "どくどく"}},
-	}
-
-	tier3 := PokemonBuildEvents{}
-
-	tier4 := PokemonBuildEvents{}
-
-	tier5 := PokemonBuildEvents{
-		PokemonBuildEvent{SelfMoveNames:MoveNames{"やどりぎのタネ", "どくどく", "まもる"}},
-		PokemonBuildEvent{SelfMoveNames:MoveNames{"やどりぎのタネ", "どくどく"}},
-	}
-
-	tier6 := PokemonBuildEvents{
-		PokemonBuildEvent{SelfMoveNames:MoveNames{"ギガドレイン", "だいちのちから", "ヘドロばくだん", "やどりぎのタネ"}},
-	}
-
-	eventsWithTier := PBEsWithTier{TIER1: tier1, TIER2: tier2, TIER3: tier3, TIER4: tier4, TIER5: tier5, TIER6: tier6}.Init()
-	return PokemonBuildKnowledge{Items:items, MoveNames: moveNames, Natures: natures, EventsWithTier: eventsWithTier}
-}
-
-func (pbk *PokemonBuildKnowledge) DiffCalcTier(pokemon, nextPokemon *Pokemon, team Team, random *rand.Rand) Tier {
+func (pb PokemonBuilder) DiffCalcTier(pokemon, nextPokemon *Pokemon, team Team, random *rand.Rand) Tier {
 	//一つ前の状態(pokemon)が満たしている組み合わせを排除する(差分を見る為に)
-	pbesWithTier := pbk.EventsWithTier.Filter(func(tier Tier, pbe *PokemonBuildEvent) bool { return !pbe.All(pokemon, team) })
-
-	if pbesWithTier[TIER6].AnyAll(nextPokemon, team) {
-		return TIER6
-	}
+	pb = pb.Filter(func(pbk *PokemonBuildKnowledge) bool { return !pbk.All(pokemon, team) })
 
 	//次の状態(nextPokemon)が満たしている組み合わせを取り出す
-	pbesWithTier = pbesWithTier.Filter(func(tier Tier, pbe *PokemonBuildEvent) bool { return pbe.All(nextPokemon, team) })
+	pb = pb.Filter(func(pbk *PokemonBuildKnowledge) bool { return pbk.All(nextPokemon, team) })
 
-	//組み合わせ数が最も多い事象を取り出す
-	maxCombinationNum := pbesWithTier.MaxCombinationNum()
-	pbesWithTier = pbesWithTier.Filter(func(tier Tier, pbe *PokemonBuildEvent) bool { return pbe.CombinationNum == maxCombinationNum })
+	//組み合わせ数が最も多い知識を取り出す
+	maxCombinationNum := pb.MaxCombinationNum()
+	pb = pb.Filter(func(pbk *PokemonBuildKnowledge) bool { return pbk.CombinationNum == maxCombinationNum })
 
-	tiersLength := 0
-	for _, pbes := range pbesWithTier {
-		tiersLength += len(pbes)
+	tierCounter := TierCounter{}
+	for _, pbk := range pb {
+		tierCounter[pbk.Tier] += 1
 	}
 
-	tiers := make(Tiers, 0, tiersLength)
-	for tier, pbes := range pbesWithTier {
-		for i := 0; i < len(pbes); i++ {
-			tiers = append(tiers, tier)
-		}
-	}
-
-	if len(tiers) == 0 {
-		return TIER6
-	}
-
-	return tiers.RandomChoice(random)
+	results := tierCounter.Tiers()
+	return results.RandomChoice(random)
 }
 
-func (pbk *PokemonBuildKnowledge) BuildMoveset(pokemon Pokemon, team Team, random *rand.Rand) (Pokemon, error) {
+func (pb PokemonBuilder) BuildMoveset(moveNames MoveNames, pokemon Pokemon, team Team, random *rand.Rand) (Moveset, error) {
 	getMoveName := func(nextPokemon Pokemon) (MoveName, error) {
 		moveNameWithTier := MoveNameWithTier{}
-
-		for _, moveName := range pbk.MoveNames {
+		for _, moveName := range moveNames {
 			moveset := pokemon.Moveset.Copy()
 
 			if _, ok := moveset[moveName]; ok {
@@ -296,72 +256,98 @@ func (pbk *PokemonBuildKnowledge) BuildMoveset(pokemon Pokemon, team Team, rando
 			moveset[moveName] = &PowerPoint{}
 			nextPokemon.Moveset = moveset
 
-			tier := pbk.DiffCalcTier(&pokemon, &nextPokemon, team, random)
-			if tier == TIER6 {
-				continue
-			}
-
+			tier := pb.DiffCalcTier(&pokemon, &nextPokemon, team, random)
 			moveNameWithTier[moveName] = tier
 		}
 
 		if len(moveNameWithTier) == 0 {
-			errMsg := fmt.Sprintf("pokemon.Moveset.Keys() = %v の状態で、次の組み合わせが見つからなかった", pokemon.Moveset.Keys())
+			errMsg := fmt.Sprintf("pokemon.Name = %v pokemon.Moveset.Keys() = %v の状態で、次の技の組み合わせが見つからなかった",
+				pokemon.Name, pokemon.Moveset.Keys(),
+			)
 			return "", fmt.Errorf(errMsg)
 		}
-		return moveNameWithTier.MoveNameRandomChoiceWithTierWeight(random), nil
+
+		moveNames, tiers := moveNameWithTier.KeysAndValues()
+		index := omw.RandomIntWithWeight(tiers.SelectPercents(), random)
+		return moveNames[index], nil
 	}
 
-	for i := 0; i < MAX_MOVESET_LENGTH; i++ {
+	padNum := MAX_MOVESET_LENGTH - len(pokemon.Moveset)
+	for i := 0; i < padNum; i++ {
 		moveName, err := getMoveName(pokemon)
 		if err != nil {
-			return Pokemon{}, err
+			return Moveset{}, err
 		}
 		moveset := pokemon.Moveset.Copy()
 		powerPoint := NewPowerPoint(MOVEDEX[moveName].BasePP, MAX_POINT_UP)
 		moveset[moveName] = &powerPoint
 		pokemon.Moveset = moveset
 	}
-	return pokemon, nil
+	return pokemon.Moveset, nil
 }
 
-// func (pbk PokemonBuildKnowledge) BuildPokemon(team Team) Pokemon {
-// 	pokemon := Pokemon{}
-// 	for i := 0; i < MAX_MOVESET_LENGTH; i++ {
-// 		moveNameWithTier := MoveNameWithTier{}
+type PokemonBuilders []PokemonBuilder
 
-// 		for _, moveName := range pbk.MoveNames {
-// 			if _, ok := pokemon.Moveset[moveName]; ok {
-// 				continue
-// 			}
+func (pbs PokemonBuilders) AccuracyYs(accuracy func(PokemonBuilder) float64) []float64 {
+	result := make([]float64, len(pbs))
+	for i, pb := range pbs {
+		result[i] = accuracy(pb)
+	}
+	return result
+}
 
-// 			powerPoint := NewPowerPoint(MOVEDEX[moveName].BasePP, MAX_POINT_UP)
-// 			pokemon.Moveset[moveName] = &powerPoint
-// 			tiers := []int{}
+func (pbs PokemonBuilders) RandomChoice(random *rand.Rand) PokemonBuilder {
+	index := random.Intn(len(pbs))
+	return pbs[index]
+}
 
-// 			if pbk.Tier1EventCombinations.AnyAll(&pokemon, team) {
-// 				tiers = append(tiers, 1)
-// 			}
+func (pbs PokemonBuilders) Elite(accuracyYs []float64) PokemonBuilders {
+	maxAccuracy := omw.MaxFloat64(accuracyYs...)
+	result := make(PokemonBuilders, 0, len(pbs))
+	for i, pb := range pbs {
+		accuracyY := accuracyYs[i]
+		if accuracyY == maxAccuracy {
+			result = append(result, pb)
+		}
+	}
+	return result
+}
 
-// 			if pbk.Tier1EventCombinations.AnyAll(&pokemon, team) {
-// 				tiers = append(tiers, 2)
-// 			}
+func (pbs PokemonBuilders) RouletteSelect(accuracyYs []float64, random *rand.Rand) PokemonBuilder {
+	index := omw.RandomIntWithWeight(accuracyYs, random)
+	return pbs[index]
+}
 
-// 			if pbk.Tier1EventCombinations.AnyAll(&pokemon, team) {
-// 				tiers = append(tiers, 3)
-// 			}
+func (pbs PokemonBuilders) NextGeneration(accuracy func(PokemonBuilder) float64, tournamentSize int, crossPercent, mutationPercent float64, mutationNum int, random *rand.Rand) (PokemonBuilders, error) {
+	selectPercent := 1.0 - (crossPercent + mutationPercent)
+	if selectPercent < 0.0 {
+		return PokemonBuilders{}, fmt.Errorf("交叉確率 + 突然変異確率 <= 1.0 でなければならない")
+	}
 
-// 			if pbk.Tier1EventCombinations.AnyAll(&pokemon, team) {
-// 				tiers = append(tiers, 4)
-// 			}
+	length := len(pbs)
+	accuracyYs := pbs.AccuracyYs(accuracy)
+	weight := []float64{selectPercent, crossPercent, mutationPercent}
 
-// 			if pbk.Tier1EventCombinations.AnyAll(&pokemon, team) {
-// 				tiers = append(tiers, 5)
-// 			}
+	result := make(PokemonBuilders, 0, length)
+	result = append(result, pbs.Elite(accuracyYs).RandomChoice(random))
 
-// 			if len(tiers) != 0 {
-// 				fmt.Println(moveNameWithTier)
-// 			}
-// 		}
-// 	}
-// 	return pokemon
-// }
+	for i := 0; i < length-1; i++ {
+		index := omw.RandomIntWithWeight(weight, random)
+		switch index {
+		case 0:
+			result = append(result, pbs.RouletteSelect(accuracyYs, random))
+		case 1:
+			pb1 := pbs.RouletteSelect(accuracyYs, random)
+			pb2 := pbs.RouletteSelect(accuracyYs, random)
+			result = append(result, pb1.Cross(pb2, random))
+		default:
+			pb := pbs.RandomChoice(random)
+			pb, err := pb.Mutation(mutationNum, random)
+			if err != nil {
+				return PokemonBuilders{}, err
+			}
+			result = append(result, pb)
+		}
+	}
+	return result, nil
+}

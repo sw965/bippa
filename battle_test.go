@@ -18,12 +18,12 @@ func TestPush(t *testing.T) {
 
 	expectedP1AttackDamages := []int{43, 45, 46, 48, 49, 51, 52, 66, 67, 69, 70, 72, 73, 75, 76, 78}
 
-	expectedP2NoCriticalAttackDamages, err := omw.MakeSliceIntRange(92, 111, 2)
+	expectedP2NoCriticalAttackDamages, err := omw.MakeSliceInt(92, 111, 2)
 	if err != nil {
 		panic(err)
 	}
 
-	expectedP2CriticalAttackDamages, err := omw.MakeSliceIntRange(138, 165, 2)
+	expectedP2CriticalAttackDamages, err := omw.MakeSliceInt(138, 165, 2)
 	if err != nil {
 		panic(err)
 	}

@@ -39,6 +39,30 @@ func (team Team) PokeNames() PokeNames {
 	return result
 }
 
+func (team Team) Natures() Natures {
+	result := make(Natures, len(team))
+	for i, pokemon := range team {
+		result[i] = pokemon.Nature
+	}
+	return result
+}
+
+func (team Team) Abilities() Abilities {
+	result := make(Abilities, len(team))
+	for i, pokemon := range team {
+		result[i] = pokemon.Ability
+	}
+	return result
+}
+
+func (team Team) Items() Items {
+	result := make(Items, len(team))
+	for i, pokemon := range team {
+		result[i] = pokemon.Item
+	}
+	return result
+}
+
 func (team Team) Find(pokeName PokeName) (Pokemon, error) {
 	if pokeName == EMPTY_POKE_NAME {
 		return Pokemon{}, fmt.Errorf("Team.Find関数において EMPTY_POKE_NAME は 引数として不適")

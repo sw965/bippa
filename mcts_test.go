@@ -24,9 +24,9 @@ func TestRunMCTS(t *testing.T) {
 	// 	battle.P2Fighters[1].CurrentHP = 0
 	// 	battle.P2Fighters[2].CurrentHP = 0
 
-	//randomInstructionTrainer := NewRandomInstructionTrainer(mtRandom)
+	// randomInstructionTrainer := NewRandomInstructionTrainer(mtRandom)
 
-	// playoutNum := 36000
+	// playoutNum := 3600
 	// p1WinCount := 0.0
 	// for i := 0; i < playoutNum; i++ {
 	// 	winner, err := randomInstructionTrainer.Playout(randomInstructionTrainer, battle, mtRandom)

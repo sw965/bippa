@@ -233,11 +233,6 @@ func (pokemon *Pokemon) BadPoisonDamage() int {
 	}
 }
 
-func (pokemon *Pokemon) CanMoveUse(moveName MoveName) bool {
-	powerPoint, ok := pokemon.Moveset[moveName]
-	return ok && powerPoint.Current > 0
-}
-
 type Pokemons []Pokemon
 
 func (pokemons Pokemons) Filter(f func(Pokemon) bool) Pokemons {
@@ -246,6 +241,25 @@ func (pokemons Pokemons) Filter(f func(Pokemon) bool) Pokemons {
 		if f(pokemon) {
 			result = append(result, pokemon)
 		}
+	}
+	return result
+}
+
+func (pokemons Pokemons) Count(pokemon Pokemon) int {
+	result := 0
+	for _, iPokemon := range pokemons {
+		iPokemonPointer := &iPokemon
+		if iPokemonPointer.Equal(&pokemon) {
+			result += 1
+		}
+	}
+	return result
+}
+
+func (pokemons Pokemons) Counts() []int {
+	result := make([]int, len(pokemons))
+	for i, pokemon := range pokemons {
+		result[i] = pokemons.Count(pokemon)
 	}
 	return result
 }

@@ -1,10 +1,5 @@
 package bippa
 
-import (
-	"github.com/sw965/omw"
-	"math/rand"
-)
-
 type MoveName string
 
 const (
@@ -46,7 +41,10 @@ func (moveNames MoveNames) Sort() MoveNames {
 	result := make(MoveNames, 0, len(moveNames))
 	for _, moveName := range ALL_MOVE_NAMES {
 		if moveNames.In(moveName) {
-			result = append(result, moveName)
+			count := moveNames.Count(moveName)
+			for i := 0; i < count; i++ {
+				result = append(result, moveName)
+			}
 		}
 	}
 
@@ -65,6 +63,41 @@ func (moveNames MoveNames) Index(moveName MoveName) int {
 	return -1
 }
 
+func (moveNames1 MoveNames) Equal(moveNames2 MoveNames) bool {
+	//index out of range 対策
+	if len(moveNames1) != len(moveNames2) {
+		return false
+	}
+
+	for i, moveName1 := range moveNames1 {
+		moveName2 := moveNames2[i]
+		if moveName1 != moveName2 {
+			return false
+		}
+	}
+	return true
+}
+
+type MoveNamess []MoveNames
+
+func (moveNamess MoveNamess) SumLength() int {
+	result := 0
+	for _, moveNames := range moveNamess {
+		result += len(moveNames)
+	}
+	return result
+}
+
+func (moveNamess MoveNamess) Flat() MoveNames {
+	result := make(MoveNames, 0, moveNamess.SumLength())
+	for _, moveNames := range moveNamess {
+		for _, moveName := range moveNames {
+			result = append(result, moveName)
+		}
+	}
+	return result
+}
+
 type MoveNameWithTier map[MoveName]Tier
 
 func (moveNameWithTier MoveNameWithTier) Keys() MoveNames {
@@ -75,21 +108,11 @@ func (moveNameWithTier MoveNameWithTier) Keys() MoveNames {
 	return result
 }
 
-func (moveNameWithTier MoveNameWithTier) Items() (MoveNames, Tiers) {
+func (moveNameWithTier MoveNameWithTier) KeysAndValues() (MoveNames, Tiers) {
 	keys := moveNameWithTier.Keys()
 	values := make(Tiers, len(moveNameWithTier))
 	for i, key := range keys {
 		values[i] = moveNameWithTier[key]
 	}
 	return keys, values
-}
-
-func (moveNameWithTier MoveNameWithTier) MoveNameRandomChoiceWithTierWeight(random *rand.Rand) MoveName {
-	keys, values := moveNameWithTier.Items()
-	weight := make([]float64, len(values))
-	for i, tier := range values {
-		weight[i] = TIER_WITH_SELECT_PERCENT[tier]
-	}
-	index := omw.RandomIntWithWeight(weight, random)
-	return keys[index]
 }

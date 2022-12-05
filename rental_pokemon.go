@@ -9,12 +9,14 @@ import (
 // 3
 func NewVenusaur() Pokemon {
 	pokemon, err := NewPokemon("フシギバナ", "おだやか", "しんりょく", "♀", "くろいヘドロ",
-		MoveNames{"ギガドレイン", "ヘドロばくだん", "やどりぎのタネ", "まもる"}, NewMaxPointUps(MAX_MOVESET_LENGTH),
+		MoveNames{"ギガドレイン", "ヘドロばくだん", "やどりぎのタネ", "まもる"},
+		NewMaxPointUps(MAX_MOVESET_LENGTH),
 		&ALL_MAX_INDIVIDUAL, &Effort{HP: MAX_EFFORT_VAL, SpDef: MAX_EFFORT_VAL, Speed: 4})
 
 	if err != nil {
 		panic(err)
 	}
+
 	return pokemon
 }
 

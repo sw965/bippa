@@ -22,6 +22,15 @@ func (abilities Abilities) In(ability Ability) bool {
 	return false
 }
 
+func (abilities Abilities) InAll(ability ...Ability) bool {
+	for _, iAbility := range ability {
+		if !abilities.In(iAbility) {
+			return false
+		}
+	}
+	return true
+}
+
 func (abilities Abilities) Index(ability Ability) int {
 	for i, iAbility := range abilities {
 		if iAbility == ability {
@@ -29,4 +38,18 @@ func (abilities Abilities) Index(ability Ability) int {
 		}
 	}
 	return -1
+}
+
+type AbilityWithTier map[Ability]Tier
+
+func (abilityWithTier AbilityWithTier) KeysAndValues() (Abilities, Tiers) {
+	length := len(abilityWithTier)
+	keys := make(Abilities, 0, length)
+	values := make(Tiers, 0, length)
+
+	for k, v := range abilityWithTier {
+		keys = append(keys, k)
+		values = append(values, v)
+	}
+	return keys, values
 }
