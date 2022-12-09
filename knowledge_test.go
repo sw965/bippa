@@ -3,104 +3,74 @@ package bippa
 import (
 	"fmt"
 	"github.com/seehuhn/mt19937"
-	"github.com/sw965/omw"
 	"math/rand"
 	"testing"
 	"time"
 )
 
-func Accuracy(moveNames MoveNames, random *rand.Rand) func(PokemonBuilder) float64 {
-	result := func(pb PokemonBuilder) float64 {
-		// result := 0.0
-		// for _, pbk := range pb {
-		// 	if pbk.NearlyEqual(&PokemonBuildKnowledge{SelfMoveNames:MoveNames{"ギガドレイン"}}) {
-		// 		if pbk.Tier == TIER1 {
-		// 			result += 1.0
-		// 		}
-		// 	}
+// func Accuracy(moveNames MoveNames, random *rand.Rand) func(PokemonBuilder) float64 {
+// 	result := func(pb PokemonBuilder) float64 {
+// 		count := 0.0
+// 		trialNum := 196
 
-		// 	if pbk.NearlyEqual(&PokemonBuildKnowledge{SelfMoveNames:MoveNames{"ヘドロばくだん"}}) {
-		// 		if pbk.Tier == TIER1 {
-		// 			result += 1.0
-		// 		}
-		// 	}
+// 		for i := 0; i < trialNum; i++ {
+// 			moveset, selectPokemonBuilder, err := pb.BuildMoveset(moveNames, Pokemon{}, Team{}, random)
 
-		// 	if pbk.NearlyEqual(&PokemonBuildKnowledge{SelfMoveNames:MoveNames{"まもる"}}) {
-		// 		if pbk.Tier == TIER1 {
-		// 			result += 1.0
-		// 		}
-		// 	}
+// 			if err != nil {
+// 				panic(err)
+// 			}
 
-		// 	if pbk.NearlyEqual(&PokemonBuildKnowledge{SelfMoveNames:MoveNames{"やどりぎのタネ"}}) {
-		// 		if pbk.Tier == TIER1 {
-		// 			result += 1.0
-		// 		}
-		// 	}
+// 			_, ok1 := moveset["ギガドレイン"]
+// 			_, ok2 := moveset["ヘドロばくだん"]
+// 			_, ok3 := moveset["やどりぎのタネ"]
+// 			_, ok4 := moveset["まもる"]
 
-		// 	if pbk.NearlyEqual(&PokemonBuildKnowledge{SelfMoveNames:MoveNames{"だいちのちから"}}) {
-		// 		if pbk.Tier != TIER1 {
-		// 			result += 1.0
-		// 		}
-		// 	}
+// 			if ok1 {
+// 				count += 1
+// 			}
 
-		// 	if pbk.NearlyEqual(&PokemonBuildKnowledge{SelfMoveNames:MoveNames{"どくどく"}}) {
-		// 		if pbk.Tier != TIER1 {
-		// 			result += 1.0
-		// 		}
-		// 	}
+// 			if ok2 {
+// 				count += 1
+// 			}
 
-		// 	if pbk.NearlyEqual(&PokemonBuildKnowledge{SelfMoveNames:MoveNames{"こうごうせい"}}) {
-		// 		if pbk.Tier != TIER1 {
-		// 			result += 1.0
-		// 		}
-		// 	}
+// 			if ok3 {
+// 				count += 1
+// 			}
 
-		// 	if pbk.NearlyEqual(&PokemonBuildKnowledge{SelfMoveNames:MoveNames{"にほんばれ"}}) {
-		// 		if pbk.Tier != TIER1 {
-		// 			result += 1.0
-		// 		}
-		// 	}
+// 			if ok4 {
+// 				count += 1
+// 			}
+// 		}
+// 		result := float64(count) / float64(trialNum * 4)
+// 		t := 1.0
 
-		// 	if pbk.NearlyEqual(&PokemonBuildKnowledge{SelfMoveNames:MoveNames{"ソーラービーム"}}) {
-		// 		if pbk.Tier != TIER1 {
-		// 			result += 1.0
-		// 		}
-		// 	}
-		// }
+// 		learningRate := (float64(result) - t) * (float64(result) - t)
+// 	}
+// 	return result
+// }
 
-		trialNum := 196
-		count := 0.0
-
-		for i := 0; i < trialNum; i++ {
-			moveset, err := pb.BuildMoveset(moveNames, Pokemon{}, Team{}, random)
-			if err != nil {
-				panic(err)
-			}
-			_, ok1 := moveset["ギガドレイン"]
-			_, ok2 := moveset["ヘドロばくだん"]
-			_, ok3 := moveset["やどりぎのタネ"]
-			_, ok4 := moveset["まもる"]
-
-			if ok1 {
-				count += 1.0
-			}
-
-			if ok2 {
-				count += 1.0
-			}
-
-			if ok3 {
-				count += 1.0
-			}
-
-			if ok4 {
-				count += 1.0
-			}
+func Accuracy(builder PokemonBuilder, moveNames MoveNames, testNum int, random *rand.Rand) float64 {
+	count := 0
+	for i := 0; i < testNum; i++ {
+		getSelectPercents := func(pb PokemonBuilder) []float64 {
+			return pb.SelectPercents()
 		}
-		return count
-		//return result
+
+		moveset, _, err := builder.BuildMoveset(moveNames, Pokemon{}, Team{}, getSelectPercents, random)
+
+		if err != nil {
+			panic(err)
+		}
+
+		_, ok1 := moveset["ギガドレイン"]
+		_, ok2 := moveset["ヘドロばくだん"]
+		_, ok3 := moveset["やどりぎのタネ"]
+		_, ok4 := moveset["まもる"]
+		if ok1 && ok2 && ok3 && ok4 {
+			count += 1
+		}
 	}
-	return result
+	return float64(count) / float64(testNum)
 }
 
 func TestBuildMoveset(t *testing.T) {
@@ -108,36 +78,50 @@ func TestBuildMoveset(t *testing.T) {
 	mtRandom.Seed(time.Now().UnixNano())
 	moveNames := MoveNames{"ギガドレイン", "ヘドロばくだん", "こうごうせい", "やどりぎのタネ",
 		"だいちのちから", "ソーラービーム", "まもる", "どくどく", "にほんばれ"}
+	
+	builder := NewInitPokemonBuilder(
+		Abilities{"しんりょく", "ようりょくそ"},
+		Items{"くろいヘドロ", "オボンのみ"},
+		moveNames,
+		Natures{"さみしがり", "ひかえめ", "いじっぱり"},
+		mtRandom,
+	).Init(mtRandom)
 
-	size := 512
-	builders := make(PokemonBuilders, size)
-	for i := 0; i < size; i++ {
-		builders[i] = NewInitPokemonBuilder(
-			Abilities{"しんりょく", "ようりょくそ"},
-			Items{"くろいヘドロ", "オボンのみ"},
-			moveNames,
-			Natures{"さみしがり", "ひかえめ", "いじっぱり"},
-			mtRandom,
-		)
+	//accuracy := Accuracy(moveNames, mtRandom)
+	learningRate := 0.001
+	getSelectPercents := func(pb PokemonBuilder) []float64 {
+		return make([]float64, len(pb))
 	}
-	accuracy := Accuracy(moveNames, mtRandom)
 
-	for i := 0; i < 12800; i++ {
-		builders, err := builders.NextGeneration(accuracy, 96, 0.5, 0.01, 1, mtRandom)
+	for i := 0; i < 1600000; i++ {
+		//powerPoint := NewPowerPoint(10, 3)
+		ms := Moveset{}
+		moveset, actionHistory, err := builder.BuildMoveset(moveNames, Pokemon{Moveset:ms}, Team{}, getSelectPercents, mtRandom)
+
 		if err != nil {
 			panic(err)
 		}
 
-		if i%1 == 0 {
-			accuracyYs := builders.AccuracyYs(accuracy)
-			elite := builders.Elite(accuracyYs).RandomChoice(mtRandom)
-			fmt.Println("len = ", len(builders), "accyracy = ", omw.MaxFloat64(accuracyYs...), "i = ", i)
+		ok := func(pokemon Pokemon, team Team) bool {
+			_, ok1 := moveset["やどりぎのタネ"]
+			_, ok2 := moveset["まもる"]
+			_, ok3 := moveset["ギガドレイン"]
+			_, ok4 := moveset["ヘドロばくだん"]
+			return ok1 && ok2 && ok3 && ok4
+		}
 
-			fmt.Println("tier1", elite.Filter(func(pbk *PokemonBuildKnowledge) bool { return pbk.Tier == TIER1 }))
-			fmt.Println("tier2", elite.Filter(func(pbk *PokemonBuildKnowledge) bool { return pbk.Tier == TIER2 }))
-			fmt.Println("tier3", elite.Filter(func(pbk *PokemonBuildKnowledge) bool { return pbk.Tier == TIER3 }))
-			fmt.Println("tier4", elite.Filter(func(pbk *PokemonBuildKnowledge) bool { return pbk.Tier == TIER4 }))
-			fmt.Println("tier5", elite.Filter(func(pbk *PokemonBuildKnowledge) bool { return pbk.Tier == TIER5 }))
+		teacher := PokemonBuilderTeacher{ActionHistory:actionHistory, Pokemon:Pokemon{}, Team:Team{}, OK:ok}
+		err = builder.Optimizer(&teacher, 0.9, learningRate)
+		if err != nil {
+			panic(err)
+		}
+
+		if i%1600 == 0 {
+			for _, pbck := range  builder {
+				fmt.Println(pbck)
+			}
+			fmt.Println(Accuracy(builder, moveNames, 1280, mtRandom))
+			fmt.Println("")
 		}
 	}
 }

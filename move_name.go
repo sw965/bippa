@@ -116,3 +116,16 @@ func (moveNameWithTier MoveNameWithTier) KeysAndValues() (MoveNames, Tiers) {
 	}
 	return keys, values
 }
+
+type MoveNameWithFloat64 map[MoveName]float64
+
+func (moveNameWithFloat64 MoveNameWithFloat64) KeysAndValues() (MoveNames, []float64) {
+	length := len(moveNameWithFloat64)
+	keys := make(MoveNames, 0, length)
+	values := make([]float64, 0, length)
+	for k, v := range moveNameWithFloat64 {
+		keys = append(keys, k)
+		values = append(values, v)
+	}
+	return keys, values
+}
