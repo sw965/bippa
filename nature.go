@@ -22,20 +22,6 @@ func (natures Natures) InAll(nature ...Nature) bool {
 	return true
 }
 
-type NatureWithTier map[Nature]Tier
-
-func (natureWithTier NatureWithTier) KeysAndValues() (Natures, Tiers) {
-	length := len(natureWithTier)
-	keys := make(Natures, 0, length)
-	values := make(Tiers, 0, length)
-
-	for k, v := range natureWithTier {
-		keys = append(keys, k)
-		values = append(values, v)
-	}
-	return keys, values
-}
-
 type NatureBonus float64
 
 const (

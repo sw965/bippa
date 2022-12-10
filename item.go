@@ -38,17 +38,3 @@ func (items Items) InAll(item ...Item) bool {
 	}
 	return true
 }
-
-type ItemWithTier map[Item]Tier
-
-func (itemWithTier ItemWithTier) KeysAndValues() (Items, Tiers) {
-	length := len(itemWithTier)
-	keys := make(Items, 0, length)
-	values := make(Tiers, 0, length)
-
-	for k, v := range itemWithTier {
-		keys = append(keys, k)
-		values = append(values, v)
-	}
-	return keys, values
-}

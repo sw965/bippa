@@ -39,17 +39,3 @@ func (abilities Abilities) Index(ability Ability) int {
 	}
 	return -1
 }
-
-type AbilityWithTier map[Ability]Tier
-
-func (abilityWithTier AbilityWithTier) KeysAndValues() (Abilities, Tiers) {
-	length := len(abilityWithTier)
-	keys := make(Abilities, 0, length)
-	values := make(Tiers, 0, length)
-
-	for k, v := range abilityWithTier {
-		keys = append(keys, k)
-		values = append(values, v)
-	}
-	return keys, values
-}

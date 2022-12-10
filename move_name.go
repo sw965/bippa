@@ -98,25 +98,6 @@ func (moveNamess MoveNamess) Flat() MoveNames {
 	return result
 }
 
-type MoveNameWithTier map[MoveName]Tier
-
-func (moveNameWithTier MoveNameWithTier) Keys() MoveNames {
-	result := make(MoveNames, 0, len(moveNameWithTier))
-	for k, _ := range moveNameWithTier {
-		result = append(result, k)
-	}
-	return result
-}
-
-func (moveNameWithTier MoveNameWithTier) KeysAndValues() (MoveNames, Tiers) {
-	keys := moveNameWithTier.Keys()
-	values := make(Tiers, len(moveNameWithTier))
-	for i, key := range keys {
-		values[i] = moveNameWithTier[key]
-	}
-	return keys, values
-}
-
 type MoveNameWithFloat64 map[MoveName]float64
 
 func (moveNameWithFloat64 MoveNameWithFloat64) KeysAndValues() (MoveNames, []float64) {

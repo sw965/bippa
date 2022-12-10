@@ -83,16 +83,3 @@ func (effort Effort) SetUpperLimitSpeed() Effort {
 }
 
 type Efforts []Effort
-
-type EffortWithTier map[Effort]Tier
-
-func (effortWithTier EffortWithTier) KeysAndValues() (Efforts, Tiers) {
-	length := len(effortWithTier)
-	keys := make(Efforts, 0, length)
-	values := make(Tiers, 0, length)
-	for k, v := range effortWithTier {
-		keys = append(keys, k)
-		values = append(values, v)
-	}
-	return keys, values
-}

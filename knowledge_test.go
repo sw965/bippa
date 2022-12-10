@@ -8,55 +8,16 @@ import (
 	"time"
 )
 
-// func Accuracy(moveNames MoveNames, random *rand.Rand) func(PokemonBuilder) float64 {
-// 	result := func(pb PokemonBuilder) float64 {
-// 		count := 0.0
-// 		trialNum := 196
-
-// 		for i := 0; i < trialNum; i++ {
-// 			moveset, selectPokemonBuilder, err := pb.BuildMoveset(moveNames, Pokemon{}, Team{}, random)
-
-// 			if err != nil {
-// 				panic(err)
-// 			}
-
-// 			_, ok1 := moveset["ギガドレイン"]
-// 			_, ok2 := moveset["ヘドロばくだん"]
-// 			_, ok3 := moveset["やどりぎのタネ"]
-// 			_, ok4 := moveset["まもる"]
-
-// 			if ok1 {
-// 				count += 1
-// 			}
-
-// 			if ok2 {
-// 				count += 1
-// 			}
-
-// 			if ok3 {
-// 				count += 1
-// 			}
-
-// 			if ok4 {
-// 				count += 1
-// 			}
-// 		}
-// 		result := float64(count) / float64(trialNum * 4)
-// 		t := 1.0
-
-// 		learningRate := (float64(result) - t) * (float64(result) - t)
-// 	}
-// 	return result
-// }
-
-func Accuracy(builder PokemonBuilder, moveNames MoveNames, testNum int, random *rand.Rand) float64 {
-	count := 0
+func Accuracy(builder PokemonBuilder, moveNames MoveNames, testNum int, random *rand.Rand) (float64, float64) {
+	count1 := 0
+	count2 := 0
 	for i := 0; i < testNum; i++ {
-		getSelectPercents := func(pb PokemonBuilder) []float64 {
-			return pb.SelectPercents()
+		getWs := func(pb PokemonBuilder) []float64 {
+			return pb.Ws()
 		}
 
-		moveset, _, err := builder.BuildMoveset(moveNames, Pokemon{}, Team{}, getSelectPercents, random)
+		//powerPoint := NewPowerPoint(10, 3)
+		moveset, _, err := builder.BuildMoveset(moveNames, Pokemon{}, Team{}, getWs, 4, random)
 
 		if err != nil {
 			panic(err)
@@ -64,20 +25,29 @@ func Accuracy(builder PokemonBuilder, moveNames MoveNames, testNum int, random *
 
 		_, ok1 := moveset["ギガドレイン"]
 		_, ok2 := moveset["ヘドロばくだん"]
-		_, ok3 := moveset["やどりぎのタネ"]
-		_, ok4 := moveset["まもる"]
+
+		_, ok3 := moveset["まもる"]
+		_, ok4 := moveset["やどりぎのタネ"]
+		
+		_, ok5 := moveset["こうごうせい"]
+		_, ok6 := moveset["ねむりごな"]
+
 		if ok1 && ok2 && ok3 && ok4 {
-			count += 1
+			count1 += 1
+		}
+
+		if ok1 && ok2 && ok5 && ok6 {
+			count2 += 1
 		}
 	}
-	return float64(count) / float64(testNum)
+	return float64(count1) / float64(testNum), float64(count2) / float64(testNum)
 }
 
 func TestBuildMoveset(t *testing.T) {
 	mtRandom := rand.New(mt19937.New())
 	mtRandom.Seed(time.Now().UnixNano())
 	moveNames := MoveNames{"ギガドレイン", "ヘドロばくだん", "こうごうせい", "やどりぎのタネ",
-		"だいちのちから", "ソーラービーム", "まもる", "どくどく", "にほんばれ"}
+		"だいちのちから", "ソーラービーム", "まもる", "どくどく", "にほんばれ", "ねむりごな"}
 	
 	builder := NewInitPokemonBuilder(
 		Abilities{"しんりょく", "ようりょくそ"},
@@ -88,38 +58,69 @@ func TestBuildMoveset(t *testing.T) {
 	).Init(mtRandom)
 
 	//accuracy := Accuracy(moveNames, mtRandom)
-	learningRate := 0.001
-	getSelectPercents := func(pb PokemonBuilder) []float64 {
+	learningRate := 0.0001
+	getWs := func(pb PokemonBuilder) []float64 {
 		return make([]float64, len(pb))
 	}
 
+	actionHistories := make(PokemonBuilderActionHistories, 0, 12800)
+
 	for i := 0; i < 1600000; i++ {
 		//powerPoint := NewPowerPoint(10, 3)
-		ms := Moveset{}
-		moveset, actionHistory, err := builder.BuildMoveset(moveNames, Pokemon{Moveset:ms}, Team{}, getSelectPercents, mtRandom)
+		moveset, actionHistory, err := builder.BuildMoveset(moveNames, Pokemon{}, Team{}, getWs, 4, mtRandom)
 
 		if err != nil {
 			panic(err)
 		}
 
-		ok := func(pokemon Pokemon, team Team) bool {
-			_, ok1 := moveset["やどりぎのタネ"]
-			_, ok2 := moveset["まもる"]
-			_, ok3 := moveset["ギガドレイン"]
-			_, ok4 := moveset["ヘドロばくだん"]
+		ok1 := func() bool {
+			_, ok1 := moveset["ギガドレイン"]
+			_, ok2 := moveset["ヘドロばくだん"]
+			_, ok3 := moveset["やどりぎのタネ"]
+			_, ok4 := moveset["まもる"]
 			return ok1 && ok2 && ok3 && ok4
 		}
 
-		teacher := PokemonBuilderTeacher{ActionHistory:actionHistory, Pokemon:Pokemon{}, Team:Team{}, OK:ok}
-		err = builder.Optimizer(&teacher, 0.9, learningRate)
-		if err != nil {
-			panic(err)
+		ok2 := func() bool {
+			_, ok1 := moveset["ギガドレイン"]
+			_, ok2 := moveset["ヘドロばくだん"]
+			_, ok3 := moveset["こうごうせい"]
+			_, ok4 := moveset["ねむりごな"]
+			return ok1 && ok2 && ok3 && ok4
+		}
+
+		if ok1() {
+			err = builder.Optimizer(&actionHistory, learningRate)
+			if err != nil {
+				panic(err)
+			}
+			actionHistories = append(actionHistories, actionHistory)
+		}
+
+		if ok2() {
+			err = builder.Optimizer(&actionHistory, learningRate)
+			if err != nil {
+				panic(err)
+			}
+			actionHistories = append(actionHistories, actionHistory)		
 		}
 
 		if i%1600 == 0 {
+			for i := 0; i < 64; i++ {
+				for _, actionHistory := range actionHistories.RandomChoices(128, mtRandom) {
+					err := builder.Optimizer(&actionHistory, learningRate)
+					if err != nil {
+						panic(err)
+					}
+				}
+			}
+
+			actionHistories = make(PokemonBuilderActionHistories, 0, 12800)
+
 			for _, pbck := range  builder {
 				fmt.Println(pbck)
 			}
+
 			fmt.Println(Accuracy(builder, moveNames, 1280, mtRandom))
 			fmt.Println("")
 		}
