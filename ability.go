@@ -39,3 +39,17 @@ func (abilities Abilities) Index(ability Ability) int {
 	}
 	return -1
 }
+
+type AbilityWithFloat64 map[Ability]float64
+
+func (abilityWithFloat64 AbilityWithFloat64) KeysAndValues() (Abilities, []float64) {
+	length := len(abilityWithFloat64)
+	keys := make(Abilities, 0, length)
+	values := make([]float64, 0, length)
+
+	for k, v := range abilityWithFloat64 {
+		keys = append(keys, k)
+		values = append(values, v)
+	}
+	return keys, values
+}

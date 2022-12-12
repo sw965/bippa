@@ -38,3 +38,16 @@ func (items Items) InAll(item ...Item) bool {
 	}
 	return true
 }
+
+type ItemWithFloat64 map[Item]float64
+
+func (itemWithFloat64 ItemWithFloat64) KeysAndValues() (Items, []float64) {
+	length := len(itemWithFloat64)
+	keys := make(Items, 0, length)
+	values := make([]float64, 0, length)
+	for k, v := range itemWithFloat64 {
+		keys = append(keys, k)
+		values = append(values, v)
+	}
+	return keys, values
+}

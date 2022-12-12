@@ -1,5 +1,9 @@
 package bippa
 
+import (
+	"github.com/sw965/omw"
+)
+
 type MoveName string
 
 const (
@@ -78,24 +82,33 @@ func (moveNames1 MoveNames) Equal(moveNames2 MoveNames) bool {
 	return true
 }
 
-type MoveNamess []MoveNames
-
-func (moveNamess MoveNamess) SumLength() int {
-	result := 0
-	for _, moveNames := range moveNamess {
-		result += len(moveNames)
+func (moveNames MoveNames) IndicesAccess(indices []int) MoveNames {
+	result := make(MoveNames, len(indices))
+	for i, index := range indices {
+		result[i] = moveNames[index]
 	}
 	return result
 }
 
-func (moveNamess MoveNamess) Flat() MoveNames {
-	result := make(MoveNames, 0, moveNamess.SumLength())
-	for _, moveNames := range moveNamess {
-		for _, moveName := range moveNames {
-			result = append(result, moveName)
-		}
+func (moveNames MoveNames) Combination(r int) ([]MoveNames, error) {
+	n := len(moveNames)
+	combinationNumbers, err := omw.CombinationNumbers(n, r)
+	if err != nil {
+		return []MoveNames{}, err
 	}
-	return result
+
+	combinationTotalNum, err := omw.CombinationTotalNum(n, r)
+	if err != nil {
+		return []MoveNames{}, err
+	}
+
+	result := make([]MoveNames, combinationTotalNum)
+
+	for i, indices := range combinationNumbers {
+		result[i] = moveNames.IndicesAccess(indices)
+	}
+	return result, nil
+
 }
 
 type MoveNameWithFloat64 map[MoveName]float64
