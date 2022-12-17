@@ -6,18 +6,6 @@ import (
 	"math/rand"
 )
 
-type BattlePolicy func(*Battle) map[ActionCmd]float64
-
-func NoBattlePolicy(battle *Battle) map[ActionCmd]float64 {
-	legalActionCmds := battle.P1Fighters.LegalActionCmds()
-	result := map[ActionCmd]float64{}
-	floatLegalActionNum := float64(len(legalActionCmds))
-	for _, actionCmd := range legalActionCmds {
-		result[actionCmd] = 1.0 / floatLegalActionNum
-	}
-	return result
-}
-
 type PolynomialUpperConfidenceBound struct {
 	P           float64
 	AccumReward float64
@@ -31,6 +19,18 @@ func (pucb *PolynomialUpperConfidenceBound) AverageReward() float64 {
 func (pucb *PolynomialUpperConfidenceBound) Get(totalTrial int, X float64) float64 {
 	averageReward := pucb.AverageReward()
 	return crow.PolynomialUpperConfidenceBound(averageReward, pucb.P, totalTrial, pucb.Trial, X)
+}
+
+type BattlePolicy func(*Battle) map[ActionCmd]float64
+
+func NoBattlePolicy(battle *Battle) map[ActionCmd]float64 {
+	legalActionCmds := battle.P1Fighters.LegalActionCmds()
+	result := map[ActionCmd]float64{}
+	floatLegalActionNum := float64(len(legalActionCmds))
+	for _, actionCmd := range legalActionCmds {
+		result[actionCmd] = 1.0 / floatLegalActionNum
+	}
+	return result
 }
 
 type ActionCmdPUCBs map[ActionCmd]*PolynomialUpperConfidenceBound
@@ -104,16 +104,16 @@ func (actionCmdPUCBs ActionCmdPUCBs) MaxTrialActionCmds() ActionCmds {
 	return result
 }
 
-type Node struct {
+type BattleNode struct {
 	Battle          *Battle
 	LegalActionCmds ActionCmds
 	ActionCmdPUCBs  ActionCmdPUCBs
-	NextNodes       Nodes
+	NextBattleNodes       BattleNodes
 	IsP1            bool
 	SelectCount     int
 }
 
-func NewNodePointer(battle *Battle, battlePolicy BattlePolicy) *Node {
+func NewBattleNodePointer(battle *Battle, battlePolicy BattlePolicy) *BattleNode {
 	isP1Phase := battle.IsP1Phase()
 	var fighters Fighters
 
@@ -138,77 +138,77 @@ func NewNodePointer(battle *Battle, battlePolicy BattlePolicy) *Node {
 		actionCmdPUCBs[actionCmd] = &PolynomialUpperConfidenceBound{P: battlePolicyY[actionCmd]}
 	}
 
-	return &Node{Battle: battle, LegalActionCmds: legalActionCmds, ActionCmdPUCBs: actionCmdPUCBs,
+	return &BattleNode{Battle: battle, LegalActionCmds: legalActionCmds, ActionCmdPUCBs: actionCmdPUCBs,
 		IsP1: isP1Phase, SelectCount: 0}
 }
 
-func (node *Node) SelectAndExpansion(battle Battle, allNodes Nodes, battlePolicy BattlePolicy, X float64, random *rand.Rand) (Battle, Nodes, Selects, error) {
-	selects := Selects{}
+func (battleNode *BattleNode) SelectAndExpansion(battle Battle, allBattleNodes BattleNodes, battlePolicy BattlePolicy, X float64, random *rand.Rand) (Battle, BattleNodes, Selects, error) {
+	selects := make(Selects, 0, 64)
 	var err error
 
 	for {
-		maxPUCBActionCmds := node.ActionCmdPUCBs.MaxActionCmds(X)
+		maxPUCBActionCmds := battleNode.ActionCmdPUCBs.MaxActionCmds(X)
 		selectActionCmd := maxPUCBActionCmds.RandomChoice(random)
-		selects = append(selects, Select{Node: node, ActionCmd: selectActionCmd})
-		node.SelectCount += 1
+		selects = append(selects, Select{BattleNode: battleNode, ActionCmd: selectActionCmd})
+		battleNode.SelectCount += 1
 
 		battle, err = battle.Push(selectActionCmd, random)
 		if err != nil {
-			return Battle{}, Nodes{}, Selects{}, err
+			return Battle{}, BattleNodes{}, Selects{}, err
 		}
 
 		if battle.IsGameEnd() {
 			break
 		}
 
-		//NextNodesの中に、同じ局面のbattleが存在するならば、それを次のnodeとする
-		//NextNodesの中に、同じ局面のbattleが存在しないなら、allNodesの中から同じ局面のbattleが存在しないかを調べる。
-		//allNodesの中に、同じ局面のbattleが存在するならば、次回から高速に探索出来るように、NextNodesに追加して、次のnodeとする。
-		//NextNodesにもallNodesにも同じ局面のbattleが存在しないなら、新しくnodeを作り、
-		//NextNodesと、allNodesに追加し、新しく作ったnodeを次のnodeとし、select処理を終了する。
+		//NextBattleNodesの中に、同じ局面のbattleが存在するならば、それを次のbattleNodeとする
+		//NextBattleNodesの中に、同じ局面のbattleが存在しないなら、allBattleNodesの中から同じ局面のbattleが存在しないかを調べる。
+		//allBattleNodesの中に、同じ局面のbattleが存在するならば、次回から高速に探索出来るように、NextBattleNodesに追加して、次のbattleNodeとする。
+		//NextBattleNodesにもallBattleNodesにも同じ局面のbattleが存在しないなら、新しくbattleNodeを作り、
+		//NextBattleNodesと、allBattleNodesに追加し、新しく作ったbattleNodeを次のbattleNodeとし、select処理を終了する。
 
-		nextNode, err := node.NextNodes.Find(&battle)
+		nextBattleNode, err := battleNode.NextBattleNodes.Find(&battle)
 		if err != nil {
-			nextNode, err = allNodes.Find(&battle)
+			nextBattleNode, err = allBattleNodes.Find(&battle)
 			if err == nil {
-				node.NextNodes = append(node.NextNodes, nextNode)
+				battleNode.NextBattleNodes = append(battleNode.NextBattleNodes, nextBattleNode)
 			} else {
-				nextNode = NewNodePointer(&battle, battlePolicy)
-				allNodes = append(allNodes, nextNode)
-				node.NextNodes = append(node.NextNodes, nextNode)
+				nextBattleNode = NewBattleNodePointer(&battle, battlePolicy)
+				allBattleNodes = append(allBattleNodes, nextBattleNode)
+				battleNode.NextBattleNodes = append(battleNode.NextBattleNodes, nextBattleNode)
 				break
 			}
 		}
 
-		if nextNode.SelectCount == 1 {
+		if nextBattleNode.SelectCount == 1 {
 			break
 		}
-		node = nextNode
+		battleNode = nextBattleNode
 	}
-	return battle, allNodes, selects, nil
+	return battle, allBattleNodes, selects, nil
 }
 
-func (node *Node) AverageReward() float64 {
+func (battleNode *BattleNode) AverageReward() float64 {
 	accumReward := 0.0
-	for _, pucb := range node.ActionCmdPUCBs {
+	for _, pucb := range battleNode.ActionCmdPUCBs {
 		accumReward += pucb.AverageReward()
 	}
-	return float64(accumReward) / float64(len(node.ActionCmdPUCBs))
+	return float64(accumReward) / float64(len(battleNode.ActionCmdPUCBs))
 }
 
-type Nodes []*Node
+type BattleNodes []*BattleNode
 
-func (nodes Nodes) Find(battle *Battle) (*Node, error) {
-	for _, node := range nodes {
-		if node.Battle.Equal(battle) {
-			return node, nil
+func (battleNodes BattleNodes) Find(battle *Battle) (*BattleNode, error) {
+	for _, battleNode := range battleNodes {
+		if battleNode.Battle.Equal(battle) {
+			return battleNode, nil
 		}
 	}
-	return &Node{}, fmt.Errorf("battleが一致しているnodeが見つからなかった")
+	return &BattleNode{}, fmt.Errorf("battleが一致しているbattleNodeが見つからなかった")
 }
 
 type Select struct {
-	Node      *Node
+	BattleNode      *BattleNode
 	ActionCmd ActionCmd
 }
 
@@ -216,22 +216,22 @@ type Selects []Select
 
 func (selects Selects) Backward(battleEvalY float64, battleEval *BattleEval) {
 	for _, select_ := range selects {
-		node := select_.Node
+		battleNode := select_.BattleNode
 		actionCmd := select_.ActionCmd
 
-		if node.IsP1 {
-			node.ActionCmdPUCBs[actionCmd].AccumReward += battleEvalY
+		if battleNode.IsP1 {
+			battleNode.ActionCmdPUCBs[actionCmd].AccumReward += battleEvalY
 		} else {
-			node.ActionCmdPUCBs[actionCmd].AccumReward += battleEval.Reverse(battleEvalY)
+			battleNode.ActionCmdPUCBs[actionCmd].AccumReward += battleEval.Reverse(battleEvalY)
 		}
-		node.ActionCmdPUCBs[actionCmd].Trial += 1
-		node.SelectCount = 0
+		battleNode.ActionCmdPUCBs[actionCmd].Trial += 1
+		battleNode.SelectCount = 0
 	}
 }
 
-func RunMCTS(rootBattle Battle, simuNum int, X float64, battlePolicy BattlePolicy, battleEval *BattleEval, random *rand.Rand) (Nodes, error) {
-	rootNode := NewNodePointer(&rootBattle, battlePolicy)
-	allNodes := Nodes{rootNode}
+func RunMCTS(rootBattle Battle, simuNum int, X float64, battlePolicy BattlePolicy, battleEval *BattleEval, random *rand.Rand) (BattleNodes, error) {
+	rootBattleNode := NewBattleNodePointer(&rootBattle, battlePolicy)
+	allBattleNodes := BattleNodes{rootBattleNode}
 	battle := rootBattle
 
 	var selects Selects
@@ -239,21 +239,21 @@ func RunMCTS(rootBattle Battle, simuNum int, X float64, battlePolicy BattlePolic
 	var err error
 
 	for i := 0; i < simuNum; i++ {
-		battle, allNodes, selects, err = rootNode.SelectAndExpansion(battle, allNodes, battlePolicy, X, random)
+		battle, allBattleNodes, selects, err = rootBattleNode.SelectAndExpansion(battle, allBattleNodes, battlePolicy, X, random)
 		if err != nil {
-			return Nodes{}, err
+			return BattleNodes{}, err
 		}
 
 		battleEvalY, err = battleEval.Func(&battle)
 
 		if err != nil {
-			return Nodes{}, err
+			return BattleNodes{}, err
 		}
 
 		selects.Backward(battleEvalY, battleEval)
 		battle = rootBattle
 	}
-	return allNodes, nil
+	return allBattleNodes, nil
 }
 
 func NewMCTSTrainer(simuNum int, X float64, battlePolicy BattlePolicy, battleEval *BattleEval, random *rand.Rand) Trainer {
@@ -264,13 +264,13 @@ func NewMCTSTrainer(simuNum int, X float64, battlePolicy BattlePolicy, battleEva
 			return legalActionCmds[0], nil
 		}
 
-		allNodes, err := RunMCTS(*battle, simuNum, X, battlePolicy, battleEval, random)
+		allBattleNodes, err := RunMCTS(*battle, simuNum, X, battlePolicy, battleEval, random)
 
 		if err != nil {
 			return "", err
 		}
 
-		return allNodes[0].ActionCmdPUCBs.MaxTrialActionCmds().RandomChoice(random), nil
+		return allBattleNodes[0].ActionCmdPUCBs.MaxTrialActionCmds().RandomChoice(random), nil
 	}
 	return result
 }

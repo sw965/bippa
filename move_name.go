@@ -92,12 +92,12 @@ func (moveNames MoveNames) IndicesAccess(indices []int) MoveNames {
 
 func (moveNames MoveNames) Combination(r int) ([]MoveNames, error) {
 	n := len(moveNames)
-	combinationNumbers, err := omw.CombinationNumbers(n, r)
+	combinationTotalNum, err := omw.CombinationTotalNum(n, r)
 	if err != nil {
 		return []MoveNames{}, err
 	}
-
-	combinationTotalNum, err := omw.CombinationTotalNum(n, r)
+	
+	combinationNumbers, err := omw.CombinationNumbers(n, r)
 	if err != nil {
 		return []MoveNames{}, err
 	}
