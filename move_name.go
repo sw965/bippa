@@ -34,11 +34,11 @@ func (moveNames MoveNames) In(moveName MoveName) bool {
 
 func (moveNames MoveNames) InAll(moveName ...MoveName) bool {
 	for _, iMoveName := range moveName {
-		if moveNames.In(iMoveName) {
-			return true
+		if !moveNames.In(iMoveName) {
+			return false
 		}
 	}
-	return false
+	return true
 }
 
 func (moveNames MoveNames) Sort() MoveNames {

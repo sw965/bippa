@@ -21,6 +21,45 @@ func (pucb *PolynomialUpperConfidenceBound) Get(totalTrial int, X float64) float
 	return crow.PolynomialUpperConfidenceBound(averageReward, pucb.P, totalTrial, pucb.Trial, X)
 }
 
+type PolynomialUpperConfidenceBounds []*PolynomialUpperConfidenceBound
+
+func (pucbs PolynomialUpperConfidenceBounds) TotalTrial() int {
+	result := 0
+	for _, pucb := range pucbs {
+		result += pucb.Trial
+	}
+	return result
+}
+
+func (pucbs PolynomialUpperConfidenceBounds) Max(X float64) float64 {
+	totalTrial := pucbs.TotalTrial()
+	result := pucbs[0].Get(totalTrial, X)
+	for _, pucb := range pucbs[1:] {
+		pucbY := pucb.Get(totalTrial, X)
+		if pucbY > result {
+			result = pucbY
+		}
+	}
+	return result
+}
+
+func (pucbs PolynomialUpperConfidenceBounds) MaxPUCBsAndIndices(X float64) (PolynomialUpperConfidenceBounds, []int) {
+	length := len(pucbs)
+	totalTrial := pucbs.TotalTrial()
+	max := pucbs.Max(X)
+	maxPUCBs := make(PolynomialUpperConfidenceBounds, 0, length)
+	indices := make([]int, 0, length)
+
+	for i, pucb := range pucbs {
+		pucbY := pucb.Get(totalTrial, X)
+		if pucbY == max {
+			maxPUCBs = append(maxPUCBs, pucb)
+			indices = append(indices, i)
+		}
+	}
+	return maxPUCBs, indices
+}
+
 type BattlePolicy func(*Battle) map[ActionCmd]float64
 
 func NoBattlePolicy(battle *Battle) map[ActionCmd]float64 {
@@ -273,4 +312,15 @@ func NewMCTSTrainer(simuNum int, X float64, battlePolicy BattlePolicy, battleEva
 		return allBattleNodes[0].ActionCmdPUCBs.MaxTrialActionCmds().RandomChoice(random), nil
 	}
 	return result
+}
+
+type TeamNode struct {
+	Team Team
+	LegalPokeNames PokeNames
+	LegalAbilities Abilities
+	LegalItems Items
+	LegalMoveNames MoveNames
+	LegalNatures Natures
+
+	Policies []float64
 }
