@@ -27,54 +27,50 @@ func ReadJsonPokemonBuildCommonKnowledge(filePath string) PokemonBuildCommonKnow
 	return result
 }
 
-type PokemonBuildCombinationKnowledge struct {
+type PokemonStateCombinationFeature struct {
 	MoveNames  MoveNames
 	Ability    Ability
 	Item       Item
 	Nature     Nature
-
 	CombinationNum int
-	Policy         float64
-	Value float64
+	InitIndex int
 }
 
-func (pbCombK *PokemonBuildCombinationKnowledge) Init() {
+func (pscf *PokemonStateCombinationFeature) Init() {
 	combinationNum := 0
 
-	if pbCombK.Ability != "" {
+	if pscf.Ability != "" {
 		combinationNum += 1
 	}
 
-	if pbCombK.Item != "" {
+	if pscf.Item != "" {
 		combinationNum += 1
 	}
 
-	combinationNum += len(pbCombK.MoveNames)
+	combinationNum += len(pscf.MoveNames)
 
-	if pbCombK.Nature != "" {
+	if pscf.Nature != "" {
 		combinationNum += 1
 	}
 
-	pbCombK.CombinationNum = combinationNum
-	pbCombK.Policy = 0.5
-	pbCombK.Value = 1.0
+	pscf.CombinationNum = combinationNum
 }
 
-func (pbCombK *PokemonBuildCombinationKnowledge) All(pokemon *Pokemon, team Team) bool {
-	if pbCombK.Ability != "" {
-		if pbCombK.Ability != pokemon.Ability {
+func (pscf *PokemonStateCombinationFeature) OK(pokemon *Pokemon) bool {
+	if pscf.Ability != "" {
+		if pscf.Ability != pokemon.Ability {
 			return false
 		}
 	}
 
-	if pbCombK.Item != "" {
-		if pbCombK.Item != pokemon.Item {
+	if pscf.Item != "" {
+		if pscf.Item != pokemon.Item {
 			return false
 		}
 	}
 
-	if len(pbCombK.MoveNames) != 0 {
-		for _, moveName := range pbCombK.MoveNames {
+	if len(pscf.MoveNames) != 0 {
+		for _, moveName := range pscf.MoveNames {
 			_, ok := pokemon.Moveset[moveName]
 			if !ok {
 				return false
@@ -82,73 +78,72 @@ func (pbCombK *PokemonBuildCombinationKnowledge) All(pokemon *Pokemon, team Team
 		}
 	}
 
-	if pbCombK.Nature != "" {
-		if pbCombK.Nature != pokemon.Nature {
+	if pscf.Nature != "" {
+		if pscf.Nature != pokemon.Nature {
 			return false
 		}
 	}
 	return true
 }
 
-func (pbCombK1 *PokemonBuildCombinationKnowledge) NearlyEqual(pbCombK2 *PokemonBuildCombinationKnowledge) bool {
-	if pbCombK1.Ability != pbCombK2.Ability {
+func (pscf1 *PokemonStateCombinationFeature) Equal(pscf2 *PokemonStateCombinationFeature) bool {
+	if pscf1.Ability != pscf2.Ability {
 		return false
 	}
 
-	if pbCombK1.Item != pbCombK2.Item {
+	if pscf1.Item != pscf2.Item {
 		return false
 	}
 
-	sortedMoveNames1 := pbCombK1.MoveNames.Sort()
-	sortedMoveNames2 := pbCombK2.MoveNames.Sort()
+	sortedMoveNames1 := pscf1.MoveNames.Sort()
+	sortedMoveNames2 := pscf2.MoveNames.Sort()
 
 	if !sortedMoveNames1.Equal(sortedMoveNames2) {
 		return false
 	}
 
-	if pbCombK1.Nature != pbCombK2.Nature {
+	if pscf1.Nature != pscf2.Nature {
 		return false
 	}
 	return true
 }
 
-func (pbCombK1 *PokemonBuildCombinationKnowledge) IsInclusion(pbCombK2 *PokemonBuildCombinationKnowledge) bool {
-	if pbCombK1.CombinationNum < pbCombK2.CombinationNum {
+func (pscf1 *PokemonStateCombinationFeature) IsInclusion(pscf2 *PokemonStateCombinationFeature) bool {
+	if pscf1.CombinationNum < pscf2.CombinationNum {
 		return false
 	}
 
-	pbCombK2Ability := pbCombK2.Ability
-	pbCombK2Item := pbCombK2.Item
-	pbCombK2Nature := pbCombK2.Nature
+	pscf2Ability := pscf2.Ability
+	pscf2Item := pscf2.Item
+	pscf2Nature := pscf2.Nature
 
-	if pbCombK2Ability != "" {
-		if pbCombK1.Ability != pbCombK2Ability {
+	if pscf2Ability != "" {
+		if pscf1.Ability != pscf2Ability {
 			return false
 		}
 	}
 
-	if pbCombK2Item != "" {
-		if pbCombK1.Item != pbCombK2Item {
+	if pscf2Item != "" {
+		if pscf1.Item != pscf2Item {
 			return false
 		}
 	}
 
-	if pbCombK2Nature != "" {
-		if pbCombK1.Nature != pbCombK2Nature {
+	if pscf2Nature != "" {
+		if pscf1.Nature != pscf2Nature {
 			return false
 		}
 	}
 
-	if !pbCombK1.MoveNames.InAll(pbCombK2.MoveNames...) {
+	if !pscf1.MoveNames.InAll(pscf2.MoveNames...) {
 		return false
 	}
-
 	return true
 }
 
-type PokemonBuildCombinationKnowledgeList []*PokemonBuildCombinationKnowledge
+type PokemonStateCombinationFeatures []*PokemonStateCombinationFeature
 
-func NewInitPokemonBuildCombinationKnowledgeList(pokeName PokeName, pbCommonK *PokemonBuildCommonKnowledge) PokemonBuildCombinationKnowledgeList {
+func NewPokemonStateCombinationFeatures(pokeName PokeName, pbCommonK *PokemonBuildCommonKnowledge) PokemonStateCombinationFeatures {
 	pokeData := POKEDEX[pokeName]
 
 	allAbilities := pokeData.AllAbilities
@@ -158,22 +153,22 @@ func NewInitPokemonBuildCombinationKnowledgeList(pokeName PokeName, pbCommonK *P
 	pbCommonKItems := pbCommonK.Items
 	pbCommonKNatures := pbCommonK.Natures
 
-	result := make(PokemonBuildCombinationKnowledgeList, 0, 6400)
+	result := make(PokemonStateCombinationFeatures, 0, 6400)
 
 	for _, moveName := range learnset {
-		result = append(result, &PokemonBuildCombinationKnowledge{MoveNames: MoveNames{moveName}})
+		result = append(result, &PokemonStateCombinationFeature{MoveNames: MoveNames{moveName}})
 	}
 
 	for _, ability := range allAbilities {
-		result = append(result, &PokemonBuildCombinationKnowledge{Ability: ability})
+		result = append(result, &PokemonStateCombinationFeature{Ability: ability})
 	}
 
 	for _, item := range ALL_ITEMS {
-		result = append(result, &PokemonBuildCombinationKnowledge{Item: item})
+		result = append(result, &PokemonStateCombinationFeature{Item: item})
 	}
 
 	for _, nature := range ALL_NATURES {
-		result = append(result, &PokemonBuildCombinationKnowledge{Nature: nature})
+		result = append(result, &PokemonStateCombinationFeature{Nature: nature})
 	}
 
 	combination2MoveNames, err := pbCommonKMoveNames .Combination(2)
@@ -182,24 +177,24 @@ func NewInitPokemonBuildCombinationKnowledgeList(pokeName PokeName, pbCommonK *P
 	}
 
 	for _, moveNames := range combination2MoveNames {
-		result = append(result, &PokemonBuildCombinationKnowledge{MoveNames:moveNames})
+		result = append(result, &PokemonStateCombinationFeature{MoveNames:moveNames})
 	}
 
 	for _, moveName := range pbCommonKMoveNames  {
 		for _, ability := range allAbilities {
-			result = append(result, &PokemonBuildCombinationKnowledge{MoveNames:MoveNames{moveName}, Ability:ability})
+			result = append(result, &PokemonStateCombinationFeature{MoveNames:MoveNames{moveName}, Ability:ability})
 		}
 	}
 
 	for _, moveName := range pbCommonKMoveNames  {
 		for _, item := range pbCommonKItems  {
-			result = append(result, &PokemonBuildCombinationKnowledge{MoveNames:MoveNames{moveName}, Item:item})
+			result = append(result, &PokemonStateCombinationFeature{MoveNames:MoveNames{moveName}, Item:item})
 		}
 	}
 
 	for _, moveName := range pbCommonKMoveNames  {
 		for _, nature := range pbCommonKNatures {
-			result = append(result, &PokemonBuildCombinationKnowledge{MoveNames:MoveNames{moveName}, Nature:nature})
+			result = append(result, &PokemonStateCombinationFeature{MoveNames:MoveNames{moveName}, Nature:nature})
 		}
 	}
 
@@ -209,125 +204,99 @@ func NewInitPokemonBuildCombinationKnowledgeList(pokeName PokeName, pbCommonK *P
 	}
 
 	for _, moveNames := range combination3MoveNames {
-		result = append(result, &PokemonBuildCombinationKnowledge{MoveNames: moveNames})
+		result = append(result, &PokemonStateCombinationFeature{MoveNames: moveNames})
 	}
 
 	for _, moveNames := range combination2MoveNames {
 		for _, ability := range allAbilities {
-			result = append(result, &PokemonBuildCombinationKnowledge{MoveNames:moveNames, Ability:ability})
+			result = append(result, &PokemonStateCombinationFeature{MoveNames:moveNames, Ability:ability})
 		}
 	}
 
 	for _, moveNames := range combination2MoveNames {
 		for _, item := range pbCommonKItems  {
-			result = append(result, &PokemonBuildCombinationKnowledge{MoveNames:moveNames, Item:item})
+			result = append(result, &PokemonStateCombinationFeature{MoveNames:moveNames, Item:item})
 		}
 	}
 
 	for _, moveNames := range combination2MoveNames {
 		for _, nature := range pbCommonKNatures {
-			result = append(result, &PokemonBuildCombinationKnowledge{MoveNames:moveNames, Nature:nature})
+			result = append(result, &PokemonStateCombinationFeature{MoveNames:moveNames, Nature:nature})
 		}
 	}
 
 	return result
 }
 
-func (pbCombKList PokemonBuildCombinationKnowledgeList) Init() {
-	for i := 0; i < len(pbCombKList); i++ {
-		pbCombKList[i].Init()
+func (pscfs PokemonStateCombinationFeatures) Init() {
+	for i := 0; i < len(pscfs); i++ {
+		pscfs[i].Init()
+		pscfs[i].InitIndex = i
 	}
 }
 
-func (pbCombKList PokemonBuildCombinationKnowledgeList) Index(pbCombK *PokemonBuildCombinationKnowledge) int {
-	for i, iPBCombK := range pbCombKList {
-		if iPBCombK.NearlyEqual(pbCombK) {
-			return i
+func (pscfs PokemonStateCombinationFeatures) InitIndices() []int {
+	result := make([]int, 0, len(pscfs))
+	for i, pscf := range pscfs {
+		result[i] = pscf.InitIndex
+	}
+	return result
+}
+
+//ある要素に属している要素を取り除く
+func (pscfs PokemonStateCombinationFeatures) Set() PokemonStateCombinationFeatures {
+	result := make(PokemonStateCombinationFeatures, 0, len(pscfs))
+
+	for _, pscfB := range pscfs {
+		for _, pscfA := range pscfs {
+			if pscfA.IsInclusion(pscfB) {
+				continue
+			}
 		}
-	}
-	return -1
-}
-
-func (pbCombKList PokemonBuildCombinationKnowledgeList) RandomChoice(random *rand.Rand) *PokemonBuildCombinationKnowledge {
-	index := random.Intn(len(pbCombKList))
-	return pbCombKList[index]
-}
-
-func (pbCombKList PokemonBuildCombinationKnowledgeList) Policies() []float64 {
-	result := make([]float64, len(pbCombKList))
-	for i, pbCombK := range pbCombKList {
-		result[i] = pbCombK.Policy
+		result = append(result, pscfB)
 	}
 	return result
 }
 
-func (pbCombKList PokemonBuildCombinationKnowledgeList) MeanPolicy() float64 {
-	return omw.SumFloat64(pbCombKList.Policies()...) / float64(len(pbCombKList))
-}
-
-func (pbCombKList PokemonBuildCombinationKnowledgeList) SumValue() float64 {
-	result := 0.0
-	for _, pbCombK := range pbCombKList {
-		result += pbCombK.Value
-	}
-	return result
-}
-
-func (pbCombKList PokemonBuildCombinationKnowledgeList) MaxCombinationNum() int {
-	result := pbCombKList[0].CombinationNum
-	for _, pbCombK := range pbCombKList[1:] {
-		maxCombinationNum := pbCombK.CombinationNum
-		if maxCombinationNum > result {
-			result = maxCombinationNum
+func (pscfs PokemonStateCombinationFeatures) GetOKs(pokemon *Pokemon) PokemonStateCombinationFeatures {
+	result := make(PokemonStateCombinationFeatures, 0, len(pscfs))
+	for _, pscf := range pscfs {
+		if pscf.OK(pokemon) {
+			result = append(result, pscf)
 		}
 	}
 	return result
 }
 
-func (pbCombKList PokemonBuildCombinationKnowledgeList) MaxCombinationNumKnowledgeList() PokemonBuildCombinationKnowledgeList {
-	maxCombinationNum := pbCombKList.MaxCombinationNum()
-	result := make(PokemonBuildCombinationKnowledgeList, 0, len(pbCombKList))
-	for _, pbCombK := range pbCombKList {
-		if pbCombK.CombinationNum == maxCombinationNum {
-			result = append(result, pbCombK)
+func (pscfs PokemonStateCombinationFeatures) GetNotOKs(pokemon *Pokemon) PokemonStateCombinationFeatures {
+	result := make(PokemonStateCombinationFeatures, 0, len(pscfs))
+	for _, pscf := range pscfs {
+		if !pscf.OK(pokemon) {
+			result = append(result, pscf)
 		}
 	}
 	return result
 }
 
-func (pbCombKList PokemonBuildCombinationKnowledgeList) Usable(pokemon *Pokemon, team Team) PokemonBuildCombinationKnowledgeList {
-	result := make(PokemonBuildCombinationKnowledgeList, 0, len(pbCombKList))
-	for _, pbCombK := range pbCombKList {
-		if pbCombK.All(pokemon, team) {
-			result = append(result, pbCombK)
-		}
-	}
-	return result
+func (pscfs PokemonStateCombinationFeatures) Policy(pokemon, nextPokemon *Pokemon) PokemonStateCombinationFeatures {
+	//一つ前の状態(pokemon)で、該当する特徴を満たしていない特徴量を取り出す
+	pscfs = pscfs.GetNotOKs(pokemon)
+
+	//次の状態(nextPokemon)で、該当する特徴を満たしている特徴量を取り出す
+	pscfs = pscfs.GetOKs(nextPokemon)
+
+	//情報量が多い特徴量のみを取り出す
+	return pscfs.Set()
 }
 
-func (pbCombKList PokemonBuildCombinationKnowledgeList) NotUsing(pokemon *Pokemon, team Team) PokemonBuildCombinationKnowledgeList {
-	result := make(PokemonBuildCombinationKnowledgeList, 0, len(pbCombKList))
-	for _, pbCombK := range pbCombKList {
-		if !pbCombK.All(pokemon, team) {
-			result = append(result, pbCombK)
-		}
-	}
-	return result
+type PokemonBuildModel struct {
+	X PokemonStateCombinationFeatures
+	Policies []float64
+	Values []float64
 }
 
-func (pbCombKList PokemonBuildCombinationKnowledgeList) PolicyKnowledgeList(pokemon, nextPokemon *Pokemon, team Team) PokemonBuildCombinationKnowledgeList {
-	//一つ前の状態(pokemon)で、活用不可能な知識を取り出す(差分を見る為に)
-	pbCombKList = pbCombKList.NotUsing(pokemon, team)
-
-	//次の状態(nextPokemon)において、活用可能な知識を取り出す。
-	pbCombKList = pbCombKList.Usable(nextPokemon, team)
-
-	//組み合わせ数が最も多い知識を取り出す
-	return pbCombKList.MaxCombinationNumKnowledgeList()
-}
-
-func (pbCombKList PokemonBuildCombinationKnowledgeList) MoveNameWithPolicyData(moveNames MoveNames, pokemon Pokemon, team Team) map[MoveName]PBCombKPolicyData {
-	moveNameWithPolicyData := map[MoveName]PBCombKPolicyData{}
+func (pokemonBuildModel *PokemonBuildModel) MoveNameWithPolicyData(moveNames MoveNames, pokemon Pokemon, team Team) map[MoveName]PBMPolicyData {
+	moveNameWithPolicyData := map[MoveName]PBMPolicyData{}
 	nextPokemon := pokemon
 
 	for _, moveName := range moveNames {
@@ -341,33 +310,35 @@ func (pbCombKList PokemonBuildCombinationKnowledgeList) MoveNameWithPolicyData(m
 		moveset[moveName] = &PowerPoint{}
 		nextPokemon.Moveset = moveset
 
-		policyKnowledgeList := pbCombKList.PolicyKnowledgeList(&pokemon, &nextPokemon, team)
-		meanPolicy := policyKnowledgeList.MeanPolicy()
-		policyData := PBCombKPolicyData{Mean:meanPolicy, KnowledgeList:policyKnowledgeList}
+		policyPSCFs := pokemonBuildModel.X.Policy(&pokemon, &nextPokemon)
+		initIndices := policyPSCFs.InitIndices()
+		meanPolicy := omw.SliceFloat64Mean(omw.SliceFloat64IndicesAccess(pokemonBuildModel.Policies, initIndices))
+		policyData := PBMPolicyData{Mean:meanPolicy, PSCFs:policyPSCFs}
 
 		moveNameWithPolicyData[moveName] = policyData
 	}
 	return moveNameWithPolicyData
 }
 
-func (pbCombKList PokemonBuildCombinationKnowledgeList) AbilityWithPolicyData(abilities Abilities, pokemon Pokemon, team Team) (map[Ability]PBCombKPolicyData) {
-	abilityWithPolicyData:= map[Ability]PBCombKPolicyData{}
+func (pokemonBuildModel *PokemonBuildModel) AbilityWithPolicyData(abilities Abilities, pokemon Pokemon, team Team) (map[Ability]PBMPolicyData) {
+	abilityWithPolicyData:= map[Ability]PBMPolicyData{}
 	nextPokemon := pokemon
 
 	for _, ability := range abilities {
 		nextPokemon.Ability = ability
 
-		policyKnowledgeList := pbCombKList.PolicyKnowledgeList(&pokemon, &nextPokemon, team)
-		meanPolicy := policyKnowledgeList.MeanPolicy()
-		policyData := PBCombKPolicyData{Mean:meanPolicy, KnowledgeList:policyKnowledgeList}
+		policyPSCFs := pokemonBuildModel.X.Policy(&pokemon, &nextPokemon)
+		initIndices := policyPSCFs.InitIndices()
+		meanPolicy := omw.SliceFloat64Mean(omw.SliceFloat64IndicesAccess(pokemonBuildModel.Policies, initIndices))
+		policyData := PBMPolicyData{Mean:meanPolicy, PSCFs:policyPSCFs}
 
 		abilityWithPolicyData[ability] = policyData
 	}
 	return abilityWithPolicyData
 }
 
-func (pbCombKList PokemonBuildCombinationKnowledgeList) ItemWithPolicyData(items Items, pokemon Pokemon, team Team) map[Item]PBCombKPolicyData {
-	itemWithPolicyData := map[Item]PBCombKPolicyData{}
+func (pokemonBuildModel *PokemonBuildModel) ItemWithPolicyData(items Items, pokemon Pokemon, team Team) map[Item]PBMPolicyData {
+	itemWithPolicyData := map[Item]PBMPolicyData{}
 	nextPokemon := pokemon
 
 	for _, item := range items {
@@ -377,47 +348,49 @@ func (pbCombKList PokemonBuildCombinationKnowledgeList) ItemWithPolicyData(items
 
 		nextPokemon.Item = item
 
-		policyKnowledgeList := pbCombKList.PolicyKnowledgeList(&pokemon, &nextPokemon, team)
-		meanPolicy := policyKnowledgeList.MeanPolicy()
-		policyData := PBCombKPolicyData{Mean:meanPolicy, KnowledgeList:policyKnowledgeList}
+		policyPSCFs := pokemonBuildModel.X.Policy(&pokemon, &nextPokemon)
+		initIndices := policyPSCFs.InitIndices()
+		meanPolicy := omw.SliceFloat64Mean(omw.SliceFloat64IndicesAccess(pokemonBuildModel.Policies, initIndices))
+		policyData := PBMPolicyData{Mean:meanPolicy, PSCFs:policyPSCFs}
 
 		itemWithPolicyData[item] = policyData
 	}
 	return itemWithPolicyData
 }
 
-func (pbCombKList PokemonBuildCombinationKnowledgeList) NatureWithPolicyData(natures Natures, pokemon Pokemon, team Team) map[Nature]PBCombKPolicyData {
-	natureWithPolicyData := map[Nature]PBCombKPolicyData{}
+func (pokemonBuildModel *PokemonBuildModel) NatureWithPolicyData(natures Natures, pokemon Pokemon, team Team) map[Nature]PBMPolicyData {
+	natureWithPolicyData := map[Nature]PBMPolicyData{}
 	nextPokemon := pokemon
 
 	for _, nature := range natures {
 		nextPokemon.Nature = nature
-
-		policyKnowledgeList := pbCombKList.PolicyKnowledgeList(&pokemon, &nextPokemon, team)
-		meanPolicy := policyKnowledgeList.MeanPolicy()
-		policyData := PBCombKPolicyData{Mean:meanPolicy, KnowledgeList:policyKnowledgeList}
+		
+		policyPSCFs := pokemonBuildModel.X.Policy(&pokemon, &nextPokemon)
+		initIndices := policyPSCFs.InitIndices()		
+		meanPolicy := omw.SliceFloat64Mean(omw.SliceFloat64IndicesAccess(pokemonBuildModel.Policies, initIndices))
+		policyData := PBMPolicyData{Mean:meanPolicy, PSCFs:policyPSCFs}
 
 		natureWithPolicyData[nature] = policyData
 	}
 	return natureWithPolicyData
 }
 
-func (pbCombKList PokemonBuildCombinationKnowledgeList) BuildMoveset(pokeName PokeName, moveNames MoveNames, pokemon Pokemon, team Team, finalPolicies func([]float64) []float64, random *rand.Rand) (Moveset, MoveName, map[MoveName]PBCombKPolicyData, error) {
+func (pokemonBuildModel *PokemonBuildModel) BuildMoveset(pokeName PokeName, moveNames MoveNames, pokemon Pokemon, team Team, finalPolicies func([]float64) []float64, random *rand.Rand) (Moveset, MoveName, map[MoveName]PBMPolicyData, error) {
 	moveset := pokemon.Moveset.Copy()
 	movesetLength := len(pokemon.Moveset)
 	learnsetLength := len(POKEDEX[pokeName].Learnset)
 
 	if movesetLength == MAX_MOVESET_LENGTH || movesetLength == learnsetLength {
-		return pokemon.Moveset, "", map[MoveName]PBCombKPolicyData{}, nil
+		return pokemon.Moveset, "", map[MoveName]PBMPolicyData{}, nil
 	}
 
-	moveNameWithPolicyData := pbCombKList.MoveNameWithPolicyData(moveNames, pokemon, team)
+	moveNameWithPolicyData := pokemonBuildModel.MoveNameWithPolicyData(moveNames, pokemon, team)
 
 	if len(moveNameWithPolicyData) == 0 {
 		errMsg := fmt.Sprintf("pokemon.Name = %v pokemon.Moveset.Keys() = %v の状態で、次の技の組み合わせが見つからなかった",
 			pokemon.Name, pokemon.Moveset.Keys(),
 		)
-		return Moveset{}, "", map[MoveName]PBCombKPolicyData{}, fmt.Errorf(errMsg)
+		return Moveset{}, "", map[MoveName]PBMPolicyData{}, fmt.Errorf(errMsg)
 	}
 
 	length := len(moveNameWithPolicyData)
@@ -439,16 +412,16 @@ func (pbCombKList PokemonBuildCombinationKnowledgeList) BuildMoveset(pokeName Po
 	return moveset, selectMoveName, moveNameWithPolicyData, nil
 }
 
-func (pbCombKList PokemonBuildCombinationKnowledgeList) BuildAbility(abilities Abilities, pokemon Pokemon, team Team, finalPolicies func([]float64) []float64, random *rand.Rand) (Ability, map[Ability]PBCombKPolicyData, error) {
+func (pokemonBuildModel *PokemonBuildModel) BuildAbility(abilities Abilities, pokemon Pokemon, team Team, finalPolicies func([]float64) []float64, random *rand.Rand) (Ability, map[Ability]PBMPolicyData, error) {
 	if pokemon.Ability != "" {
-		return pokemon.Ability, map[Ability]PBCombKPolicyData{}, nil
+		return pokemon.Ability, map[Ability]PBMPolicyData{}, nil
 	}
 
-	abilityWithPolicyData := pbCombKList.AbilityWithPolicyData(abilities, pokemon, team)
+	abilityWithPolicyData := pokemonBuildModel.AbilityWithPolicyData(abilities, pokemon, team)
 
 	if len(abilityWithPolicyData) == 0 {
 		errMsg := fmt.Sprintf("pokemon.Name = %v の状態で、次の特性の組み合わせが見つからなかった", pokemon.Name)
-		return "", map[Ability]PBCombKPolicyData{}, fmt.Errorf(errMsg)
+		return "", map[Ability]PBMPolicyData{}, fmt.Errorf(errMsg)
 	}
 
 	length := len(abilityWithPolicyData)
@@ -467,16 +440,16 @@ func (pbCombKList PokemonBuildCombinationKnowledgeList) BuildAbility(abilities A
 	return selectAbility, abilityWithPolicyData, nil
 }
 
-func (pbCombKList PokemonBuildCombinationKnowledgeList) BuildItem(items Items, pokemon Pokemon, team Team, finalPolicies func([]float64) []float64, random *rand.Rand) (Item, map[Item]PBCombKPolicyData, error) {
+func (pokemonBuildModel *PokemonBuildModel) BuildItem(items Items, pokemon Pokemon, team Team, finalPolicies func([]float64) []float64, random *rand.Rand) (Item, map[Item]PBMPolicyData, error) {
 	if pokemon.Item != "" {
-		return pokemon.Item, map[Item]PBCombKPolicyData{}, nil
+		return pokemon.Item, map[Item]PBMPolicyData{}, nil
 	}
 
-	itemWithPolicyData := pbCombKList.ItemWithPolicyData(items, pokemon, team)
+	itemWithPolicyData := pokemonBuildModel.ItemWithPolicyData(items, pokemon, team)
 
 	if len(itemWithPolicyData) == 0 {
 		errMsg := fmt.Sprintf("pokemon.Name = %v の状態で、次のアイテムの組み合わせが見つからなかった", pokemon.Name)
-		return "", map[Item]PBCombKPolicyData{}, fmt.Errorf(errMsg)
+		return "", map[Item]PBMPolicyData{}, fmt.Errorf(errMsg)
 	}
 
 	length := len(itemWithPolicyData)
@@ -495,16 +468,16 @@ func (pbCombKList PokemonBuildCombinationKnowledgeList) BuildItem(items Items, p
 	return selectItem, itemWithPolicyData, nil
 }
 
-func (pbCombKList PokemonBuildCombinationKnowledgeList) BuildNature(natures Natures, pokemon Pokemon, team Team, finalPolicies func([]float64) []float64, random *rand.Rand) (Nature, map[Nature]PBCombKPolicyData, error) {
+func (pokemonBuildModel *PokemonBuildModel) BuildNature(natures Natures, pokemon Pokemon, team Team, finalPolicies func([]float64) []float64, random *rand.Rand) (Nature, map[Nature]PBMPolicyData, error) {
 	if pokemon.Nature != "" {
-		return pokemon.Nature, map[Nature]PBCombKPolicyData{}, nil
+		return pokemon.Nature, map[Nature]PBMPolicyData{}, nil
 	}
 
-	natureWithPolicyData := pbCombKList.NatureWithPolicyData(natures, pokemon, team)
+	natureWithPolicyData := pokemonBuildModel.NatureWithPolicyData(natures, pokemon, team)
 
 	if len(natureWithPolicyData) == 0 {
 		errMsg := fmt.Sprintf("pokemon.Name = %v の状態で、次の性格の組み合わせが見つからなかった", pokemon.Name)
-		return "", map[Nature]PBCombKPolicyData{}, fmt.Errorf(errMsg)
+		return "", map[Nature]PBMPolicyData{}, fmt.Errorf(errMsg)
 	}
 
 	length := len(natureWithPolicyData)
@@ -523,14 +496,14 @@ func (pbCombKList PokemonBuildCombinationKnowledgeList) BuildNature(natures Natu
 	return selectNature, natureWithPolicyData, nil	
 }
 
-func (pbCombKList PokemonBuildCombinationKnowledgeList) Run(pokemon Pokemon, team Team, pbCommonK *PokemonBuildCommonKnowledge, finalPolicies func([]float64) []float64, random *rand.Rand) (Pokemon, PBCombKRunHistory, error) {
+func (pokemonBuildModel *PokemonBuildModel) Run(pokemon Pokemon, team Team, pbCommonK *PokemonBuildCommonKnowledge, finalPolicies func([]float64) []float64, random *rand.Rand) (Pokemon, PBMRunHistory, error) {
 	if pokemon.Name == "" {
-		return Pokemon{}, PBCombKRunHistory{}, fmt.Errorf("pokemon.Name が 空の状態で、PokemonBuildCombinationKnowledgeList.Run は 実行出来ない")
+		return Pokemon{}, PBMRunHistory{}, fmt.Errorf("pokemon.Name が 空の状態で、PokemonStateCombinationFeatures.Run は 実行出来ない")
 	}
 
-	pbCombKRunHistory := PBCombKRunHistory{
+	pbmRunHistory := PBMRunHistory{
 		SelectMoveNames:make(MoveNames, 0, MAX_MOVESET_LENGTH),
-		MoveNameWithPolicyDataList:make([]map[MoveName]PBCombKPolicyData, 0, MAX_MOVESET_LENGTH),
+		MoveNameWithPolicyDataList:make([]map[MoveName]PBMPolicyData, 0, MAX_MOVESET_LENGTH),
 	}
 
 	pokeData := POKEDEX[pokemon.Name]
@@ -539,28 +512,28 @@ func (pbCombKList PokemonBuildCombinationKnowledgeList) Run(pokemon Pokemon, tea
 	pbCommonKItems := pbCommonK.Items
 	pbCommonKNatures := pbCommonK.Natures
 
-	ability, abilityWithPolicyData, err := pbCombKList.BuildAbility(allAbilities, pokemon, team, finalPolicies, random)
+	ability, abilityWithPolicyData, err := pokemonBuildModel.BuildAbility(allAbilities, pokemon, team, finalPolicies, random)
 	if err != nil {
-		return Pokemon{}, PBCombKRunHistory{}, err
+		return Pokemon{}, PBMRunHistory{}, err
 	}
 
 	pokemon.Ability = ability
-	pbCombKRunHistory.SelectAbility = ability
-	pbCombKRunHistory.AbilityWithPolicyData = abilityWithPolicyData
+	pbmRunHistory.SelectAbility = ability
+	pbmRunHistory.AbilityWithPolicyData = abilityWithPolicyData
 
-	item, itemWithPolicyData, err := pbCombKList.BuildItem(pbCommonKItems, pokemon, team, finalPolicies, random)
+	item, itemWithPolicyData, err := pokemonBuildModel.BuildItem(pbCommonKItems, pokemon, team, finalPolicies, random)
 	if err != nil {
-		return Pokemon{}, PBCombKRunHistory{}, err
+		return Pokemon{}, PBMRunHistory{}, err
 	}
 
 	pokemon.Item = item
-	pbCombKRunHistory.SelectItem = item
-	pbCombKRunHistory.ItemWithPolicyData = itemWithPolicyData
+	pbmRunHistory.SelectItem = item
+	pbmRunHistory.ItemWithPolicyData = itemWithPolicyData
 
 	for i := 0; i < MAX_MOVESET_LENGTH; i++ {
-		moveset, selectMoveName, moveNameWithPolicyData, err := pbCombKList.BuildMoveset(pokemon.Name, pbCommonKMoveNames, pokemon, team, finalPolicies, random)
+		moveset, selectMoveName, moveNameWithPolicyData, err := pokemonBuildModel.BuildMoveset(pokemon.Name, pbCommonKMoveNames, pokemon, team, finalPolicies, random)
 		if err != nil {
-			return Pokemon{}, PBCombKRunHistory{}, err
+			return Pokemon{}, PBMRunHistory{}, err
 		}
 
 		if selectMoveName == "" {
@@ -568,57 +541,35 @@ func (pbCombKList PokemonBuildCombinationKnowledgeList) Run(pokemon Pokemon, tea
 		}
 
 		pokemon.Moveset = moveset
-		pbCombKRunHistory.SelectMoveNames = append(pbCombKRunHistory.SelectMoveNames, selectMoveName)
-		pbCombKRunHistory.MoveNameWithPolicyDataList = append(pbCombKRunHistory.MoveNameWithPolicyDataList, moveNameWithPolicyData)
+		pbmRunHistory.SelectMoveNames = append(pbmRunHistory.SelectMoveNames, selectMoveName)
+		pbmRunHistory.MoveNameWithPolicyDataList = append(pbmRunHistory.MoveNameWithPolicyDataList, moveNameWithPolicyData)
 	}
 
-	nature, natureWithPolicyData, err := pbCombKList.BuildNature(pbCommonKNatures, pokemon, team, finalPolicies, random)
+	nature, natureWithPolicyData, err := pokemonBuildModel.BuildNature(pbCommonKNatures, pokemon, team, finalPolicies, random)
 	if err != nil {
-		return Pokemon{}, PBCombKRunHistory{}, err
+		return Pokemon{}, PBMRunHistory{}, err
 	}
 
 	pokemon.Nature = nature
-	pbCombKRunHistory.SelectNature = nature
-	pbCombKRunHistory.NatureWithPolicyData = natureWithPolicyData
+	pbmRunHistory.SelectNature = nature
+	pbmRunHistory.NatureWithPolicyData = natureWithPolicyData
 
-	return pokemon, pbCombKRunHistory, nil
+	return pokemon, pbmRunHistory, nil
 }
 
-
-type PokemonBuildCombinationKnowledgeLists []PokemonBuildCombinationKnowledgeList
-
-func (pbCombKLists PokemonBuildCombinationKnowledgeLists) IndicesAccess(indices []int) PokemonBuildCombinationKnowledgeLists {
-	result := make(PokemonBuildCombinationKnowledgeLists, len(indices))
-	for i, index := range indices {
-		result[i] = pbCombKLists[index]
-	}
-	return result
-}
-
-func (pbCombKLists PokemonBuildCombinationKnowledgeLists) RandomChoices(size int, random *rand.Rand) (PokemonBuildCombinationKnowledgeLists, []int) {
-	length := len(pbCombKLists)
-	indices := make([]int, size)
-
-	for i := 0; i < size; i++ {
-		index := random.Intn(length)
-		indices[i] = index
-	}
-	return pbCombKLists.IndicesAccess(indices), indices
-}
-
-type PBCombKPolicyData struct {
+type PBMPolicyData struct {
 	Mean float64
-	KnowledgeList PokemonBuildCombinationKnowledgeList
+	PSCFs PokemonStateCombinationFeatures
 }
 
-type PBCombKRunHistory struct {
+type PBMRunHistory struct {
 	SelectMoveNames MoveNames
 	SelectAbility Ability
 	SelectItem Item
 	SelectNature Nature
 
-	MoveNameWithPolicyDataList []map[MoveName]PBCombKPolicyData
-	AbilityWithPolicyData map[Ability]PBCombKPolicyData
-	ItemWithPolicyData map[Item]PBCombKPolicyData
-	NatureWithPolicyData map[Nature]PBCombKPolicyData
+	MoveNameWithPolicyDataList []map[MoveName]PBMPolicyData
+	AbilityWithPolicyData map[Ability]PBMPolicyData
+	ItemWithPolicyData map[Item]PBMPolicyData
+	NatureWithPolicyData map[Nature]PBMPolicyData
 }
