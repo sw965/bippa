@@ -34,8 +34,3 @@ func NewPlayoutBattleEval(trainer Trainer, random *rand.Rand) BattleEval {
 	}
 	return BattleEval{Func: evalFunc, Reverse: reverse}
 }
-
-type TeamEval struct {
-	Events     []func(Team) bool
-	Parameters []float64
-}
