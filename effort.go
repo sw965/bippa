@@ -1,9 +1,5 @@
 package bippa
 
-import (
-	"github.com/sw965/omw"
-)
-
 type EffortVal int
 
 var (
@@ -35,51 +31,3 @@ type Effort struct {
 func (effort *Effort) Sum() EffortVal {
 	return effort.HP + effort.Atk + effort.Def + effort.SpAtk + effort.SpDef + effort.Speed
 }
-
-func (effort *Effort) Remaining() EffortVal {
-	return MAX_SUM_EFFORT_VAL - effort.Sum()
-}
-
-func (effort Effort) SetUpperLimitHP() Effort {
-	remaining := effort.Remaining()
-	hp := omw.MinInt(int(MAX_EFFORT_VAL-effort.HP), int(remaining))
-	effort.HP = EffortVal(hp)
-	return effort
-}
-
-func (effort Effort) SetUpperLimitAtk() Effort {
-	remaining := effort.Remaining()
-	atk := omw.MinInt(int(MAX_EFFORT_VAL-effort.Atk), int(remaining))
-	effort.Atk = EffortVal(atk)
-	return effort
-}
-
-func (effort Effort) SetUpperLimitDef() Effort {
-	remaining := effort.Remaining()
-	def := omw.MinInt(int(MAX_EFFORT_VAL-effort.Def), int(remaining))
-	effort.Def = EffortVal(def)
-	return effort
-}
-
-func (effort Effort) SetUpperLimitSpAtk() Effort {
-	remaining := effort.Remaining()
-	spAtk := omw.MinInt(int(MAX_EFFORT_VAL-effort.SpAtk), int(remaining))
-	effort.SpAtk = EffortVal(spAtk)
-	return effort
-}
-
-func (effort Effort) SetUpperLimitSpDef() Effort {
-	remaining := effort.Remaining()
-	spDef := omw.MinInt(int(MAX_EFFORT_VAL-effort.SpDef), int(remaining))
-	effort.SpDef = EffortVal(spDef)
-	return effort
-}
-
-func (effort Effort) SetUpperLimitSpeed() Effort {
-	remaining := effort.Remaining()
-	speed := omw.MinInt(int(MAX_EFFORT_VAL-effort.Speed), int(remaining))
-	effort.Speed = EffortVal(speed)
-	return effort
-}
-
-type Efforts []Effort

@@ -2,5 +2,5 @@ github.com/seehuhn/mt19937 v1.0.0 h1:r02DuVkQXfohssWZO8L/TeAlYOah7aNNubEHB/7Vtfs
 github.com/seehuhn/mt19937 v1.0.0/go.mod h1:RikyXajNu+1Gqxm4hOacc3ckyWRd0usF6IkE3gnEcAM=
 github.com/sw965/crow v0.0.0-20221123031325-277683f5d01f h1:LyGaKSt2U8SnO7cEZyFAjIDKNZErtOyU7aHJXpy8uf0=
 github.com/sw965/crow v0.0.0-20221123031325-277683f5d01f/go.mod h1:Rj2eHGdmoAl9YZevjqd4nve3PcX/xir4BkvBUyuJefU=
-github.com/sw965/omw v0.0.0-20221222160322-64e10b005b0e h1:1/hgDRBKxBYQjlq8liHoYi5D6SxSTBglml3SFszuVSs=
-github.com/sw965/omw v0.0.0-20221222160322-64e10b005b0e/go.mod h1:lMA+LCPnlJ0N94gIOibA9o3SnxuP20qbxJEXFWdai5c=
+github.com/sw965/omw v0.0.0-20221224113755-8a8897492ef8 h1:B8OohOSpoUOBRWr2WNNme3THUpcwnGAPjWm1FIeGZ6Q=
+github.com/sw965/omw v0.0.0-20221224113755-8a8897492ef8/go.mod h1:lMA+LCPnlJ0N94gIOibA9o3SnxuP20qbxJEXFWdai5c=

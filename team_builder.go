@@ -215,19 +215,23 @@ func (pscfs PokemonStateCombinationFeatures) Policy(pokemon, nextPokemon *Pokemo
 	//次の状態(nextPokemon)で、該当する特徴を満たしている特徴量を取り出す
 	return pscfs.GetOKs(nextPokemon)
 }
-
-type PokemonBuilder struct {
-	PSCFs PokemonStateCombinationFeatures
+                             
+type PokemonStateCombinationEvaluator struct {
+	X PokemonStateCombinationFeatures
 	Policies []float64
 	Values []float64
 }
 
-func(pokemonBuilder *PokemonBuilder) Eval() float64 {
-	return omw.SumFloat64(pokemonBuilder.Values...)
+func(psce *PokemonStateCombinationEvaluator) Eval() float64 {
+	result := 0.0
+	for _, v := range psce.Values {
+		result += v
+	}
+	return result
 }
 
-func (pokemonBuilder *PokemonBuilder) MoveNameWithPolicyData(moveNames MoveNames, pokemon Pokemon, team Team) map[MoveName]PokemonBuilderPolicyData {
-	moveNameWithPolicyData := map[MoveName]PokemonBuilderPolicyData{}
+func (psce *PokemonStateCombinationEvaluator) MoveNameWithPolicyData(moveNames MoveNames, pokemon Pokemon, team Team) map[MoveName]PSCEPolicyData {
+	moveNameWithPolicyData := map[MoveName]PSCEPolicyData{}
 	nextPokemon := pokemon
 
 	for _, moveName := range moveNames {
@@ -241,35 +245,53 @@ func (pokemonBuilder *PokemonBuilder) MoveNameWithPolicyData(moveNames MoveNames
 		moveset[moveName] = &PowerPoint{}
 		nextPokemon.Moveset = moveset
 
-		policyPSCFs := pokemonBuilder.PSCFs.Policy(&pokemon, &nextPokemon)
+		policyPSCFs := psce.X.Policy(&pokemon, &nextPokemon)
 		initIndices := policyPSCFs.InitIndices()
-		sumPolicy := omw.SumFloat64(omw.SliceFloat64IndicesAccess(pokemonBuilder.Policies, initIndices)...)
-		policyData := PokemonBuilderPolicyData{Sum:sumPolicy, PSCFs:policyPSCFs}
 
+		policies := make([]float64, len(initIndices))
+		for i, index := range initIndices {
+			policies[i] = psce.Policies[index]
+		}
+
+		sumPolicy := 0.0
+		for _, v := range policies {
+			sumPolicy += v
+		}
+
+		policyData := PSCEPolicyData{X:policyPSCFs, Sum:sumPolicy}
 		moveNameWithPolicyData[moveName] = policyData
 	}
 	return moveNameWithPolicyData
 }
 
-func (pokemonBuilder *PokemonBuilder) AbilityWithPolicyData(abilities Abilities, pokemon Pokemon, team Team) (map[Ability]PokemonBuilderPolicyData) {
-	abilityWithPolicyData := map[Ability]PokemonBuilderPolicyData{}
+func (psce *PokemonStateCombinationEvaluator) AbilityWithPolicyData(abilities Abilities, pokemon Pokemon, team Team) (map[Ability]PSCEPolicyData) {
+	abilityWithPolicyData := map[Ability]PSCEPolicyData{}
 	nextPokemon := pokemon
 
 	for _, ability := range abilities {
 		nextPokemon.Ability = ability
 
-		policyPSCFs := pokemonBuilder.PSCFs.Policy(&pokemon, &nextPokemon)
+		policyPSCFs := psce.X.Policy(&pokemon, &nextPokemon)
 		initIndices := policyPSCFs.InitIndices()
-		sumPolicy := omw.SumFloat64(omw.SliceFloat64IndicesAccess(pokemonBuilder.Policies, initIndices)...)
-		policyData := PokemonBuilderPolicyData{Sum:sumPolicy, PSCFs:policyPSCFs}
 
+		policies := make([]float64, len(initIndices))
+		for i, index := range initIndices {
+			policies[i] = psce.Policies[index]
+		}
+
+		sumPolicy := 0.0
+		for _, v := range policies {
+			sumPolicy += v
+		}
+
+		policyData := PSCEPolicyData{X:policyPSCFs, Sum:sumPolicy}
 		abilityWithPolicyData[ability] = policyData
 	}
 	return abilityWithPolicyData
 }
 
-func (pokemonBuilder *PokemonBuilder) ItemWithPolicyData(items Items, pokemon Pokemon, team Team) map[Item]PokemonBuilderPolicyData {
-	itemWithPolicyData := map[Item]PokemonBuilderPolicyData{}
+func (psce *PokemonStateCombinationEvaluator) ItemWithPolicyData(items Items, pokemon Pokemon, team Team) map[Item]PSCEPolicyData {
+	itemWithPolicyData := map[Item]PSCEPolicyData{}
 	nextPokemon := pokemon
 
 	for _, item := range items {
@@ -279,49 +301,67 @@ func (pokemonBuilder *PokemonBuilder) ItemWithPolicyData(items Items, pokemon Po
 
 		nextPokemon.Item = item
 
-		policyPSCFs := pokemonBuilder.PSCFs.Policy(&pokemon, &nextPokemon)
+		policyPSCFs := psce.X.Policy(&pokemon, &nextPokemon)
 		initIndices := policyPSCFs.InitIndices()
-		sumPolicy := omw.SumFloat64(omw.SliceFloat64IndicesAccess(pokemonBuilder.Policies, initIndices)...)
-		policyData := PokemonBuilderPolicyData{Sum:sumPolicy, PSCFs:policyPSCFs}
 
+		policies := make([]float64, len(initIndices))
+		for i, index := range initIndices {
+			policies[i] = psce.Policies[index]
+		}
+
+		sumPolicy := 0.0
+		for _, v := range policies {
+			sumPolicy += v
+		}
+
+		policyData := PSCEPolicyData{X:policyPSCFs, Sum:sumPolicy}
 		itemWithPolicyData[item] = policyData
 	}
 	return itemWithPolicyData
 }
 
-func (pokemonBuilder *PokemonBuilder) NatureWithPolicyData(natures Natures, pokemon Pokemon, team Team) map[Nature]PokemonBuilderPolicyData {
-	natureWithPolicyData := map[Nature]PokemonBuilderPolicyData{}
+func (psce *PokemonStateCombinationEvaluator) NatureWithPolicyData(natures Natures, pokemon Pokemon, team Team) map[Nature]PSCEPolicyData {
+	natureWithPolicyData := map[Nature]PSCEPolicyData{}
 	nextPokemon := pokemon
 
 	for _, nature := range natures {
 		nextPokemon.Nature = nature
 		
-		policyPSCFs := pokemonBuilder.PSCFs.Policy(&pokemon, &nextPokemon)
+		policyPSCFs := psce.X.Policy(&pokemon, &nextPokemon)
 		initIndices := policyPSCFs.InitIndices()		
-		sumPolicy := omw.SumFloat64(omw.SliceFloat64IndicesAccess(pokemonBuilder.Policies, initIndices)...)
-		policyData := PokemonBuilderPolicyData{Sum:sumPolicy, PSCFs:policyPSCFs}
 
+		policies := make([]float64, len(initIndices))
+		for i, index := range initIndices {
+			policies[i] = psce.Policies[index]
+		}
+
+		sumPolicy := 0.0
+		for _, v := range policies {
+			sumPolicy += v
+		}
+
+		policyData := PSCEPolicyData{X:policyPSCFs, Sum:sumPolicy}
 		natureWithPolicyData[nature] = policyData
 	}
 	return natureWithPolicyData
 }
 
-func (pokemonBuilder *PokemonBuilder) BuildMoveset(pokeName PokeName, moveNames MoveNames, pokemon Pokemon, team Team, finalPolicies func([]float64) []float64, random *rand.Rand) (Moveset, MoveName, map[MoveName]PokemonBuilderPolicyData, error) {
+func (psce *PokemonStateCombinationEvaluator) BuildMoveset(pokeName PokeName, moveNames MoveNames, pokemon Pokemon, team Team, finalPolicies func([]float64) []float64, random *rand.Rand) (Moveset, MoveName, map[MoveName]PSCEPolicyData, error) {
 	moveset := pokemon.Moveset.Copy()
 	movesetLength := len(pokemon.Moveset)
 	learnsetLength := len(POKEDEX[pokeName].Learnset)
 
 	if movesetLength == MAX_MOVESET_LENGTH || movesetLength == learnsetLength {
-		return pokemon.Moveset, "", map[MoveName]PokemonBuilderPolicyData{}, nil
+		return pokemon.Moveset, "", map[MoveName]PSCEPolicyData{}, nil
 	}
 
-	moveNameWithPolicyData := pokemonBuilder.MoveNameWithPolicyData(moveNames, pokemon, team)
+	moveNameWithPolicyData := psce.MoveNameWithPolicyData(moveNames, pokemon, team)
 
 	if len(moveNameWithPolicyData) == 0 {
 		errMsg := fmt.Sprintf("pokemon.Name = %v pokemon.Moveset.Keys() = %v の状態で、次の技の組み合わせが見つからなかった",
 			pokemon.Name, pokemon.Moveset.Keys(),
 		)
-		return Moveset{}, "", map[MoveName]PokemonBuilderPolicyData{}, fmt.Errorf(errMsg)
+		return Moveset{}, "", map[MoveName]PSCEPolicyData{}, fmt.Errorf(errMsg)
 	}
 
 	length := len(moveNameWithPolicyData)
@@ -343,16 +383,16 @@ func (pokemonBuilder *PokemonBuilder) BuildMoveset(pokeName PokeName, moveNames 
 	return moveset, selectMoveName, moveNameWithPolicyData, nil
 }
 
-func (pokemonBuilder *PokemonBuilder) BuildAbility(abilities Abilities, pokemon Pokemon, team Team, finalPolicies func([]float64) []float64, random *rand.Rand) (Ability, map[Ability]PokemonBuilderPolicyData, error) {
+func (psce *PokemonStateCombinationEvaluator) BuildAbility(abilities Abilities, pokemon Pokemon, team Team, finalPolicies func([]float64) []float64, random *rand.Rand) (Ability, map[Ability]PSCEPolicyData, error) {
 	if pokemon.Ability != "" {
-		return pokemon.Ability, map[Ability]PokemonBuilderPolicyData{}, nil
+		return pokemon.Ability, map[Ability]PSCEPolicyData{}, nil
 	}
 
-	abilityWithPolicyData := pokemonBuilder.AbilityWithPolicyData(abilities, pokemon, team)
+	abilityWithPolicyData := psce.AbilityWithPolicyData(abilities, pokemon, team)
 
 	if len(abilityWithPolicyData) == 0 {
 		errMsg := fmt.Sprintf("pokemon.Name = %v の状態で、次の特性の組み合わせが見つからなかった", pokemon.Name)
-		return "", map[Ability]PokemonBuilderPolicyData{}, fmt.Errorf(errMsg)
+		return "", map[Ability]PSCEPolicyData{}, fmt.Errorf(errMsg)
 	}
 
 	length := len(abilityWithPolicyData)
@@ -371,16 +411,16 @@ func (pokemonBuilder *PokemonBuilder) BuildAbility(abilities Abilities, pokemon 
 	return selectAbility, abilityWithPolicyData, nil
 }
 
-func (pokemonBuilder *PokemonBuilder) BuildItem(items Items, pokemon Pokemon, team Team, finalPolicies func([]float64) []float64, random *rand.Rand) (Item, map[Item]PokemonBuilderPolicyData, error) {
+func (psce *PokemonStateCombinationEvaluator) BuildItem(items Items, pokemon Pokemon, team Team, finalPolicies func([]float64) []float64, random *rand.Rand) (Item, map[Item]PSCEPolicyData, error) {
 	if pokemon.Item != "" {
-		return pokemon.Item, map[Item]PokemonBuilderPolicyData{}, nil
+		return pokemon.Item, map[Item]PSCEPolicyData{}, nil
 	}
 
-	itemWithPolicyData := pokemonBuilder.ItemWithPolicyData(items, pokemon, team)
+	itemWithPolicyData := psce.ItemWithPolicyData(items, pokemon, team)
 
 	if len(itemWithPolicyData) == 0 {
 		errMsg := fmt.Sprintf("pokemon.Name = %v の状態で、次のアイテムの組み合わせが見つからなかった", pokemon.Name)
-		return "", map[Item]PokemonBuilderPolicyData{}, fmt.Errorf(errMsg)
+		return "", map[Item]PSCEPolicyData{}, fmt.Errorf(errMsg)
 	}
 
 	length := len(itemWithPolicyData)
@@ -399,16 +439,16 @@ func (pokemonBuilder *PokemonBuilder) BuildItem(items Items, pokemon Pokemon, te
 	return selectItem, itemWithPolicyData, nil
 }
 
-func (pokemonBuilder *PokemonBuilder) BuildNature(natures Natures, pokemon Pokemon, team Team, finalPolicies func([]float64) []float64, random *rand.Rand) (Nature, map[Nature]PokemonBuilderPolicyData, error) {
+func (psce *PokemonStateCombinationEvaluator) BuildNature(natures Natures, pokemon Pokemon, team Team, finalPolicies func([]float64) []float64, random *rand.Rand) (Nature, map[Nature]PSCEPolicyData, error) {
 	if pokemon.Nature != "" {
-		return pokemon.Nature, map[Nature]PokemonBuilderPolicyData{}, nil
+		return pokemon.Nature, map[Nature]PSCEPolicyData{}, nil
 	}
 
-	natureWithPolicyData := pokemonBuilder.NatureWithPolicyData(natures, pokemon, team)
+	natureWithPolicyData := psce.NatureWithPolicyData(natures, pokemon, team)
 
 	if len(natureWithPolicyData) == 0 {
 		errMsg := fmt.Sprintf("pokemon.Name = %v の状態で、次の性格の組み合わせが見つからなかった", pokemon.Name)
-		return "", map[Nature]PokemonBuilderPolicyData{}, fmt.Errorf(errMsg)
+		return "", map[Nature]PSCEPolicyData{}, fmt.Errorf(errMsg)
 	}
 
 	length := len(natureWithPolicyData)
@@ -427,14 +467,14 @@ func (pokemonBuilder *PokemonBuilder) BuildNature(natures Natures, pokemon Pokem
 	return selectNature, natureWithPolicyData, nil	
 }
 
-func (pokemonBuilder *PokemonBuilder) Run(pokemon Pokemon, team Team, pbCommonK *PokemonBuildCommonKnowledge, finalPolicies func([]float64) []float64, random *rand.Rand) (Pokemon, PokemonBuilderRunHistory, error) {
+func (psce *PokemonStateCombinationEvaluator) Run(pokemon Pokemon, team Team, pbCommonK *PokemonBuildCommonKnowledge, finalPolicies func([]float64) []float64, random *rand.Rand) (Pokemon, PSCERunHistory, error) {
 	if pokemon.Name == "" {
-		return Pokemon{}, PokemonBuilderRunHistory{}, fmt.Errorf("pokemon.Name が 空の状態で、PokemonBuilder.Run は 実行出来ない")
+		return Pokemon{}, PSCERunHistory{}, fmt.Errorf("pokemon.Name が 空の状態で、PokemonStateCombinationEvaluator.Run は 実行出来ない")
 	}
 
-	pokemonBuilderRunHistory := PokemonBuilderRunHistory{
+	psceRunHistory := PSCERunHistory{
 		SelectMoveNames:make(MoveNames, 0, MAX_MOVESET_LENGTH),
-		MoveNameWithPolicyDataList:make([]map[MoveName]PokemonBuilderPolicyData, 0, MAX_MOVESET_LENGTH),
+		MoveNameWithPolicyDataList:make([]map[MoveName]PSCEPolicyData, 0, MAX_MOVESET_LENGTH),
 	}
 
 	pokeData := POKEDEX[pokemon.Name]
@@ -443,28 +483,28 @@ func (pokemonBuilder *PokemonBuilder) Run(pokemon Pokemon, team Team, pbCommonK 
 	pbCommonKItems := pbCommonK.Items
 	pbCommonKNatures := pbCommonK.Natures
 
-	ability, abilityWithPolicyData, err := pokemonBuilder.BuildAbility(allAbilities, pokemon, team, finalPolicies, random)
+	ability, abilityWithPolicyData, err := psce.BuildAbility(allAbilities, pokemon, team, finalPolicies, random)
 	if err != nil {
-		return Pokemon{}, PokemonBuilderRunHistory{}, err
+		return Pokemon{}, PSCERunHistory{}, err
 	}
 
 	pokemon.Ability = ability
-	pokemonBuilderRunHistory.SelectAbility = ability
-	pokemonBuilderRunHistory.AbilityWithPolicyData = abilityWithPolicyData
+	psceRunHistory.SelectAbility = ability
+	psceRunHistory.AbilityWithPolicyData = abilityWithPolicyData
 
-	item, itemWithPolicyData, err := pokemonBuilder.BuildItem(pbCommonKItems, pokemon, team, finalPolicies, random)
+	item, itemWithPolicyData, err := psce.BuildItem(pbCommonKItems, pokemon, team, finalPolicies, random)
 	if err != nil {
-		return Pokemon{}, PokemonBuilderRunHistory{}, err
+		return Pokemon{}, PSCERunHistory{}, err
 	}
 
 	pokemon.Item = item
-	pokemonBuilderRunHistory.SelectItem = item
-	pokemonBuilderRunHistory.ItemWithPolicyData = itemWithPolicyData
+	psceRunHistory.SelectItem = item
+	psceRunHistory.ItemWithPolicyData = itemWithPolicyData
 
 	for i := 0; i < MAX_MOVESET_LENGTH; i++ {
-		moveset, selectMoveName, moveNameWithPolicyData, err := pokemonBuilder.BuildMoveset(pokemon.Name, pbCommonKMoveNames, pokemon, team, finalPolicies, random)
+		moveset, selectMoveName, moveNameWithPolicyData, err := psce.BuildMoveset(pokemon.Name, pbCommonKMoveNames, pokemon, team, finalPolicies, random)
 		if err != nil {
-			return Pokemon{}, PokemonBuilderRunHistory{}, err
+			return Pokemon{}, PSCERunHistory{}, err
 		}
 
 		if selectMoveName == "" {
@@ -472,43 +512,42 @@ func (pokemonBuilder *PokemonBuilder) Run(pokemon Pokemon, team Team, pbCommonK 
 		}
 
 		pokemon.Moveset = moveset
-		pokemonBuilderRunHistory.SelectMoveNames = append(pokemonBuilderRunHistory.SelectMoveNames, selectMoveName)
-		pokemonBuilderRunHistory.MoveNameWithPolicyDataList = append(pokemonBuilderRunHistory.MoveNameWithPolicyDataList, moveNameWithPolicyData)
+		psceRunHistory.SelectMoveNames = append(psceRunHistory.SelectMoveNames, selectMoveName)
+		psceRunHistory.MoveNameWithPolicyDataList = append(psceRunHistory.MoveNameWithPolicyDataList, moveNameWithPolicyData)
 	}
 
-	nature, natureWithPolicyData, err := pokemonBuilder.BuildNature(pbCommonKNatures, pokemon, team, finalPolicies, random)
+	nature, natureWithPolicyData, err := psce.BuildNature(pbCommonKNatures, pokemon, team, finalPolicies, random)
 	if err != nil {
-		return Pokemon{}, PokemonBuilderRunHistory{}, err
+		return Pokemon{}, PSCERunHistory{}, err
 	}
 
 	pokemon.Nature = nature
-	pokemonBuilderRunHistory.SelectNature = nature
-	pokemonBuilderRunHistory.NatureWithPolicyData = natureWithPolicyData
+	psceRunHistory.SelectNature = nature
+	psceRunHistory.NatureWithPolicyData = natureWithPolicyData
 
-	return pokemon, pokemonBuilderRunHistory, nil
+	return pokemon, psceRunHistory, nil
 }
 
-type PokemonBuilderPolicyData struct {
+type PSCEPolicyData struct {
+	X PokemonStateCombinationFeatures
 	Sum float64
-	PSCFs PokemonStateCombinationFeatures
 }
 
-type PokemonBuilderRunHistory struct {
+type PSCERunHistory struct {
 	SelectMoveNames MoveNames
 	SelectAbility Ability
 	SelectItem Item
 	SelectNature Nature
 
-	MoveNameWithPolicyDataList []map[MoveName]PokemonBuilderPolicyData
-	AbilityWithPolicyData map[Ability]PokemonBuilderPolicyData
-	ItemWithPolicyData map[Item]PokemonBuilderPolicyData
-	NatureWithPolicyData map[Nature]PokemonBuilderPolicyData
+	MoveNameWithPolicyDataList []map[MoveName]PSCEPolicyData
+	AbilityWithPolicyData map[Ability]PSCEPolicyData
+	ItemWithPolicyData map[Item]PSCEPolicyData
+	NatureWithPolicyData map[Nature]PSCEPolicyData
 }
 
 type TeamCombinationFeature map[PokeName]*PokemonStateCombinationFeature
 
 func (tcf TeamCombinationFeature) OK(team Team) bool {
-
 	for k, v := range tcf {
 		pokemon, err := team.Find(k)
 		if err != nil {
@@ -639,7 +678,18 @@ func (tcfs TeamCombinationFeatures) Init() {
 	}
 }
 
-func (tcfs TeamCombinationFeatures) GetOks(team Team) TeamCombinationFeatures {
+func (tcfs TeamCombinationFeatures) UtilInitIndices() []int {
+	result := make([]int, 0, len(tcfs))
+	for _, tcf := range tcfs {
+		for _, v := range tcf {
+			result = append(result, v.InitIndex)
+			break
+		}
+	}
+	return result
+}
+
+func (tcfs TeamCombinationFeatures) GetOKs(team Team) TeamCombinationFeatures {
 	result := make(TeamCombinationFeatures, 0, len(tcfs))
 	for _, tcf := range tcfs {
 		if tcf.OK(team) {
@@ -649,20 +699,32 @@ func (tcfs TeamCombinationFeatures) GetOks(team Team) TeamCombinationFeatures {
 	return result
 }
 
-type TeamBuilder struct {
-	TCFs TeamCombinationFeatures
+type TeamCombinationEvaluator struct {
+	X TeamCombinationFeatures
 	Values []float64	
 }
 
-func NewTeamBuilder(pokeName1, pokeName2 PokeName, pbCommonKs map[PokeName]*PokemonBuildCommonKnowledge, random *rand.Rand) TeamBuilder {
+func NewTeamCombinationEvaluator(pokeName1, pokeName2 PokeName, pbCommonKs map[PokeName]*PokemonBuildCommonKnowledge, random *rand.Rand) TeamCombinationEvaluator {
 	tcfs := NewTeamCombinationFeatures(pokeName1, pokeName2, pbCommonKs)
-	values, err := omw.MakeRandomSliceFloat64(len(tcfs), 1, 10, random)
-	if err != nil {
-		panic(err)
+	length := len(tcfs)
+	values := make([]float64, length)
+	for i := 0; i < length; i++ {
+		v, err := omw.RandomFloat64(0.01, 1, random)
+		if err != nil {
+			panic(err)
+		}
+		values[i] = v
 	}
-	return TeamBuilder{TCFs:tcfs, Values:values}
+	return TeamCombinationEvaluator{X:tcfs, Values:values}
 }
 
-func (teamBuilder TeamBuilder) Eval() float64 {
-	return omw.SumFloat64(teamBuilder.Values...)
+func (tce TeamCombinationEvaluator) Eval(team Team) float64 {
+	okXs := tce.X.GetOKs(team)
+	initIndices := okXs.UtilInitIndices()
+	result := 0.0
+
+	for _, index := range initIndices {
+		result += tce.Values[index]
+	}
+	return result
 }

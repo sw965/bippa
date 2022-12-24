@@ -21,45 +21,6 @@ func (pucb *PolynomialUpperConfidenceBound) Get(totalTrial int, X float64) float
 	return crow.PolynomialUpperConfidenceBound(averageReward, pucb.P, totalTrial, pucb.Trial, X)
 }
 
-type PolynomialUpperConfidenceBounds []*PolynomialUpperConfidenceBound
-
-func (pucbs PolynomialUpperConfidenceBounds) TotalTrial() int {
-	result := 0
-	for _, pucb := range pucbs {
-		result += pucb.Trial
-	}
-	return result
-}
-
-func (pucbs PolynomialUpperConfidenceBounds) Max(X float64) float64 {
-	totalTrial := pucbs.TotalTrial()
-	result := pucbs[0].Get(totalTrial, X)
-	for _, pucb := range pucbs[1:] {
-		pucbY := pucb.Get(totalTrial, X)
-		if pucbY > result {
-			result = pucbY
-		}
-	}
-	return result
-}
-
-func (pucbs PolynomialUpperConfidenceBounds) MaxPUCBsAndIndices(X float64) (PolynomialUpperConfidenceBounds, []int) {
-	length := len(pucbs)
-	totalTrial := pucbs.TotalTrial()
-	max := pucbs.Max(X)
-	maxPUCBs := make(PolynomialUpperConfidenceBounds, 0, length)
-	indices := make([]int, 0, length)
-
-	for i, pucb := range pucbs {
-		pucbY := pucb.Get(totalTrial, X)
-		if pucbY == max {
-			maxPUCBs = append(maxPUCBs, pucb)
-			indices = append(indices, i)
-		}
-	}
-	return maxPUCBs, indices
-}
-
 type BattlePolicy func(*Battle) map[ActionCmd]float64
 
 func NoBattlePolicy(battle *Battle) map[ActionCmd]float64 {
@@ -181,19 +142,19 @@ func NewBattleNodePointer(battle *Battle, battlePolicy BattlePolicy) *BattleNode
 		IsP1: isP1Phase, SelectCount: 0}
 }
 
-func (battleNode *BattleNode) SelectAndExpansion(battle Battle, allBattleNodes BattleNodes, battlePolicy BattlePolicy, X float64, random *rand.Rand) (Battle, BattleNodes, Selects, error) {
-	selects := make(Selects, 0, 64)
+func (battleNode *BattleNode) SelectAndExpansion(battle Battle, allBattleNodes BattleNodes, battlePolicy BattlePolicy, X float64, capSize int, random *rand.Rand) (Battle, BattleNodes, BattleNodeSelects, error) {
+	selects := make(BattleNodeSelects, 0, capSize)
 	var err error
 
 	for {
 		maxPUCBActionCmds := battleNode.ActionCmdPUCBs.MaxActionCmds(X)
 		selectActionCmd := maxPUCBActionCmds.RandomChoice(random)
-		selects = append(selects, Select{BattleNode: battleNode, ActionCmd: selectActionCmd})
+		selects = append(selects, BattleNodeSelect{Node: battleNode, ActionCmd: selectActionCmd})
 		battleNode.SelectCount += 1
 
 		battle, err = battle.Push(selectActionCmd, random)
 		if err != nil {
-			return Battle{}, BattleNodes{}, Selects{}, err
+			return Battle{}, BattleNodes{}, BattleNodeSelects{}, err
 		}
 
 		if battle.IsGameEnd() {
@@ -246,25 +207,26 @@ func (battleNodes BattleNodes) Find(battle *Battle) (*BattleNode, error) {
 	return &BattleNode{}, fmt.Errorf("battleが一致しているbattleNodeが見つからなかった")
 }
 
-type Select struct {
-	BattleNode      *BattleNode
+type BattleNodeSelect struct {
+	Node      *BattleNode
 	ActionCmd ActionCmd
 }
 
-type Selects []Select
+type BattleNodeSelects []BattleNodeSelect
 
-func (selects Selects) Backward(battleEvalY float64, battleEval *BattleEval) {
-	for _, select_ := range selects {
-		battleNode := select_.BattleNode
-		actionCmd := select_.ActionCmd
+func (battleNodeSelects BattleNodeSelects) Backward(battleEvalY float64, battleEval *BattleEval) {
+	for _, battleNodeSelect := range battleNodeSelects {
+		selectNode := battleNodeSelect.Node
+		selectActionCmd := battleNodeSelect.ActionCmd
 
-		if battleNode.IsP1 {
-			battleNode.ActionCmdPUCBs[actionCmd].AccumReward += battleEvalY
+		if selectNode.IsP1 {
+			selectNode.ActionCmdPUCBs[selectActionCmd].AccumReward += battleEvalY
 		} else {
-			battleNode.ActionCmdPUCBs[actionCmd].AccumReward += battleEval.Reverse(battleEvalY)
+			selectNode.ActionCmdPUCBs[selectActionCmd].AccumReward += battleEval.Reverse(battleEvalY)
 		}
-		battleNode.ActionCmdPUCBs[actionCmd].Trial += 1
-		battleNode.SelectCount = 0
+
+		selectNode.ActionCmdPUCBs[selectActionCmd].Trial += 1
+		selectNode.SelectCount = 0
 	}
 }
 
@@ -273,12 +235,12 @@ func RunMCTS(rootBattle Battle, simuNum int, X float64, battlePolicy BattlePolic
 	allBattleNodes := BattleNodes{rootBattleNode}
 	battle := rootBattle
 
-	var selects Selects
+	var selects BattleNodeSelects
 	var battleEvalY float64
 	var err error
 
 	for i := 0; i < simuNum; i++ {
-		battle, allBattleNodes, selects, err = rootBattleNode.SelectAndExpansion(battle, allBattleNodes, battlePolicy, X, random)
+		battle, allBattleNodes, selects, err = rootBattleNode.SelectAndExpansion(battle, allBattleNodes, battlePolicy, X, i, random)
 		if err != nil {
 			return BattleNodes{}, err
 		}
