@@ -9,7 +9,9 @@ import (
 )
 
 var (
-	DATA_PATH      = os.Getenv("GOPATH") + "/arbok/data/"
+	SW965_PATH = os.Getenv("GOPATH") + "sw965/"
+
+	DATA_PATH      = SW965_PATH + "/arbok/data/"
 	POKEDEX_PATH   = DATA_PATH + "pokedex/"
 	MOVEDEX_PATH   = DATA_PATH + "movedex/"
 	NATUREDEX_PATH = DATA_PATH + "naturedex.json"
@@ -19,6 +21,11 @@ var (
 	ALL_NATURES_PATH    = DATA_PATH + "all_natures.txt"
 	ALL_MOVE_NAMES_PATH = DATA_PATH + "all_move_names.txt"
 	ALL_ITEMS_PATH      = DATA_PATH + "all_items.txt"
+
+	RATTA_PATH = SW965_PATH + "ratta/"
+	PBCK_PATH = RATTA_PATH + "pokemon_build_common_knowledge/"
+	PSCE_PATH = RATTA_PATH + "pokemon_state_combination_evaluator/"
+	TCE_PATH = RATTA_PATH + "team_combination_evaluator/"
 )
 
 type PokeData struct {

@@ -99,10 +99,6 @@ func NewPokemon(pokeName PokeName, nature Nature, ability Ability, gender Gender
 		Types: pokeData.Types, Level: DEFAULT_LEVEL}, nil
 }
 
-func NewEmptyPokemon() Pokemon {
-	return Pokemon{Name: EMPTY_POKE_NAME}
-}
-
 func (pokemon1 *Pokemon) Equal(pokemon2 *Pokemon) bool {
 	if pokemon1.Name != pokemon2.Name {
 		return false

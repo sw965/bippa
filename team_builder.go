@@ -5,6 +5,7 @@ import (
 	"github.com/sw965/omw"
 	"math/rand"
 	"encoding/json"
+	"os"
 	"io/ioutil"
 )
 
@@ -14,17 +15,19 @@ type PokemonBuildCommonKnowledge struct {
 	Natures   Natures
 }
 
-func ReadJsonPokemonBuildCommonKnowledge(filePath string) PokemonBuildCommonKnowledge {
+func LoadJsonPokemonBuildCommonKnowledge(pokeName PokeName) (PokemonBuildCommonKnowledge, error) {
+	filePath := PBCK_PATH + string(pokeName) + ".json"
+
 	bytes, err := ioutil.ReadFile(filePath)
 	if err != nil {
-		panic(err)
+		return PokemonBuildCommonKnowledge{}, err
 	}
 
 	result := PokemonBuildCommonKnowledge{}
 	if err := json.Unmarshal(bytes, &result); err != nil {
-		panic(err)
+		return PokemonBuildCommonKnowledge{}, err
 	}
-	return result
+	return result, nil
 }
 
 type PokemonStateCombinationFeature struct {
@@ -171,10 +174,11 @@ func NewPokemonStateCombinationFeatures(pokeName PokeName, pbCommonK *PokemonBui
 		}
 	}
 
+	result.Init()
 	return result
 }
 
-func (pscfs PokemonStateCombinationFeatures) Init(pokeName PokeName) {
+func (pscfs PokemonStateCombinationFeatures) Init() {
 	for i := 0; i < len(pscfs); i++ {
 		pscfs[i].InitIndex = i
 	}
@@ -188,7 +192,7 @@ func (pscfs PokemonStateCombinationFeatures) InitIndices() []int {
 	return result
 }
 
-func (pscfs PokemonStateCombinationFeatures) GetOKs(pokemon *Pokemon) PokemonStateCombinationFeatures {
+func (pscfs PokemonStateCombinationFeatures) GetOK(pokemon *Pokemon) PokemonStateCombinationFeatures {
 	result := make(PokemonStateCombinationFeatures, 0, len(pscfs))
 	for _, pscf := range pscfs {
 		if pscf.OK(pokemon) {
@@ -198,7 +202,7 @@ func (pscfs PokemonStateCombinationFeatures) GetOKs(pokemon *Pokemon) PokemonSta
 	return result
 }
 
-func (pscfs PokemonStateCombinationFeatures) GetNotOKs(pokemon *Pokemon) PokemonStateCombinationFeatures {
+func (pscfs PokemonStateCombinationFeatures) GetNotOK(pokemon *Pokemon) PokemonStateCombinationFeatures {
 	result := make(PokemonStateCombinationFeatures, 0, len(pscfs))
 	for _, pscf := range pscfs {
 		if !pscf.OK(pokemon) {
@@ -210,22 +214,60 @@ func (pscfs PokemonStateCombinationFeatures) GetNotOKs(pokemon *Pokemon) Pokemon
 
 func (pscfs PokemonStateCombinationFeatures) Policy(pokemon, nextPokemon *Pokemon) PokemonStateCombinationFeatures {
 	//一つ前の状態(pokemon)で、該当する特徴を満たしていない特徴量を取り出す
-	pscfs = pscfs.GetNotOKs(pokemon)
+	pscfs = pscfs.GetNotOK(pokemon)
 
 	//次の状態(nextPokemon)で、該当する特徴を満たしている特徴量を取り出す
-	return pscfs.GetOKs(nextPokemon)
+	return pscfs.GetOK(nextPokemon)
 }
-                             
+
 type PokemonStateCombinationEvaluator struct {
 	X PokemonStateCombinationFeatures
 	Policies []float64
 	Values []float64
 }
 
-func(psce *PokemonStateCombinationEvaluator) Eval() float64 {
+func NewPokemonStateCombinationEvaluator(pokeName PokeName, pbCommonK *PokemonBuildCommonKnowledge, random *rand.Rand) PokemonStateCombinationEvaluator {
+	x := NewPokemonStateCombinationFeatures(pokeName, pbCommonK)
+	length := len(x)
+	policies := make([]float64, length)
+	values := make([]float64, length)
+
+	for i := 0; i < length; i++ {
+		policy, err := omw.RandomFloat64(0.01, 1.0, random)
+		if err != nil {
+			panic(err)
+		}
+
+		value, err := omw.RandomFloat64(1, 10, random)
+		if err != nil {
+			panic(err)
+		}
+
+		policies[i] = policy
+		values[i] = value
+	}
+
+	return PokemonStateCombinationEvaluator{X:x, Policies:policies, Values:values}
+}
+
+func (psce *PokemonStateCombinationEvaluator) WriteJson(pokeName PokeName) error {
+	filePath := PSCE_PATH + string(pokeName) + ".json"
+
+	file, err := json.MarshalIndent(psce, "", " ")
+	if err != nil {
+		return err
+	}
+	return ioutil.WriteFile(filePath, file, 0644)
+}
+
+func(psce *PokemonStateCombinationEvaluator) Eval(pokemon *Pokemon) float64 {
+	values := psce.Values
+	okX := psce.X.GetOK(pokemon)
+	initIndices := okX.InitIndices()
 	result := 0.0
-	for _, v := range psce.Values {
-		result += v
+
+	for _, index := range initIndices {
+		result += values[index]
 	}
 	return result
 }
@@ -547,6 +589,14 @@ type PSCERunHistory struct {
 
 type TeamCombinationFeature map[PokeName]*PokemonStateCombinationFeature
 
+func (tcf TeamCombinationFeature) Keys() PokeNames {
+	result := make(PokeNames, 0, len(tcf))
+	for pokeName, _ := range tcf {
+		result = append(result, pokeName)
+	}
+	return result
+}
+
 func (tcf TeamCombinationFeature) OK(team Team) bool {
 	for k, v := range tcf {
 		pokemon, err := team.Find(k)
@@ -562,9 +612,26 @@ func (tcf TeamCombinationFeature) OK(team Team) bool {
 
 type TeamCombinationFeatures []TeamCombinationFeature
 
-func NewTeamCombinationFeatures(pokeName1, pokeName2 PokeName, pbCommonKs map[PokeName]*PokemonBuildCommonKnowledge) TeamCombinationFeatures {
+func NewTeamCombinationFeatures(pokeName1, pokeName2 PokeName) (TeamCombinationFeatures, error) {
+	pokemon1BuildCommonKnowledge, err := LoadJsonPokemonBuildCommonKnowledge(pokeName1)
+	if err != nil {
+		return TeamCombinationFeatures{}, err
+	}
+
+	pokemon2BuildCommonKnowledge, err := LoadJsonPokemonBuildCommonKnowledge(pokeName2)
+	if err != nil {
+		return TeamCombinationFeatures{}, err
+	}
+
+	pbCommonKs := map[PokeName]*PokemonBuildCommonKnowledge{
+		pokeName1: &pokemon1BuildCommonKnowledge,
+		pokeName2: &pokemon2BuildCommonKnowledge,
+	}
+
 	result := make(TeamCombinationFeatures, 0, 51200)
+	result = append(result, TeamCombinationFeature{pokeName1:&PokemonStateCombinationFeature{}, pokeName2:&PokemonStateCombinationFeature{}})
 	allAbilities := map[PokeName]Abilities{pokeName1:POKEDEX[pokeName1].AllAbilities, pokeName2:POKEDEX[pokeName2].AllAbilities}
+
 
 	get := func(pokeName1, pokeName2 PokeName) TeamCombinationFeatures {
 		result := make(TeamCombinationFeatures, 0, 25600)
@@ -667,7 +734,8 @@ func NewTeamCombinationFeatures(pokeName1, pokeName2 PokeName, pbCommonKs map[Po
 
 	result = append(result, get(pokeName1, pokeName2)...)
 	result = append(result, get(pokeName2, pokeName1)...)
-	return result
+	result.Init()
+	return result, nil
 }
 
 func (tcfs TeamCombinationFeatures) Init() {
@@ -689,7 +757,7 @@ func (tcfs TeamCombinationFeatures) UtilInitIndices() []int {
 	return result
 }
 
-func (tcfs TeamCombinationFeatures) GetOKs(team Team) TeamCombinationFeatures {
+func (tcfs TeamCombinationFeatures) GetOK(team Team) TeamCombinationFeatures {
 	result := make(TeamCombinationFeatures, 0, len(tcfs))
 	for _, tcf := range tcfs {
 		if tcf.OK(team) {
@@ -704,10 +772,15 @@ type TeamCombinationEvaluator struct {
 	Values []float64	
 }
 
-func NewTeamCombinationEvaluator(pokeName1, pokeName2 PokeName, pbCommonKs map[PokeName]*PokemonBuildCommonKnowledge, random *rand.Rand) TeamCombinationEvaluator {
-	tcfs := NewTeamCombinationFeatures(pokeName1, pokeName2, pbCommonKs)
+func NewTeamCombinationEvaluator(pokeName1, pokeName2 PokeName, random *rand.Rand) (TeamCombinationEvaluator, error) {
+	tcfs, err := NewTeamCombinationFeatures(pokeName1, pokeName2)
+	if err != nil {
+		return TeamCombinationEvaluator{}, err
+	}
+
 	length := len(tcfs)
 	values := make([]float64, length)
+
 	for i := 0; i < length; i++ {
 		v, err := omw.RandomFloat64(0.01, 1, random)
 		if err != nil {
@@ -715,16 +788,45 @@ func NewTeamCombinationEvaluator(pokeName1, pokeName2 PokeName, pbCommonKs map[P
 		}
 		values[i] = v
 	}
-	return TeamCombinationEvaluator{X:tcfs, Values:values}
+	return TeamCombinationEvaluator{X:tcfs, Values:values}, nil
+}
+
+func (tce TeamCombinationEvaluator) WriteJson() error {
+	pokeNames := tce.X[0].Keys().Sort()	
+	folderPath := TCE_PATH + string(pokeNames[0]) + "/"
+	if _, err := os.Stat(folderPath); err != nil {
+		return err
+	}
+	filePath := folderPath + string(pokeNames[1]) + ".json"
+
+	file, err := json.MarshalIndent(tce, "", " ")
+	if err != nil {
+		return err
+	}
+	return ioutil.WriteFile(filePath, file, 0644)
 }
 
 func (tce TeamCombinationEvaluator) Eval(team Team) float64 {
-	okXs := tce.X.GetOKs(team)
-	initIndices := okXs.UtilInitIndices()
+	okX := tce.X.GetOK(team)
+	initIndices := okX.UtilInitIndices()
 	result := 0.0
 
 	for _, index := range initIndices {
 		result += tce.Values[index]
 	}
+	return result
+}
+
+type TeamBuilder struct {
+	PokemonStateCombinationEvaluator PokemonStateCombinationEvaluator
+	TeamCombinationEvaluator TeamCombinationEvaluator
+}
+
+func (teamBuilder *TeamBuilder) Eval(team Team) float64 {
+	result := 0.0
+	for _, pokemon := range team {
+		result += teamBuilder.PokemonStateCombinationEvaluator.Eval(&pokemon)
+	}
+	result += teamBuilder.TeamCombinationEvaluator.Eval(team)
 	return result
 }

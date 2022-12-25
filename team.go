@@ -15,7 +15,7 @@ func NewTeam(pokemons []Pokemon) (Team, error) {
 	team := Team(pokemons)
 	pokeNames := team.PokeNames()
 
-	if !pokeNames.Filter(IsEmptyPokeName).IsUnique() {
+	if !pokeNames.IsUnique() {
 		return Team{}, fmt.Errorf("同じポケモンを、チームに入れる事は出来ない")
 	}
 
@@ -64,10 +64,6 @@ func (team Team) Items() Items {
 }
 
 func (team Team) Find(pokeName PokeName) (Pokemon, error) {
-	if pokeName == EMPTY_POKE_NAME {
-		return Pokemon{}, fmt.Errorf("Team.Find関数において EMPTY_POKE_NAME は 引数として不適")
-	}
-
 	index := team.PokeNames().Index(pokeName)
 	if index == -1 {
 		errMsg := fmt.Sprintf("ポケモン名 : %v は チームに存在しない", pokeName)
@@ -77,19 +73,15 @@ func (team Team) Find(pokeName PokeName) (Pokemon, error) {
 	}
 }
 
-func (team Team) Sort() Team {
+func (team Team) Sort() (Team, error) {
 	result := make(Team, 0, len(team))
 	pokeNames := team.PokeNames().Sort()
 	for _, pokeName := range pokeNames {
-		if pokeName == EMPTY_POKE_NAME {
-			result = append(result, NewEmptyPokemon())
-		} else {
-			pokemon, err := team.Find(pokeName)
-			if err != nil {
-				panic(err)
-			}
-			result = append(result, pokemon)
+		pokemon, err := team.Find(pokeName)
+		if err != nil {
+			return Team{}, err
 		}
+		result = append(result, pokemon)
 	}
-	return result
+	return result, nil
 }
