@@ -14,14 +14,14 @@ func InLearnset(pokeName PokeName, moveName MoveName) bool {
 	return false
 }
 
-func CalcHp(baseHP int, individualVal IndividualVal, effortVal EffortVal) int {
+func CalcHp(baseHP int, individual Individual, effort Effort) int {
 	intLevel := int(DEFAULT_LEVEL)
-	result := ((baseHP*2)+int(individualVal)+(int(effortVal)/4))*intLevel/100 + intLevel + 10
+	result := ((baseHP*2)+int(individual)+(int(effort)/4))*intLevel/100 + intLevel + 10
 	return result
 }
 
-func CalcState(baseState int, individualVal IndividualVal, effortVal EffortVal, natureBonus NatureBonus) int {
-	result := ((baseState*2)+int(individualVal)+(int(effortVal)/4))*int(DEFAULT_LEVEL)/100 + 5
+func CalcState(baseState int, individual Individual, effort Effort, natureBonus NatureBonus) int {
+	result := ((baseState*2)+int(individual)+(int(effort)/4))*int(DEFAULT_LEVEL)/100 + 5
 	return int(float64(result) * float64(natureBonus))
 }
 
@@ -42,135 +42,135 @@ const (
 	FREEZE        = StatusAilment("こおり")
 )
 
-type RankVal int
+type Rank int
 
 const (
-	MIN_RANK_VAL = RankVal(-6)
-	MAX_RANK_VAL = RankVal(6)
+	MIN_RANK = Rank(-6)
+	MAX_RANK = Rank(6)
 )
 
-func (rankVal RankVal) ToBonus() RankBonus {
-	if rankVal >= 0 {
-		result := (float64(rankVal) + 2.0) / 2.0
+func (rank Rank) ToBonus() RankBonus {
+	if rank >= 0 {
+		result := (float64(rank) + 2.0) / 2.0
 		return RankBonus(result)
 	} else {
-		abs := float64(rankVal) * -1
+		abs := float64(rank) * -1
 		result := 2.0 / (abs + 2.0)
 		return RankBonus(result)
 	}
 }
 
-type Rank struct {
-	Atk   RankVal
-	Def   RankVal
-	SpAtk RankVal
-	SpDef RankVal
-	Speed RankVal
+type RankState struct {
+	Atk   Rank
+	Def   Rank
+	SpAtk Rank
+	SpDef Rank
+	Speed Rank
 }
 
-func (rank1 *Rank) Add(rank2 *Rank) Rank {
-	atk := rank1.Atk + rank2.Atk
-	def := rank1.Def + rank2.Def
-	spAtk := rank1.SpAtk + rank2.SpAtk
-	spDef := rank1.SpDef + rank2.SpDef
-	speed := rank1.Speed + rank2.Speed
-	return Rank{Atk: atk, Def: def, SpAtk: spAtk, SpDef: spDef, Speed: speed}
+func (rankState1 *RankState) Add(rankState2 *RankState) RankState {
+	atk := rankState1.Atk + rankState2.Atk
+	def := rankState1.Def + rankState2.Def
+	spAtk := rankState1.SpAtk + rankState2.SpAtk
+	spDef := rankState1.SpDef + rankState2.SpDef
+	speed := rankState1.Speed + rankState2.Speed
+	return RankState{Atk: atk, Def: def, SpAtk: spAtk, SpDef: spDef, Speed: speed}
 }
 
-func (rank Rank) Regulate() Rank {
-	if rank.Atk > MAX_RANK_VAL {
-		rank.Atk = MAX_RANK_VAL
+func (rankState RankState) Regulate() RankState {
+	if rankState.Atk > MAX_RANK {
+		rankState.Atk = MAX_RANK
 	}
 
-	if rank.Def > MAX_RANK_VAL {
-		rank.Def = MAX_RANK_VAL
+	if rankState.Def > MAX_RANK {
+		rankState.Def = MAX_RANK
 	}
 
-	if rank.SpAtk > MAX_RANK_VAL {
-		rank.SpAtk = MAX_RANK_VAL
+	if rankState.SpAtk > MAX_RANK {
+		rankState.SpAtk = MAX_RANK
 	}
 
-	if rank.SpDef > MAX_RANK_VAL {
-		rank.SpDef = MAX_RANK_VAL
+	if rankState.SpDef > MAX_RANK {
+		rankState.SpDef = MAX_RANK
 	}
 
-	if rank.Speed > MAX_RANK_VAL {
-		rank.Speed = MAX_RANK_VAL
+	if rankState.Speed > MAX_RANK {
+		rankState.Speed = MAX_RANK
 	}
 
-	if rank.Atk < MIN_RANK_VAL {
-		rank.Atk = MIN_RANK_VAL
+	if rankState.Atk < MIN_RANK {
+		rankState.Atk = MIN_RANK
 	}
 
-	if rank.Def < MIN_RANK_VAL {
-		rank.Def = MIN_RANK_VAL
+	if rankState.Def < MIN_RANK {
+		rankState.Def = MIN_RANK
 	}
 
-	if rank.SpAtk < MIN_RANK_VAL {
-		rank.SpAtk = MIN_RANK_VAL
+	if rankState.SpAtk < MIN_RANK {
+		rankState.SpAtk = MIN_RANK
 	}
 
-	if rank.SpDef < MIN_RANK_VAL {
-		rank.SpDef = MIN_RANK_VAL
+	if rankState.SpDef < MIN_RANK {
+		rankState.SpDef = MIN_RANK
 	}
 
-	if rank.Speed < MIN_RANK_VAL {
-		rank.Speed = MIN_RANK_VAL
+	if rankState.Speed < MIN_RANK {
+		rankState.Speed = MIN_RANK
 	}
-	return rank
+	return rankState
 }
 
-func (rank *Rank) InDown() bool {
-	if rank.Atk < 0 {
+func (rankState *RankState) InDown() bool {
+	if rankState.Atk < 0 {
 		return true
 	}
 
-	if rank.Def < 0 {
+	if rankState.Def < 0 {
 		return true
 	}
 
-	if rank.SpAtk < 0 {
+	if rankState.SpAtk < 0 {
 		return true
 	}
 
-	if rank.SpDef < 0 {
+	if rankState.SpDef < 0 {
 		return true
 	}
 
-	return rank.Speed < 0
+	return rankState.Speed < 0
 }
 
-func (rank *Rank) ResetDown() Rank {
-	result := Rank{}
+func (rankState *RankState) ResetDown() RankState {
+	result := RankState{}
 
-	if rank.Atk < 0 {
+	if rankState.Atk < 0 {
 		result.Atk = 0
 	} else {
-		result.Atk = rank.Atk
+		result.Atk = rankState.Atk
 	}
 
-	if rank.Def < 0 {
+	if rankState.Def < 0 {
 		result.Def = 0
 	} else {
-		result.Def = rank.Def
+		result.Def = rankState.Def
 	}
 
-	if rank.SpAtk < 0 {
+	if rankState.SpAtk < 0 {
 		result.SpAtk = 0
 	} else {
-		result.SpAtk = rank.SpAtk
+		result.SpAtk = rankState.SpAtk
 	}
 
-	if rank.SpDef < 0 {
+	if rankState.SpDef < 0 {
 		result.SpDef = 0
 	} else {
-		result.SpDef = rank.SpDef
+		result.SpDef = rankState.SpDef
 	}
 
-	if rank.Speed < 0 {
+	if rankState.Speed < 0 {
 		result.Speed = 0
 	} else {
-		result.Speed = rank.Speed
+		result.Speed = rankState.Speed
 	}
 
 	return result

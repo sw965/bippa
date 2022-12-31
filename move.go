@@ -97,27 +97,27 @@ func LeechSeed(battle Battle, _ *rand.Rand) Battle {
 
 // つるぎのまい
 func SwordsDance(battle Battle, _ *rand.Rand) Battle {
-	return battle.RankFluctuation(&Rank{Atk: 2})
+	return battle.RankStateFluctuation(&RankState{Atk: 2})
 }
 
 // りゅうのまい
 func DragonDance(battle Battle, _ *rand.Rand) Battle {
-	return battle.RankFluctuation(&Rank{Atk: 1, Speed: 1})
+	return battle.RankStateFluctuation(&RankState{Atk: 1, Speed: 1})
 }
 
 // からをやぶる
 func ShellSmash(battle Battle, _ *rand.Rand) Battle {
-	return battle.RankFluctuation(&Rank{Atk: 2, Def: -1, SpAtk: 2, SpDef: -1, Speed: 2})
+	return battle.RankStateFluctuation(&RankState{Atk: 2, Def: -1, SpAtk: 2, SpDef: -1, Speed: 2})
 }
 
 // てっぺき
 func IronDefense(battle Battle, _ *rand.Rand) Battle {
-	return battle.RankFluctuation(&Rank{Def: 2})
+	return battle.RankStateFluctuation(&RankState{Def: 2})
 }
 
 // めいそう
 func CalmMind(battle Battle, _ *rand.Rand) Battle {
-	return battle.RankFluctuation(&Rank{SpAtk: 1, SpDef: 1})
+	return battle.RankStateFluctuation(&RankState{SpAtk: 1, SpDef: 1})
 }
 
 var STATUS_MOVES = map[MoveName]StatusMove{

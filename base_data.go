@@ -24,8 +24,8 @@ var (
 
 	RATTA_PATH = SW965_PATH + "ratta/"
 	PBCK_PATH = RATTA_PATH + "pokemon_build_common_knowledge/"
-	PSCE_PATH = RATTA_PATH + "pokemon_state_combination_evaluator/"
-	TCE_PATH = RATTA_PATH + "team_combination_evaluator/"
+	PSCS_PATH = RATTA_PATH + "pokemon_state_combinations/"
+	PSCMS_PATH = RATTA_PATH + "pokemon_state_combination_models/"
 )
 
 type PokeData struct {

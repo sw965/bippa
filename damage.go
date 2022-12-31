@@ -73,15 +73,15 @@ func NewFinalAttack(pokemon *Pokemon, moveName MoveName, isCritical bool) (Final
 	moveData := MOVEDEX[moveName]
 
 	var attack int
-	var attackRankVal RankVal
+	var attackRank Rank
 
 	switch moveData.Category {
 	case PHYSICS:
 		attack = pokemon.Atk
-		attackRankVal = pokemon.Rank.Atk
+		attackRank = pokemon.RankState.Atk
 	case SPECIAL:
 		attack = pokemon.SpAtk
-		attackRankVal = pokemon.Rank.SpAtk
+		attackRank = pokemon.RankState.SpAtk
 	}
 
 	//変化技の場合、ここでエラーが起きるので、上のswitch文ではチェック不要
@@ -91,11 +91,11 @@ func NewFinalAttack(pokemon *Pokemon, moveName MoveName, isCritical bool) (Final
 		return 0, err
 	}
 
-	if attackRankVal < 0 && isCritical {
-		attackRankVal = 0
+	if attackRank < 0 && isCritical {
+		attackRank = 0
 	}
 
-	rankBonus := attackRankVal.ToBonus()
+	rankBonus := attackRank.ToBonus()
 
 	result := int(float64(attack) * float64(rankBonus))
 	result = FiveOverRounding(float64(result) * float64(attackBonus) / 4096.0)
@@ -127,24 +127,24 @@ func NewFinalDefense(pokemon *Pokemon, moveName MoveName, isCritical bool) (Fina
 	moveData := MOVEDEX[moveName]
 
 	var defense int
-	var defenseRankVal RankVal
+	var defenseRank Rank
 
 	switch moveData.Category {
 	case PHYSICS:
 		defense = pokemon.Def
-		defenseRankVal = pokemon.Rank.Def
+		defenseRank = pokemon.RankState.Def
 	case SPECIAL:
 		defense = pokemon.SpDef
-		defenseRankVal = pokemon.Rank.SpDef
+		defenseRank = pokemon.RankState.SpDef
 	default:
 		return 0, fmt.Errorf("物理/特殊技でなければならない")
 	}
 
-	if defenseRankVal > 0 && isCritical {
-		defenseRankVal = 0
+	if defenseRank > 0 && isCritical {
+		defenseRank = 0
 	}
 
-	rankBonus := defenseRankVal.ToBonus()
+	rankBonus := defenseRank.ToBonus()
 	result := int(float64(defense) * float64(rankBonus))
 
 	if result < 1 {

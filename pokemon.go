@@ -14,8 +14,8 @@ type Pokemon struct {
 	Item    Item
 	Moveset Moveset
 
-	Individual Individual
-	Effort     Effort
+	IndividualState IndividualState
+	EffortState     EffortState
 
 	MaxHP     int
 	CurrentHP int
@@ -27,14 +27,14 @@ type Pokemon struct {
 
 	StatusAilment        StatusAilment
 	BadPoisonElapsedTurn int
-	Rank                 Rank
+	RankState                 RankState
 	ChoiceMoveName       MoveName
 
 	IsLeechSeed bool
 }
 
 func NewPokemon(pokeName PokeName, nature Nature, ability Ability, gender Gender, item Item,
-	moveNames MoveNames, pointUps PointUps, individual *Individual, effort *Effort) (Pokemon, error) {
+	moveNames MoveNames, pointUps PointUps, individualState *IndividualState, effortState *EffortState) (Pokemon, error) {
 
 	if pokeName == "" {
 		return Pokemon{}, fmt.Errorf("ポケモン名が、ゼロ値になっている")
@@ -86,15 +86,15 @@ func NewPokemon(pokeName PokeName, nature Nature, ability Ability, gender Gender
 		return Pokemon{}, err
 	}
 
-	hp := CalcHp(pokeData.BaseHP, individual.HP, effort.HP)
-	atk := CalcState(pokeData.BaseAtk, individual.Atk, effort.Atk, natureData.AtkBonus)
-	def := CalcState(pokeData.BaseDef, individual.Def, effort.Def, natureData.DefBonus)
-	spAtk := CalcState(pokeData.BaseSpAtk, individual.SpAtk, effort.SpAtk, natureData.SpAtkBonus)
-	spDef := CalcState(pokeData.BaseSpDef, individual.SpDef, effort.SpDef, natureData.SpDefBonus)
-	speed := CalcState(pokeData.BaseSpeed, individual.Speed, effort.Speed, natureData.SpeedBonus)
+	hp := CalcHp(pokeData.BaseHP, individualState.HP, effortState.HP)
+	atk := CalcState(pokeData.BaseAtk, individualState.Atk, effortState.Atk, natureData.AtkBonus)
+	def := CalcState(pokeData.BaseDef, individualState.Def, effortState.Def, natureData.DefBonus)
+	spAtk := CalcState(pokeData.BaseSpAtk, individualState.SpAtk, effortState.SpAtk, natureData.SpAtkBonus)
+	spDef := CalcState(pokeData.BaseSpDef, individualState.SpDef, effortState.SpDef, natureData.SpDefBonus)
+	speed := CalcState(pokeData.BaseSpeed, individualState.Speed, effortState.Speed, natureData.SpeedBonus)
 
 	return Pokemon{Name: pokeName, Nature: nature, Ability: ability, Gender: gender, Item: item, Moveset: moveset,
-		Individual: *individual, Effort: *effort,
+		IndividualState: *individualState, EffortState: *effortState,
 		MaxHP: hp, CurrentHP: hp, Atk: atk, Def: def, SpAtk: spAtk, SpDef: spDef, Speed: speed,
 		Types: pokeData.Types, Level: DEFAULT_LEVEL}, nil
 }
@@ -152,11 +152,11 @@ func (pokemon1 *Pokemon) Equal(pokemon2 *Pokemon) bool {
 		return false
 	}
 
-	if pokemon1.Individual != pokemon2.Individual {
+	if pokemon1.IndividualState != pokemon2.IndividualState {
 		return false
 	}
 
-	if pokemon1.Effort != pokemon2.Effort {
+	if pokemon1.EffortState != pokemon2.EffortState {
 		return false
 	}
 
@@ -166,7 +166,7 @@ func (pokemon1 *Pokemon) Equal(pokemon2 *Pokemon) bool {
 		}
 	}
 
-	if pokemon1.Rank != pokemon2.Rank {
+	if pokemon1.RankState != pokemon2.RankState {
 		return false
 	}
 

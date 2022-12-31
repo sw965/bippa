@@ -34,3 +34,6 @@ func NewPlayoutBattleEval(trainer Trainer, random *rand.Rand) BattleEval {
 	}
 	return BattleEval{Func: evalFunc, Reverse: reverse}
 }
+
+type PokemonEval func(*Pokemon) (float64, error)
+type TeamEval func(Team) (float64, error)

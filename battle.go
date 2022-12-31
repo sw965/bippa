@@ -159,7 +159,7 @@ type FinalSpeed float64
 
 func NewFinalSpeed(battle *Battle) FinalSpeed {
 	speed := battle.P1Fighters[0].Speed
-	rankBonus := battle.P1Fighters[0].Rank.Speed.ToBonus()
+	rankBonus := battle.P1Fighters[0].RankState.Speed.ToBonus()
 	speedBonus := NewSpeedBonus(battle)
 
 	result := FiveOrMoreRounding(float64(speed) * float64(rankBonus))
@@ -251,20 +251,20 @@ func (battle Battle) Heal(heal int) Battle {
 	return battle
 }
 
-func (battle Battle) RankFluctuation(fluctuationRank *Rank) Battle {
+func (battle Battle) RankStateFluctuation(fluctuationRankState *RankState) Battle {
 	if battle.P1Fighters[0].IsFaint() {
 		return battle
 	}
 
-	rank := battle.P1Fighters[0].Rank
-	newRank := rank.Add(fluctuationRank)
+	rankState := battle.P1Fighters[0].RankState
+	newRankState := rankState.Add(fluctuationRankState)
 
-	if battle.P1Fighters[0].Item == "しろいハーブ" && newRank.InDown() {
+	if battle.P1Fighters[0].Item == "しろいハーブ" && newRankState.InDown() {
 		battle.P1Fighters[0].Item = EMPTY_ITEM
-		newRank = newRank.ResetDown()
+		newRankState = newRankState.ResetDown()
 	}
 
-	battle.P1Fighters[0].Rank = newRank.Regulate()
+	battle.P1Fighters[0].RankState = newRankState.Regulate()
 	return battle
 }
 
@@ -418,7 +418,7 @@ func (battle Battle) Switch(pokeName PokeName) (Battle, error) {
 		return Battle{}, fmt.Errorf(errMsg)
 	}
 
-	battle.P1Fighters[0].Rank = Rank{}
+	battle.P1Fighters[0].RankState = RankState{}
 	battle.P1Fighters[0].BadPoisonElapsedTurn = 0
 	battle.P1Fighters[0].ChoiceMoveName = ""
 	battle.P1Fighters[0].IsLeechSeed = false

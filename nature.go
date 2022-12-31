@@ -1,5 +1,9 @@
 package bippa
 
+import (
+	"math/rand"
+)
+
 type Nature string
 
 type Natures []Nature
@@ -20,6 +24,11 @@ func (natures Natures) InAll(nature ...Nature) bool {
 		}
 	}
 	return true
+}
+
+func (natures Natures) RandomChoice(random *rand.Rand) Nature {
+	index := random.Intn(len(natures))
+	return natures[index]
 }
 
 type NatureBonus float64

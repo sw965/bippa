@@ -1,5 +1,9 @@
 package bippa
 
+import (
+	"math/rand"
+)
+
 type Item string
 
 const (
@@ -37,6 +41,11 @@ func (items Items) InAll(item ...Item) bool {
 		}
 	}
 	return true
+}
+
+func (items Items) RandomChoice(random *rand.Rand) Item {
+	index := random.Intn(len(items))
+	return items[index]
 }
 
 type ItemWithFloat64 map[Item]float64

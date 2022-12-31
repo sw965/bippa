@@ -1,10 +1,14 @@
 package bippa
 
+import (
+	"math/rand"
+)
+
 type Ability string
 
 func (ability Ability) IsValid(pokeName PokeName) bool {
-	for _, iAbility := range POKEDEX[pokeName].AllAbilities {
-		if iAbility == ability {
+	for _, v := range POKEDEX[pokeName].AllAbilities {
+		if v == ability {
 			return true
 		}
 	}
@@ -14,22 +18,22 @@ func (ability Ability) IsValid(pokeName PokeName) bool {
 type Abilities []Ability
 
 func (abilities Abilities) In(ability Ability) bool {
-	for _, iAbility := range abilities {
-		if iAbility == ability {
+	for _, v := range abilities {
+		if v == ability {
 			return true
 		}
 	}
 	return false
 }
 
-func (abilities Abilities) InAll(ability ...Ability) bool {
-	for _, iAbility := range ability {
-		if !abilities.In(iAbility) {
-			return false
-		}
-	}
-	return true
-}
+// func (abilities Abilities) InAll(ability ...Ability) bool {
+// 	for _, iAbility := range ability {
+// 		if !abilities.In(iAbility) {
+// 			return false
+// 		}
+// 	}
+// 	return true
+// }
 
 func (abilities Abilities) Index(ability Ability) int {
 	for i, iAbility := range abilities {
@@ -38,6 +42,11 @@ func (abilities Abilities) Index(ability Ability) int {
 		}
 	}
 	return -1
+}
+
+func (abilities Abilities) RandomChoice(random *rand.Rand) Ability {
+	index := random.Intn(len(abilities))
+	return abilities[index]
 }
 
 type AbilityWithFloat64 map[Ability]float64

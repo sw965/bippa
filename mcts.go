@@ -238,13 +238,15 @@ func RunMCTS(rootBattle Battle, simuNum int, X float64, battlePolicy BattlePolic
 	var selects BattleNodeSelects
 	var battleEvalY float64
 	var err error
+	selectsLength := 0
 
 	for i := 0; i < simuNum; i++ {
-		battle, allBattleNodes, selects, err = rootBattleNode.SelectAndExpansion(battle, allBattleNodes, battlePolicy, X, i, random)
+		battle, allBattleNodes, selects, err = rootBattleNode.SelectAndExpansion(battle, allBattleNodes, battlePolicy, X, selectsLength + 1, random)
 		if err != nil {
 			return BattleNodes{}, err
 		}
 
+		selectsLength = len(selects)
 		battleEvalY, err = battleEval.Func(&battle)
 
 		if err != nil {
