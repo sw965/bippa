@@ -1,5 +1,10 @@
 package bippa
 
+import (
+	"encoding/json"
+	"io/ioutil"
+)
+
 type Individual int
 
 const (
@@ -14,15 +19,6 @@ func (individual Individual) IsValid() bool {
 
 type Individuals []Individual
 
-func (individuals Individuals) In(individual Individual) bool {
-	for _, v := range individuals {
-		if v == individual {
-			return true
-		}
-	}
-	return false
-}
-
 var ALL_INDIVIDUALS = func() Individuals {
 	length := int(MAX_INDIVIDUAL + 1)
 	result := make(Individuals, length)
@@ -30,7 +26,44 @@ var ALL_INDIVIDUALS = func() Individuals {
 		result[i] = Individual(i)
 	}
 	return result
-}
+}()
+
+var ALL_UPPER_LIMIT_INDIVIDUALS = func() Individuals {
+	length := int(MAX_INDIVIDUAL + 1)
+	result := make(Individuals, length)
+	for i := 0; i < length; i++ {
+		result[i] = Individual(i + 1)
+	}
+	return result
+}()
+
+var LOWER_LIMIT_INDIVIDUALS = func() Individuals {
+	filePath := LOWER_LIMIT_PATH + "individual.json"
+	bytes, err := ioutil.ReadFile(filePath)
+	if err != nil {
+		panic(err)
+	}
+
+	result := Individuals{}
+	if err := json.Unmarshal(bytes, &result); err != nil {
+		panic(err)
+	}
+	return result
+}()
+
+var UPPER_LIMIT_INDIVIDUALS = func() Individuals {
+	filePath := UPPER_LIMIT_PATH + "individual.json"
+	bytes, err := ioutil.ReadFile(filePath)
+	if err != nil {
+		panic(err)
+	}
+
+	result := Individuals{}
+	if err := json.Unmarshal(bytes, &result); err != nil {
+		panic(err)
+	}
+	return result
+}()
 
 type IndividualState struct {
 	HP    Individual

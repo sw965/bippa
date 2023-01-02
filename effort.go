@@ -1,5 +1,10 @@
 package bippa
 
+import (
+	"encoding/json"
+	"io/ioutil"
+)
+
 type Effort int
 
 var (
@@ -11,14 +16,53 @@ var (
 
 type Efforts []Effort
 
-var ALL_EFFORTS = func() Efforts {
-	length := int(MAX_EFFORT + 1)
-	result := make(Efforts, length)
-	for i := 0; i < length; i++ {
-		result[i] = Effort(i)
+var ALL_VALID_EFFORTS = func() Efforts {
+	length := int(MAX_EFFORT / 4) + 1
+	result := make(Efforts, 0, length)
+	for i := 0; i < int(MAX_EFFORT + 1); i++ {
+		if i%4 == 0 {
+			result = append(result, Effort(i))
+		}
 	}
 	return result
-}
+}()
+
+var ALL_UPPER_LIMIT_EFFORTS = func() Efforts {
+	length := len(ALL_VALID_EFFORTS)
+	result := make(Efforts, length)
+	for i, v := range ALL_VALID_EFFORTS {
+		result[i] = v + 1
+	}
+	return result
+}()
+
+var LOWER_LIMIT_EFFORTS = func() Efforts {
+	filePath := LOWER_LIMIT_PATH + "effort.json"
+	bytes, err := ioutil.ReadFile(filePath)
+	if err != nil {
+		panic(err)
+	}
+
+	result := Efforts{}
+	if err := json.Unmarshal(bytes, &result); err != nil {
+		panic(err)
+	}
+	return result
+}()
+
+var UPPER_LIMIT_EFFORTS = func() Efforts {
+	filePath := UPPER_LIMIT_PATH + "effort.json"
+	bytes, err := ioutil.ReadFile(filePath)
+	if err != nil {
+		panic(err)
+	}
+
+	result := Efforts{}
+	if err := json.Unmarshal(bytes, &result); err != nil {
+		panic(err)
+	}
+	return result
+}()
 
 func (efforts Efforts) In(effort Effort) bool {
 	for _, v := range efforts {

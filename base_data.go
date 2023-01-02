@@ -23,8 +23,9 @@ var (
 	ALL_ITEMS_PATH      = DATA_PATH + "all_items.txt"
 
 	RATTA_PATH = SW965_PATH + "ratta/"
+	LOWER_LIMIT_PATH = RATTA_PATH + "lower_limit/"
+	UPPER_LIMIT_PATH = RATTA_PATH + "upper_limit/"
 	PBCK_PATH = RATTA_PATH + "pokemon_build_common_knowledge/"
-	PSCS_PATH = RATTA_PATH + "pokemon_state_combinations/"
 	PSCMS_PATH = RATTA_PATH + "pokemon_state_combination_models/"
 )
 
