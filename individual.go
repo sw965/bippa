@@ -28,37 +28,22 @@ var ALL_INDIVIDUALS = func() Individuals {
 	return result
 }()
 
-var ALL_UPPER_LIMIT_INDIVIDUALS = func() Individuals {
-	length := int(MAX_INDIVIDUAL + 1)
-	result := make(Individuals, length)
-	for i := 0; i < length; i++ {
-		result[i] = Individual(i + 1)
+var ALL_LOWER_AND_UPPER_LIMIT_INDIVIDUALS = func() []Individuals {
+	result := make([]Individuals, len(ALL_INDIVIDUALS))
+	for i, individual := range ALL_INDIVIDUALS {
+		result[i] = Individuals{individual, individual + 1}
 	}
 	return result
 }()
 
-var LOWER_LIMIT_INDIVIDUALS = func() Individuals {
-	filePath := LOWER_LIMIT_PATH + "individual.json"
+var SET_LOWER_AND_UPPER_LIMIT_INDIVIDUALS = func() []Individuals {
+	filePath := SET_LOWER_AND_UPPER_LIMIT_INDIVIDUALS_PATH
 	bytes, err := ioutil.ReadFile(filePath)
 	if err != nil {
 		panic(err)
 	}
 
-	result := Individuals{}
-	if err := json.Unmarshal(bytes, &result); err != nil {
-		panic(err)
-	}
-	return result
-}()
-
-var UPPER_LIMIT_INDIVIDUALS = func() Individuals {
-	filePath := UPPER_LIMIT_PATH + "individual.json"
-	bytes, err := ioutil.ReadFile(filePath)
-	if err != nil {
-		panic(err)
-	}
-
-	result := Individuals{}
+	result := []Individuals{}
 	if err := json.Unmarshal(bytes, &result); err != nil {
 		panic(err)
 	}

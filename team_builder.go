@@ -193,25 +193,23 @@ func NewNatureCombinations() PokemonStateCombinations {
 
 func NewIndividualCombinations(key string) PokemonStateCombinations {
 	setter := SET_POKEMON_STATE_COMBINATIONL_LOWER_AND_UPPER_LIMIT_INDIVIDUALS[key]
-	result := make(PokemonStateCombinations, len(ALL_INDIVIDUALS))
-	for i, lowerLimit := range ALL_INDIVIDUALS {
-		upperLimit := ALL_UPPER_LIMIT_INDIVIDUALS[i]
+	result := make(PokemonStateCombinations, len(ALL_LOWER_AND_UPPER_LIMIT_INDIVIDUALS))
+	for i, lowerAndUpperLimit := range ALL_LOWER_AND_UPPER_LIMIT_INDIVIDUALS {
 		psc := PokemonStateCombination{}
-		setter(&psc, Individuals{lowerLimit, upperLimit})
+		setter(&psc, lowerAndUpperLimit)
 		result[i] = psc
 	}
 	return result
 
 }
 
-func NewEffortCombinations(key string) PokemonStateCombinations {
+func NewEffortEffortCombinations(key string) PokemonStateCombinations {
 	setter := SET_POKEMON_STATE_COMBINATIONL_LOWER_AND_UPPER_LIMIT_EFFORTS[key]
-	result := make(PokemonStateCombinations, len(ALL_VALID_EFFORTS))
+	result := make(PokemonStateCombinations, len(ALL_LOWER_AND_UPPER_LIMIT_EFFORTS))
 
-	for i, lowerLimit := range ALL_VALID_EFFORTS {
-		upperLimit := ALL_UPPER_LIMIT_EFFORTS[i]
+	for i, lowerAndUpperLimit := range ALL_LOWER_AND_UPPER_LIMIT_EFFORTS {
 		psc := PokemonStateCombination{}
-		setter(&psc, Efforts{lowerLimit, upperLimit})
+		setter(&psc, lowerAndUpperLimit)
 		result[i] = psc
 	}
 	return result
@@ -257,15 +255,14 @@ func NewMoveNameAndNatureCombinations(pbk *PokemonBuildCommonKnowledge) PokemonS
 
 func NewMoveNameAndIndividualCombinations(pbk *PokemonBuildCommonKnowledge, key string) PokemonStateCombinations {
 	setter := SET_POKEMON_STATE_COMBINATIONL_LOWER_AND_UPPER_LIMIT_INDIVIDUALS[key]
-	length := len(pbk.MoveNames) * len(LOWER_LIMIT_INDIVIDUALS)
+	length := len(pbk.MoveNames) * len(SET_LOWER_AND_UPPER_LIMIT_INDIVIDUALS)
 	result := make(PokemonStateCombinations, 0, length)
 
 	for _, moveName := range pbk.MoveNames {
-		for i, lowerLimit := range LOWER_LIMIT_INDIVIDUALS {
-			upperLimit := UPPER_LIMIT_INDIVIDUALS[i]
+		for _, lowerAndUpperLimit := range SET_LOWER_AND_UPPER_LIMIT_INDIVIDUALS {
 			psc := PokemonStateCombination{}
 			psc.MoveNames = MoveNames{moveName}
-			setter(&psc, Individuals{lowerLimit, upperLimit})
+			setter(&psc, lowerAndUpperLimit)
 			result = append(result, psc)
 		}
 	}
@@ -274,15 +271,14 @@ func NewMoveNameAndIndividualCombinations(pbk *PokemonBuildCommonKnowledge, key 
 
 func NewMoveNameAndEffortCombinations(pbk *PokemonBuildCommonKnowledge, key string) PokemonStateCombinations {
 	setter := SET_POKEMON_STATE_COMBINATIONL_LOWER_AND_UPPER_LIMIT_EFFORTS[key]
-	length := len(pbk.MoveNames) * len(LOWER_LIMIT_EFFORTS)
+	length := len(pbk.MoveNames) * len(SET_LOWER_AND_UPPER_LIMIT_EFFORTS)
 	result := make(PokemonStateCombinations, 0, length)
 
 	for _, moveName := range pbk.MoveNames {
-		for i, lowerLimit := range LOWER_LIMIT_EFFORTS {
-			upperLimit := UPPER_LIMIT_EFFORTS[i]
+		for _, lowerAndUpperLimit := range SET_LOWER_AND_UPPER_LIMIT_EFFORTS {
 			psc := PokemonStateCombination{}
 			psc.MoveNames = MoveNames{moveName}
-			setter(&psc, Efforts{lowerLimit, upperLimit})
+			setter(&psc, lowerAndUpperLimit)
 			result = append(result, psc)
 		}
 	}
@@ -358,15 +354,13 @@ func NewMoveNames2AndIndividualCombinations(pbk *PokemonBuildCommonKnowledge, ke
 	if err != nil {
 		return PokemonStateCombinations{}, err
 	}
-	length := len(combination2MoveNames) * len(LOWER_LIMIT_INDIVIDUALS)
+	length := len(combination2MoveNames) * len(SET_LOWER_AND_UPPER_LIMIT_INDIVIDUALS)
 	result := make(PokemonStateCombinations, 0, length)
 
 	for _, moveNames := range combination2MoveNames {
-		for i, lowerLimit := range LOWER_LIMIT_INDIVIDUALS {
-			upperLimit := UPPER_LIMIT_INDIVIDUALS[i]
-			psc := PokemonStateCombination{}
-			psc.MoveNames = moveNames
-			setter(&psc, Individuals{lowerLimit, upperLimit})
+		for _, lowerAndUpperLimit := range SET_LOWER_AND_UPPER_LIMIT_INDIVIDUALS {
+			psc := PokemonStateCombination{MoveNames:moveNames}
+			setter(&psc, lowerAndUpperLimit)
 			result = append(result, psc)
 		}
 	}
@@ -379,34 +373,29 @@ func NewMoveNames2AndEffortCombinations(pbk *PokemonBuildCommonKnowledge, key st
 	if err != nil {
 		return PokemonStateCombinations{}, err
 	}
-	length := len(combination2MoveNames) * len(LOWER_LIMIT_EFFORTS)
+	length := len(combination2MoveNames) * len(SET_LOWER_AND_UPPER_LIMIT_EFFORTS)
 	result := make(PokemonStateCombinations, 0, length)
 
 	for _, moveNames := range combination2MoveNames {
-		for i, lowerLimit := range LOWER_LIMIT_EFFORTS {
-			upperLimit := UPPER_LIMIT_EFFORTS[i]
-			psc := PokemonStateCombination{}
-			psc.MoveNames = moveNames
-			setter(&psc, Efforts{lowerLimit, upperLimit})
+		for _, lowerAndUpperLimit := range SET_LOWER_AND_UPPER_LIMIT_EFFORTS {
+			psc := PokemonStateCombination{MoveNames:moveNames}
+			setter(&psc, lowerAndUpperLimit)
 			result = append(result, psc)
 		}
 	}
 	return result, nil
 }
 
-func NewMoveNameAndNatureAndEffortCombinations(pbk *PokemonBuildCommonKnowledge, key string) PokemonStateCombinations {
-	setter := SET_POKEMON_STATE_COMBINATIONL_LOWER_AND_UPPER_LIMIT_EFFORTS[key]
-	length := len(pbk.MoveNames) * len(pbk.Natures) * len(LOWER_LIMIT_EFFORTS)
+func NewMoveNameAndNatureAndIndividualCombinations(pbk *PokemonBuildCommonKnowledge, key string) PokemonStateCombinations {
+	setter := SET_POKEMON_STATE_COMBINATIONL_LOWER_AND_UPPER_LIMIT_INDIVIDUALS[key]
+	length := len(pbk.MoveNames) * len(pbk.Natures) * len(SET_LOWER_AND_UPPER_LIMIT_INDIVIDUALS)
 	result := make(PokemonStateCombinations, 0, length)
 
 	for _, moveName := range pbk.MoveNames {
 		for _, nature := range pbk.Natures {
-			for i, lowerLimit := range LOWER_LIMIT_EFFORTS {
-				upperLimit := UPPER_LIMIT_EFFORTS[i]
-				psc := PokemonStateCombination{}
-				psc.MoveNames = MoveNames{moveName}
-				psc.Nature = nature
-				setter(&psc, Efforts{lowerLimit, upperLimit})
+			for _, lowerAndUpperLimit := range SET_LOWER_AND_UPPER_LIMIT_INDIVIDUALS {
+				psc := PokemonStateCombination{MoveNames:MoveNames{moveName}, Nature:nature}
+				setter(&psc, lowerAndUpperLimit)
 				result = append(result, psc)
 			}
 		}
@@ -414,21 +403,35 @@ func NewMoveNameAndNatureAndEffortCombinations(pbk *PokemonBuildCommonKnowledge,
 	return result
 }
 
-func NewNatureAndIndividualAndEffortCombinations(pbk *PokemonBuildCommonKnowledge, individualKey, effortKey string) PokemonStateCombinations {
-	individualSetter := SET_POKEMON_STATE_COMBINATIONL_LOWER_AND_UPPER_LIMIT_INDIVIDUALS[individualKey]
-	effortSetter := SET_POKEMON_STATE_COMBINATIONL_LOWER_AND_UPPER_LIMIT_EFFORTS[effortKey]
-	length := len(pbk.Natures) * len(LOWER_LIMIT_INDIVIDUALS) * len(LOWER_LIMIT_EFFORTS)
+func NewMoveNameAndNatureAndEffortCombinations(pbk *PokemonBuildCommonKnowledge, key string) PokemonStateCombinations {
+	setter := SET_POKEMON_STATE_COMBINATIONL_LOWER_AND_UPPER_LIMIT_EFFORTS[key]
+	length := len(pbk.MoveNames) * len(pbk.Natures) * len(SET_LOWER_AND_UPPER_LIMIT_EFFORTS)
 	result := make(PokemonStateCombinations, 0, length)
 
-	for _, nature := range pbk.Natures {
-		for i, lowerLimitIndividual := range LOWER_LIMIT_INDIVIDUALS {
-			upperLimitIndividual := UPPER_LIMIT_INDIVIDUALS[i]
-			for j, lowerLimitEffort := range LOWER_LIMIT_EFFORTS {
-				upperLimitEffort := UPPER_LIMIT_EFFORTS[j]
-				psc := PokemonStateCombination{}
-				psc.Nature = nature
-				individualSetter(&psc, Individuals{lowerLimitIndividual, upperLimitIndividual})
-				effortSetter(&psc, Efforts{lowerLimitEffort, upperLimitEffort})
+	for _, moveName := range pbk.MoveNames {
+		for _, nature := range pbk.Natures {
+			for _, lowerAndUpperLimit := range SET_LOWER_AND_UPPER_LIMIT_EFFORTS {
+				psc := PokemonStateCombination{MoveNames:MoveNames{moveName}, Nature:nature}
+				setter(&psc, lowerAndUpperLimit)
+				result = append(result, psc)
+			}
+		}
+	}
+	return result
+}
+
+func NewMoveNameAndIndividualAndEffortCombinations(pbk *PokemonBuildCommonKnowledge, individualKey, effortKey string) PokemonStateCombinations {
+	individualSetter := SET_POKEMON_STATE_COMBINATIONL_LOWER_AND_UPPER_LIMIT_INDIVIDUALS[individualKey]
+	effortSetter := SET_POKEMON_STATE_COMBINATIONL_LOWER_AND_UPPER_LIMIT_EFFORTS[effortKey]
+	length := len(pbk.MoveNames) * len(SET_LOWER_AND_UPPER_LIMIT_INDIVIDUALS) * len(SET_LOWER_AND_UPPER_LIMIT_EFFORTS)
+	result := make(PokemonStateCombinations, 0, length)
+
+	for _, moveName := range pbk.MoveNames {
+		for _, lowerAndUpperLimitIndividuals := range SET_LOWER_AND_UPPER_LIMIT_INDIVIDUALS {
+			for _, lowerAndUpperLimitEfforts := range SET_LOWER_AND_UPPER_LIMIT_EFFORTS {
+				psc := PokemonStateCombination{MoveNames:MoveNames{moveName}}
+				individualSetter(&psc, lowerAndUpperLimitIndividuals)
+				effortSetter(&psc, lowerAndUpperLimitEfforts)
 				result = append(result, psc)
 			}
 		}
@@ -551,6 +554,17 @@ func (mpsc MultiplePokemonStateCombination) OK(pokemons ...*Pokemon) bool {
 
 type MultiplePokemonStateCombinations []MultiplePokemonStateCombination
 
+func NewPokemon1MoveNameAndPokemon2NameCombinations(pokeName1, pokeName2 PokeName) MultiplePokemonStateCombinations {
+	learnset := POKEDEX[pokeName1].Learnset
+	result := make(MultiplePokemonStateCombinations, 0, len(learnset))
+	for _, moveName := range learnset {
+		psc1 := PokemonStateCombination{MoveNames:MoveNames{moveName}}
+		psc2 := PokemonStateCombination{}
+		result = append(result, MultiplePokemonStateCombination{pokeName1:&psc1, pokeName2:&psc2})
+	}
+	return result
+}
+
 func NewPokemon1MoveNameAndPokemon2MoveNameCombinations(pbk1, pbk2 *PokemonBuildCommonKnowledge) MultiplePokemonStateCombinations {
 	length := len(pbk1.MoveNames) * len(pbk2.MoveNames)
 	result := make(MultiplePokemonStateCombinations, 0, length)
@@ -566,15 +580,15 @@ func NewPokemon1MoveNameAndPokemon2MoveNameCombinations(pbk1, pbk2 *PokemonBuild
 	return result
 }
 
-func NewPokemon1MoveNameAndPokemon2Ability(pbk1, pbk2 *PokemonBuildCommonKnowledge) MultiplePokemonStateCombinations {
+func NewPokemon1MoveNameAndPokemon2AbilityCombinations(pbk1, pbk2 *PokemonBuildCommonKnowledge) MultiplePokemonStateCombinations {
 	allAbilities := POKEDEX[pbk2.PokeName].AllAbilities
 	length := len(pbk1.MoveNames) * len(allAbilities)
 	result := make(MultiplePokemonStateCombinations, 0, length)
 
-	for _, moveName := range pbk1.MoveNames {
-		for _, ability := range allAbilities {
-			pbc1 := PokemonStateCombination{MoveNames:MoveNames{moveName}}
-			pbc2 := PokemonStateCombination{Ability:ability}
+	for _, moveName1 := range pbk1.MoveNames {
+		for _, ability2 := range allAbilities {
+			pbc1 := PokemonStateCombination{MoveNames:MoveNames{moveName1}}
+			pbc2 := PokemonStateCombination{Ability:ability2}
 			mpsc := MultiplePokemonStateCombination{pbk1.PokeName:&pbc1, pbk2.PokeName:&pbc2}
 			result = append(result, mpsc)
 		}
@@ -582,13 +596,14 @@ func NewPokemon1MoveNameAndPokemon2Ability(pbk1, pbk2 *PokemonBuildCommonKnowled
 	return result
 }
 
-func NewPokemon1MoveNameAndPokemon2Item(pbk1, pbk2 *PokemonBuildCommonKnowledge) MultiplePokemonStateCombinations {
+func NewPokemon1MoveNameAndPokemon2ItemCombinations(pbk1, pbk2 *PokemonBuildCommonKnowledge) MultiplePokemonStateCombinations {
 	length := len(pbk1.MoveNames) * len(pbk2.Items)
 	result := make(MultiplePokemonStateCombinations, 0, length)
-	for _, moveName := range pbk1.MoveNames {
-		for _, item := range pbk2.Items {
-			pbc1 := PokemonStateCombination{MoveNames:MoveNames{moveName}}
-			pbc2 := PokemonStateCombination{Item:item}
+
+	for _, moveName1 := range pbk1.MoveNames {
+		for _, item2 := range pbk2.Items {
+			pbc1 := PokemonStateCombination{MoveNames:MoveNames{moveName1}}
+			pbc2 := PokemonStateCombination{Item:item2}
 			mpsc := MultiplePokemonStateCombination{pbk1.PokeName:&pbc1, pbk2.PokeName:&pbc2}
 			result = append(result, mpsc)
 		}
@@ -596,13 +611,14 @@ func NewPokemon1MoveNameAndPokemon2Item(pbk1, pbk2 *PokemonBuildCommonKnowledge)
 	return result
 }
 
-func NewPokemon1MoveNameAndPokemon2Nature(pbk1, pbk2 *PokemonBuildCommonKnowledge) MultiplePokemonStateCombinations {
+func NewPokemon1MoveNameAndPokemon2NatureCombinations(pbk1, pbk2 *PokemonBuildCommonKnowledge) MultiplePokemonStateCombinations {
 	length := len(pbk1.MoveNames) * len(pbk2.Natures)
 	result := make(MultiplePokemonStateCombinations, 0, length)
-	for _, moveName := range pbk1.MoveNames {
-		for _, nature := range pbk2.Natures {
-			pbc1 := PokemonStateCombination{MoveNames:MoveNames{moveName}}
-			pbc2 := PokemonStateCombination{Nature:nature}
+
+	for _, moveName1 := range pbk1.MoveNames {
+		for _, nature2 := range pbk2.Natures {
+			pbc1 := PokemonStateCombination{MoveNames:MoveNames{moveName1}}
+			pbc2 := PokemonStateCombination{Nature:nature2}
 			mpsc := MultiplePokemonStateCombination{pbk1.PokeName:&pbc1, pbk2.PokeName:&pbc2}
 			result = append(result, mpsc)
 		}
@@ -610,19 +626,284 @@ func NewPokemon1MoveNameAndPokemon2Nature(pbk1, pbk2 *PokemonBuildCommonKnowledg
 	return result
 }
 
-func NewPokemon1MoveNameAndPokemon2Effort(pbk1, pbk2 *PokemonBuildCommonKnowledge, key string) MultiplePokemonStateCombinations {
+func NewPokemon1MoveNameAndPokemon2EffortCombinations(pbk1, pbk2 *PokemonBuildCommonKnowledge, key string) MultiplePokemonStateCombinations {
 	setter := SET_POKEMON_STATE_COMBINATIONL_LOWER_AND_UPPER_LIMIT_EFFORTS[key]
-	length := len(pbk1.MoveNames) * len(LOWER_LIMIT_EFFORTS)
+	length := len(pbk1.MoveNames) * len(SET_LOWER_AND_UPPER_LIMIT_EFFORTS)
 	result := make(MultiplePokemonStateCombinations, 0, length)
 
-	for _, moveName := range pbk1.MoveNames {
-		for i, lowerLimit := range LOWER_LIMIT_EFFORTS {
-			upperLimit := UPPER_LIMIT_EFFORTS[i]
-			pbc1 := PokemonStateCombination{MoveNames:MoveNames{moveName}}
+	for _, moveName1 := range pbk1.MoveNames {
+		for _, lowerAndUpperLimit := range SET_LOWER_AND_UPPER_LIMIT_EFFORTS {
+			pbc1 := PokemonStateCombination{MoveNames:MoveNames{moveName1}}
 			pbc2 := PokemonStateCombination{}
-			setter(&pbc2, Efforts{lowerLimit, upperLimit})
+			setter(&pbc2, lowerAndUpperLimit)
 			mpsc := MultiplePokemonStateCombination{pbk1.PokeName:&pbc1, pbk2.PokeName:&pbc2}
 			result = append(result, mpsc)
+		}
+	}
+	return result
+}
+
+func NewPokemon1MoveNames2AndPokemon2MoveNameCombinations(pbk1, pbk2 *PokemonBuildCommonKnowledge) (MultiplePokemonStateCombinations, error) {
+	combination2MoveNames, err := pbk1.MoveNames.Combination(2)
+	if err != nil {
+		return MultiplePokemonStateCombinations{}, err
+	}
+	length := len(combination2MoveNames) * len(pbk2.MoveNames)
+	result := make(MultiplePokemonStateCombinations, 0, length)
+
+	for _, moveNames1 := range combination2MoveNames {
+		for _, moveName2 := range pbk2.MoveNames {
+			psc1 := PokemonStateCombination{MoveNames:moveNames1}
+			psc2 := PokemonStateCombination{MoveNames:MoveNames{moveName2}}
+			result = append(result, MultiplePokemonStateCombination{pbk1.PokeName:&psc1, pbk2.PokeName:&psc2})
+		}
+	}
+	return result, nil
+}
+
+func NewPokemon1MoveNames2AndPokemon2AbilityCombinations(pbk1, pbk2 *PokemonBuildCommonKnowledge) (MultiplePokemonStateCombinations, error) {
+	combination2MoveNames, err := pbk1.MoveNames.Combination(2)
+	if err != nil {
+		return MultiplePokemonStateCombinations{}, err
+	}
+	allAbilities := POKEDEX[pbk2.PokeName].AllAbilities
+	length := len(combination2MoveNames) * len(allAbilities)
+	result := make(MultiplePokemonStateCombinations, 0, length)
+
+	for _, moveNames1 := range combination2MoveNames {
+		for _, ability2 := range allAbilities {
+			psc1 := PokemonStateCombination{MoveNames:moveNames1}
+			psc2 := PokemonStateCombination{Ability:ability2}
+			result = append(result, MultiplePokemonStateCombination{pbk1.PokeName:&psc1, pbk2.PokeName:&psc2})
+		}
+	}
+	return result, nil
+
+}
+
+func NewPokemon1MoveNames2AndPokemon2ItemCombinations(pbk1, pbk2 *PokemonBuildCommonKnowledge) (MultiplePokemonStateCombinations, error) {
+	combination2MoveNames, err := pbk1.MoveNames.Combination(2)
+	if err != nil {
+		return MultiplePokemonStateCombinations{}, err
+	}
+	length := len(combination2MoveNames) * len(pbk2.Items)
+	result := make(MultiplePokemonStateCombinations, 0, length)
+
+	for _, moveNames1 := range combination2MoveNames {
+		for _, item2 := range pbk2.Items {
+			psc1 := PokemonStateCombination{MoveNames:moveNames1}
+			psc2 := PokemonStateCombination{Item:item2}
+			result = append(result, MultiplePokemonStateCombination{pbk1.PokeName:&psc1, pbk2.PokeName:&psc2})
+		}
+	}
+	return result, nil
+}
+
+func NewPokemon1MoveNames2AndPokemon2NatureCombinations(pbk1, pbk2 *PokemonBuildCommonKnowledge) (MultiplePokemonStateCombinations, error) {
+	combination2MoveNames, err := pbk1.MoveNames.Combination(2)
+	if err != nil {
+		return MultiplePokemonStateCombinations{}, err
+	}
+	length := len(combination2MoveNames) * len(pbk2.Natures)
+	result := make(MultiplePokemonStateCombinations, 0, length)
+	
+	for _, moveNames1 := range combination2MoveNames {
+		for _, nature2 := range pbk2.Natures {
+			psc1 := PokemonStateCombination{MoveNames:moveNames1}
+			psc2 := PokemonStateCombination{Nature:nature2}
+			result = append(result, MultiplePokemonStateCombination{pbk1.PokeName:&psc1, pbk2.PokeName:&psc2})
+		}
+	}
+	return result, nil
+}
+
+func NewPokemon1MoveNames2AndPokemon2EffortCombinations(pbk1, pbk2 *PokemonBuildCommonKnowledge, key string) (MultiplePokemonStateCombinations, error) {
+	setter := SET_POKEMON_STATE_COMBINATIONL_LOWER_AND_UPPER_LIMIT_EFFORTS[key]
+	combination2MoveNames, err := pbk1.MoveNames.Combination(2)
+	if err != nil {
+		return MultiplePokemonStateCombinations{}, err
+	}
+	length := len(combination2MoveNames) * len(SET_LOWER_AND_UPPER_LIMIT_EFFORTS)
+	result := make(MultiplePokemonStateCombinations, 0, length)
+
+	for _, moveNames1 := range combination2MoveNames {
+		for _, lowerAndUpperLimit2 := range SET_LOWER_AND_UPPER_LIMIT_EFFORTS {
+			psc1 := PokemonStateCombination{MoveNames:moveNames1}
+			psc2 := PokemonStateCombination{}
+			setter(&psc2, lowerAndUpperLimit2)
+			result = append(result, MultiplePokemonStateCombination{pbk1.PokeName:&psc1, pbk2.PokeName:&psc2})
+		}
+	}
+	return result, nil
+}
+
+func NewPokemon1MoveNameAndAbilityAndPokemon2AbilityCombinations(pbk1, pbk2 *PokemonBuildCommonKnowledge) (MultiplePokemonStateCombinations, error) {
+	allAbilities1 := POKEDEX[pbk1.PokeName].AllAbilities
+	allAbilities2 := POKEDEX[pbk2.PokeName].AllAbilities
+	length := len(pbk1.MoveNames) * len(allAbilities1) * len(allAbilities2)
+	result := make(MultiplePokemonStateCombinations, 0, length)
+
+	for _, moveName1 := range pbk1.MoveNames {
+		for _, ability1 := range allAbilities1 {
+			for _, ability2 := range allAbilities2 {
+				psc1 := PokemonStateCombination{MoveNames:MoveNames{moveName1}, Ability:ability1}
+				psc2 := PokemonStateCombination{Ability:ability2}
+				result = append(result, MultiplePokemonStateCombination{pbk1.PokeName:&psc1, pbk2.PokeName:&psc2})
+			}
+		}
+	}
+	return result, nil
+}
+
+func NewPokemon1MoveNameAndNatureAndPokemon2NatureCombinations(pbk1, pbk2 *PokemonBuildCommonKnowledge) MultiplePokemonStateCombinations {
+	length := len(pbk1.MoveNames) * len(pbk1.Natures) * len(pbk2.Natures)
+	result := make(MultiplePokemonStateCombinations, 0, length)
+
+	for _, moveName1 := range pbk1.MoveNames {
+		for _, nature1 := range pbk1.Natures {
+			for _, nature2 := range pbk2.Natures {
+				psc1 := PokemonStateCombination{MoveNames:MoveNames{moveName1}, Nature:nature1}
+				psc2 := PokemonStateCombination{Nature:nature2}
+				result = append(result, MultiplePokemonStateCombination{pbk1.PokeName:&psc1, pbk2.PokeName:&psc2})
+			}
+		}
+	}
+	return result
+}
+
+func NewPokemon1MoveNameAndNatureAndPokemon2EffortCombinations(pbk1, pbk2 *PokemonBuildCommonKnowledge, key string) MultiplePokemonStateCombinations {
+	setter := SET_POKEMON_STATE_COMBINATIONL_LOWER_AND_UPPER_LIMIT_EFFORTS[key]
+	length := len(pbk1.MoveNames) * len(pbk1.Natures) * len(SET_LOWER_AND_UPPER_LIMIT_EFFORTS)
+	result := make(MultiplePokemonStateCombinations, 0, length)
+
+	for _, moveName1 := range pbk1.MoveNames {
+		for _, nature1 := range pbk1.Natures {
+			for _, lowerAndUpperLimit2 := range SET_LOWER_AND_UPPER_LIMIT_EFFORTS {
+				psc1 := PokemonStateCombination{MoveNames:MoveNames{moveName1}, Nature:nature1}
+				psc2 := PokemonStateCombination{}
+				setter(&psc2, lowerAndUpperLimit2)
+				result = append(result, MultiplePokemonStateCombination{pbk1.PokeName:&psc1, pbk2.PokeName:&psc2})
+			}
+		}
+	}
+	return result
+}
+
+func NewPokemon1MoveNameAndEffortAndPokemon2NatureCombinations(pbk1, pbk2 *PokemonBuildCommonKnowledge, key string) MultiplePokemonStateCombinations {
+	setter := SET_POKEMON_STATE_COMBINATIONL_LOWER_AND_UPPER_LIMIT_EFFORTS[key]
+	length := len(pbk1.MoveNames) * len(SET_LOWER_AND_UPPER_LIMIT_EFFORTS) * len(pbk2.Natures)
+	result := make(MultiplePokemonStateCombinations, 0, length)
+
+	for _, moveName1 := range pbk1.MoveNames {
+		for _, lowerAndUpperLimit1 := range SET_LOWER_AND_UPPER_LIMIT_EFFORTS {
+			for _, nature2 := range pbk2.Natures {
+				psc1 := PokemonStateCombination{MoveNames:MoveNames{moveName1}}
+				setter(&psc1, lowerAndUpperLimit1)
+				psc2 := PokemonStateCombination{Nature:nature2}
+				result = append(result, MultiplePokemonStateCombination{pbk1.PokeName:&psc1, pbk2.PokeName:&psc2})
+			}
+		}
+	}
+	return result
+}
+
+func NewPokemon1MoveNameAndEffortAndPokemon2EffortCombinations(pbk1, pbk2 *PokemonBuildCommonKnowledge, key1, key2 string) MultiplePokemonStateCombinations {
+	setter1 := SET_POKEMON_STATE_COMBINATIONL_LOWER_AND_UPPER_LIMIT_EFFORTS[key1]
+	setter2 := SET_POKEMON_STATE_COMBINATIONL_LOWER_AND_UPPER_LIMIT_EFFORTS[key2]
+	length := len(pbk1.MoveNames) * len(SET_LOWER_AND_UPPER_LIMIT_EFFORTS) * len(SET_LOWER_AND_UPPER_LIMIT_EFFORTS)
+	result := make(MultiplePokemonStateCombinations, 0, length)
+
+	for _, moveName1 := range pbk1.MoveNames {
+		for _, lowerAndUpperLimit1 := range SET_LOWER_AND_UPPER_LIMIT_EFFORTS {
+			for _, lowerAndUpperLimit2 := range SET_LOWER_AND_UPPER_LIMIT_EFFORTS {
+				psc1 := PokemonStateCombination{MoveNames:MoveNames{moveName1}}
+				setter1(&psc1, lowerAndUpperLimit1)
+				psc2 := PokemonStateCombination{}
+				setter2(&psc2, lowerAndUpperLimit2)
+				result = append(result, MultiplePokemonStateCombination{pbk1.PokeName:&psc1, pbk2.PokeName:&psc2})
+			}
+		}
+	}
+	return result
+}
+
+func NewPokemon1MoveNames2AndPokemon2NameCombinations(pbk1 *PokemonBuildCommonKnowledge, pokeName2 PokeName) (MultiplePokemonStateCombinations, error) {
+	combination2MoveNames, err := pbk1.MoveNames.Combination(2)
+	if err != nil {
+		return MultiplePokemonStateCombinations{}, err
+	}
+	result := make(MultiplePokemonStateCombinations, 0, len(combination2MoveNames))
+
+	for _, moveNames1 := range combination2MoveNames {
+		psc1 := PokemonStateCombination{MoveNames:moveNames1}
+		psc2 := PokemonStateCombination{}
+		result = append(result, MultiplePokemonStateCombination{pbk1.PokeName:&psc1, pokeName2:&psc2})
+	}
+	return result, nil
+}
+
+func NewPokemon1MoveNameAndGenderAndPokemon2NameCombinations(pbk1 *PokemonBuildCommonKnowledge, pokeName2 PokeName) MultiplePokemonStateCombinations {
+	validGenders1 := NewVaildGenders(pbk1.PokeName)
+	result := make(MultiplePokemonStateCombinations, 0, len(pbk1.MoveNames) * len(validGenders1))
+
+	for _, moveName1 := range pbk1.MoveNames {
+		for _, gender1 := range validGenders1 {
+			psc1 := PokemonStateCombination{MoveNames:MoveNames{moveName1}, Gender:gender1}
+			psc2 := PokemonStateCombination{}
+			result = append(result, MultiplePokemonStateCombination{pbk1.PokeName:&psc1, pokeName2:&psc2})
+		}
+	}
+	return result
+}
+
+func NewPokemon1MoveNameAndAbilityAndPokemon2NameCombinations(pbk1 *PokemonBuildCommonKnowledge, pokeName2 PokeName) MultiplePokemonStateCombinations {
+	allAbilities1 := POKEDEX[pbk1.PokeName].AllAbilities
+	result := make(MultiplePokemonStateCombinations, 0, len(pbk1.MoveNames) * len(allAbilities1))
+
+	for _, moveName1 := range pbk1.MoveNames {
+		for _, ability1 := range allAbilities1 {
+			psc1 := PokemonStateCombination{MoveNames:MoveNames{moveName1}, Ability:ability1}
+			psc2 := PokemonStateCombination{}
+			result = append(result, MultiplePokemonStateCombination{pbk1.PokeName:&psc1, pokeName2:&psc2})
+		}
+	}
+	return result
+}
+
+func NewPokemon1MoveNameAndItemAndPokemon2NameCombinations(pbk1 *PokemonBuildCommonKnowledge, pokeName2 PokeName) MultiplePokemonStateCombinations {
+	result := make(MultiplePokemonStateCombinations, 0, len(pbk1.MoveNames) * len(pbk1.Items))
+	for _, moveName1 := range pbk1.MoveNames {
+		for _, item1 := range pbk1.Items {
+			psc1 := PokemonStateCombination{MoveNames:MoveNames{moveName1}, Item:item1}
+			psc2 := PokemonStateCombination{}
+			result = append(result, MultiplePokemonStateCombination{pbk1.PokeName:&psc1, pokeName2:&psc2})
+		}
+	}
+	return result
+}
+
+func NewPokemon1MoveNameAndNatureAndPokemon2NameCombinations(pbk1 *PokemonBuildCommonKnowledge, pokeName2 PokeName) MultiplePokemonStateCombinations {
+	result := make(MultiplePokemonStateCombinations, 0, len(pbk1.MoveNames) * len(pbk1.Natures))
+	for _, moveName1 := range pbk1.MoveNames {
+		for _, nature1 := range pbk1.Natures {
+			psc1 := PokemonStateCombination{MoveNames:MoveNames{moveName1}, Nature:nature1}
+			psc2 := PokemonStateCombination{}
+			result = append(result, MultiplePokemonStateCombination{pbk1.PokeName:&psc1, pokeName2:&psc2})
+		}
+	}
+	return result
+}
+
+func NewPokemon1MoveNameAndEffortAndPokemon2NameCombinations(pbk1 *PokemonBuildCommonKnowledge, pokeName2 PokeName, key string) MultiplePokemonStateCombinations {
+	setter := SET_POKEMON_STATE_COMBINATIONL_LOWER_AND_UPPER_LIMIT_EFFORTS[key]
+	result := make(MultiplePokemonStateCombinations, 0, len(pbk1.MoveNames) * len(SET_LOWER_AND_UPPER_LIMIT_EFFORTS))
+
+	for _, moveName1 := range pbk1.MoveNames {
+		for _, lowerAndUpperLimit := range SET_LOWER_AND_UPPER_LIMIT_EFFORTS {
+			psc1 := PokemonStateCombination{MoveNames:MoveNames{moveName1}}
+			setter(&psc1, lowerAndUpperLimit)
+			psc2 := PokemonStateCombination{}
+			result = append(result, MultiplePokemonStateCombination{pbk1.PokeName:&psc1, pokeName2:&psc2})
 		}
 	}
 	return result
@@ -631,4 +912,29 @@ func NewPokemon1MoveNameAndPokemon2Effort(pbk1, pbk2 *PokemonBuildCommonKnowledg
 type MultiplePokemonStateCombinationModel struct {
 	X MultiplePokemonStateCombination
 	Value float64
+	Number int
+}
+
+type MultiplePokemonStateCombinationModels []MultiplePokemonStateCombinationModel
+
+func NewMultiplePokemonStateCombinationModels(mpscs MultiplePokemonStateCombinations, random *rand.Rand) MultiplePokemonStateCombinationModels {
+	length := len(mpscs)
+	result := make(MultiplePokemonStateCombinationModels, 0, length)
+	for i, mpsc := range mpscs {
+		value, err := omw.RandomFloat64(0.01, 16.0, random)
+		if err != nil {
+			panic(err)
+		}
+		result = append(result, MultiplePokemonStateCombinationModel{X:mpsc, Value:value, Number:i})
+	}
+	return result
+}
+
+func (mpscms MultiplePokemonStateCombinationModels) WriteJson(pokeName1, pokeName2 PokeName) error {
+	filePath := MPSCMS_PATH + string(pokeName1) + "/" + string(pokeName2) + ".json"
+	file, err := json.MarshalIndent(mpscms, "", " ")
+	if err != nil {
+		return err
+	}
+	return ioutil.WriteFile(filePath, file, 0644)
 }

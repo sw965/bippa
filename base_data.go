@@ -23,10 +23,11 @@ var (
 	ALL_ITEMS_PATH      = DATA_PATH + "all_items.txt"
 
 	RATTA_PATH = SW965_PATH + "ratta/"
-	LOWER_LIMIT_PATH = RATTA_PATH + "lower_limit/"
-	UPPER_LIMIT_PATH = RATTA_PATH + "upper_limit/"
+	SET_LOWER_AND_UPPER_LIMIT_INDIVIDUALS_PATH = RATTA_PATH + "lower_and_upper_limit_individuals.json"
+	SET_LOWER_AND_UPPER_LIMIT_EFFORTS_PATH = RATTA_PATH + "lower_and_upper_limit_efforts.json"
 	PBCK_PATH = RATTA_PATH + "pokemon_build_common_knowledge/"
 	PSCMS_PATH = RATTA_PATH + "pokemon_state_combination_models/"
+	MPSCMS_PATH = RATTA_PATH + "multiple_pokemon_state_combination_models/"
 )
 
 type PokeData struct {

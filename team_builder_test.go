@@ -12,21 +12,24 @@ func Test(t *testing.T) {
 	mtRandom := rand.New(mt19937.New())
 	mtRandom.Seed(time.Now().UnixNano())
 
-	fmt.Println(ALL_VALID_EFFORTS)
+	fmt.Println(EFFECTIVE_EFFORTS)
 
-	pbk, err := LoadJsonPokemonBuildCommonKnowledge("フシギバナ")
+	pbk1, err := LoadJsonPokemonBuildCommonKnowledge("フシギバナ")
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println(pbk)
+	fmt.Println(pbk1)
 
-	pscs := NewNatureAndIndividualAndEffortCombinations(&pbk, "HP", "Atk")
+	pbk2, err := LoadJsonPokemonBuildCommonKnowledge("リザードン")
 	if err != nil {
 		panic(err)
 	}
+	fmt.Println(pbk2)
 
-	pscms := NewPokemonStateCombinationModels(pscs, mtRandom)
-	err = pscms.WriteJson("フシギバナ", "test.json")
+	mpscs := NewPokemon1MoveNameAndNatureAndPokemon2EffortCombinations(&pbk1, &pbk2, "HP")
+
+	mpscms := NewMultiplePokemonStateCombinationModels(mpscs, mtRandom)
+	err = mpscms.WriteJson("フシギバナ", "リザードン")
 	if err != nil {
 		panic(err)
 	}
