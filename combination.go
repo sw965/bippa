@@ -899,12 +899,23 @@ func NewPokemon1MoveNameAndEffortAndPokemon2NameCombinations(pbk1 *PokemonBuildC
 	result := make(MultiplePokemonStateCombinations, 0, len(pbk1.MoveNames) * len(SET_LOWER_AND_UPPER_LIMIT_EFFORTS))
 
 	for _, moveName1 := range pbk1.MoveNames {
-		for _, lowerAndUpperLimit := range SET_LOWER_AND_UPPER_LIMIT_EFFORTS {
+		for _, lowerAndUpperLimit1 := range SET_LOWER_AND_UPPER_LIMIT_EFFORTS {
 			psc1 := PokemonStateCombination{MoveNames:MoveNames{moveName1}}
-			setter(&psc1, lowerAndUpperLimit)
+			setter(&psc1, lowerAndUpperLimit1)
 			psc2 := PokemonStateCombination{}
 			result = append(result, MultiplePokemonStateCombination{pbk1.PokeName:&psc1, pokeName2:&psc2})
 		}
+	}
+	return result
+}
+
+func NewPokemon1MoveNameAndPokemon2NameAndPokemon3Name(pbk1 *PokemonBuildCommonKnowledge, pokeName2, pokeName3 PokeName) MultiplePokemonStateCombinations {
+	result := make(MultiplePokemonStateCombinations, len(pbk1.MoveNames))
+	for i, moveName1 := range pbk1.MoveNames {
+		psc1 := PokemonStateCombination{MoveNames:MoveNames{moveName1}}
+		psc2 := PokemonStateCombination{}
+		psc3 := PokemonStateCombination{}
+		result[i] = MultiplePokemonStateCombination{pbk1.PokeName:&psc1, pokeName2:&psc2, pokeName3:&psc3}
 	}
 	return result
 }
@@ -930,8 +941,14 @@ func NewMultiplePokemonStateCombinationModels(mpscs MultiplePokemonStateCombinat
 	return result
 }
 
-func (mpscms MultiplePokemonStateCombinationModels) WriteJson(pokeName1, pokeName2 PokeName) error {
-	filePath := MPSCMS_PATH + string(pokeName1) + "/" + string(pokeName2) + ".json"
+func (mpscms MultiplePokemonStateCombinationModels) WriteJson(pokeNames ...PokeName) error {
+	lastIndex := len(pokeNames) - 1
+	filePath := MPSCMS_PATH
+	for _, pokeName := range pokeNames[:lastIndex - 1] {
+		filePath += string(pokeName)
+	}
+
+	filePath += string(pokeNames[lastIndex]) + ".json"
 	file, err := json.MarshalIndent(mpscms, "", " ")
 	if err != nil {
 		return err
