@@ -1,5 +1,9 @@
 package bippa
 
+import (
+	"github.com/sw965/omw"
+)
+
 type PokeName string
 type PokeNames []PokeName
 
@@ -50,4 +54,28 @@ func (pokeNames PokeNames) Sort() PokeNames {
 		}
 	}
 	return result
+}
+
+func (pokeNames PokeNames) Access(indices []int) PokeNames {
+	result := make(PokeNames, len(indices))
+	for i, index := range indices {
+		result[i] = pokeNames[index]
+	}
+	return result
+}
+
+func (pokeNames PokeNames) Permutation(r int) ([]PokeNames, error) {
+	n := len(pokeNames)
+	permutationTotalNum := omw.PermutationTotalNum(n, r)
+
+	permutationNumbers, err := omw.PermutationNumbers(n, r)
+	if err != nil {
+		return []PokeNames{}, err
+	}
+
+	result := make([]PokeNames, permutationTotalNum)
+	for i, indices := range permutationNumbers {
+		result[i] = pokeNames.Access(indices)
+	}
+	return result, nil
 }

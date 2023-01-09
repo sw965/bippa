@@ -1,6 +1,7 @@
 package bippa
 
 import (
+	"os"
 	"math/rand"
 	"encoding/json"
 	"io/ioutil"
@@ -507,13 +508,6 @@ type PokemonStateCombinationModel struct {
 
 type PokemonStateCombinationModels []*PokemonStateCombinationModel
 
-func (pscms PokemonStateCombinationModels) InitNumber() {
-	length := len(pscms)
-	for i := 0; i < length; i++ {
-		pscms[i].Number = i
-	}
-}
-
 func NewPokemonStateCombinationModels(pscs PokemonStateCombinations, random *rand.Rand) PokemonStateCombinationModels {
 	result := make(PokemonStateCombinationModels, len(pscs))
 	for i, psc := range pscs {
@@ -528,13 +522,25 @@ func NewPokemonStateCombinationModels(pscs PokemonStateCombinations, random *ran
 	return result
 }
 
+func (pscms PokemonStateCombinationModels) InitNumber() {
+	length := len(pscms)
+	for i := 0; i < length; i++ {
+		pscms[i].Number = i
+	}
+}
+
 func (pscms PokemonStateCombinationModels) WriteJson(pokeName PokeName, fileName string) error {
-	filePath := PSCMS_PATH + string(pokeName) + "/" + fileName + ".json"
+	folderDirectory := PSCMS_PATH + string(pokeName) + "/"
+	if err := os.Mkdir(folderDirectory, os.ModePerm); err != nil {
+		return err
+	}
+
+	fullPath := folderDirectory + fileName + ".json"
 	file, err := json.MarshalIndent(pscms, "", " ")
 	if err != nil {
 		return err
 	}
-	return ioutil.WriteFile(filePath, file, 0644)
+	return ioutil.WriteFile(fullPath, file, 0644)
 }
 
 type MultiplePokemonStateCombination map[PokeName]*PokemonStateCombination
@@ -943,15 +949,21 @@ func NewMultiplePokemonStateCombinationModels(mpscs MultiplePokemonStateCombinat
 
 func (mpscms MultiplePokemonStateCombinationModels) WriteJson(pokeNames ...PokeName) error {
 	lastIndex := len(pokeNames) - 1
-	filePath := MPSCMS_PATH
-	for _, pokeName := range pokeNames[:lastIndex - 1] {
-		filePath += string(pokeName)
+	folderDirectory := MPSCMS_PATH
+
+	for _, pokeName := range pokeNames[:lastIndex] {
+		folderDirectory += string(pokeName) + "/"
 	}
 
-	filePath += string(pokeNames[lastIndex]) + ".json"
+	if err := os.MkdirAll(folderDirectory, os.ModePerm); err != nil {
+		return err
+	}
+
+	fullPath := folderDirectory + string(pokeNames[lastIndex]) + ".json"
+
 	file, err := json.MarshalIndent(mpscms, "", " ")
 	if err != nil {
 		return err
 	}
-	return ioutil.WriteFile(filePath, file, 0644)
+	return ioutil.WriteFile(fullPath, file, 0644)
 }

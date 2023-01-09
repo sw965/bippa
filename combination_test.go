@@ -29,7 +29,7 @@ func Test(t *testing.T) {
 	mpscs := NewPokemon1MoveNameAndNatureAndPokemon2EffortCombinations(&pbk1, &pbk2, "HP")
 
 	mpscms := NewMultiplePokemonStateCombinationModels(mpscs, mtRandom)
-	err = mpscms.WriteJson("フシギバナ", "リザードン")
+	err = mpscms.WriteJson("フシギバナ", "リザードン", "カメックス", "くっさいおパンツ")
 	if err != nil {
 		panic(err)
 	}

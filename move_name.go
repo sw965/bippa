@@ -82,7 +82,7 @@ func (moveNames1 MoveNames) Equal(moveNames2 MoveNames) bool {
 	return true
 }
 
-func (moveNames MoveNames) IndicesAccess(indices []int) MoveNames {
+func (moveNames MoveNames) Access(indices []int) MoveNames {
 	result := make(MoveNames, len(indices))
 	for i, index := range indices {
 		result[i] = moveNames[index]
@@ -103,9 +103,8 @@ func (moveNames MoveNames) Combination(r int) ([]MoveNames, error) {
 	}
 
 	result := make([]MoveNames, combinationTotalNum)
-
 	for i, indices := range combinationNumbers {
-		result[i] = moveNames.IndicesAccess(indices)
+		result[i] = moveNames.Access(indices)
 	}
 	return result, nil
 
