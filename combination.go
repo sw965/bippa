@@ -204,7 +204,7 @@ func NewIndividualCombinations(key string) PokemonStateCombinations {
 
 }
 
-func NewEffortEffortCombinations(key string) PokemonStateCombinations {
+func NewEffortCombinations(key string) PokemonStateCombinations {
 	setter := SET_POKEMON_STATE_COMBINATIONL_LOWER_AND_UPPER_LIMIT_EFFORTS[key]
 	result := make(PokemonStateCombinations, len(ALL_LOWER_AND_UPPER_LIMIT_EFFORTS))
 
@@ -535,7 +535,7 @@ func (pscms PokemonStateCombinationModels) WriteJson(pokeName PokeName, fileName
 		return err
 	}
 
-	fullPath := folderDirectory + fileName + ".json"
+	fullPath := folderDirectory + fileName
 	file, err := json.MarshalIndent(pscms, "", " ")
 	if err != nil {
 		return err
