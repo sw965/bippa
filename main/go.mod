@@ -4,7 +4,7 @@ go 1.19
 
 require (
 	github.com/seehuhn/mt19937 v1.0.0
-	github.com/sw965/bippa v0.0.0-20230109125447-b787adea9a90
+	github.com/sw965/bippa v0.0.0-20230109140716-c7c8a2ca6018
 )
 
 require (

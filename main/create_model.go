@@ -6,8 +6,9 @@ import (
 	"math/rand"
 	"github.com/seehuhn/mt19937"
 	"time"
-	"strings"
 )
+
+var KEY_DATA = map[string]string{"HP":"hp", "Atk":"atk", "Def":"def", "SpAtk":"sp_atk", "SpDef":"sp_def", "Speed":"speed"}
 
 func main() {
 	mtRandom := rand.New(mt19937.New())
@@ -19,7 +20,7 @@ func main() {
 	for _, pokeName := range bippa.ALL_POKE_NAMES {
 		pbk, err := bippa.LoadJsonPokemonBuildCommonKnowledge(pokeName)
 		if err != nil {
-			fmt.Println(pokeName, "は pbk を 作れなかった")
+			fmt.Println(pokeName, "の PokemonBuildCommonKnowledge を 作れなかった")
 			continue
 		}
 		pbks[pokeName] = &pbk
@@ -62,9 +63,7 @@ func main() {
 			panic(err)
 		}
 
-		for _, key := range []string{"HP", "Atk", "Def", "SpAtk", "SpDef", "Speed"} {
-			lowerKey := strings.ToLower(key)
-
+		for key, lowerKey := range KEY_DATA {
 			pscs = bippa.NewIndividualCombinations(key)
 			pscms = bippa.NewPokemonStateCombinationModels(pscs, mtRandom)
 			err = pscms.WriteJson(pokeName, lowerKey + "_individual.json")
@@ -103,9 +102,7 @@ func main() {
 			panic(err)
 		}
 
-		for _, key := range []string{"HP", "Atk", "Def", "SpAtk", "SpDef", "Speed"} {
-			lowerKey := strings.ToLower(key)
-
+		for key, lowerKey := range KEY_DATA {
 			pscs = bippa.NewMoveNameAndIndividualCombinations(pbk, key)
 			pscms = bippa.NewPokemonStateCombinationModels(pscs, mtRandom)
 			err = pscms.WriteJson(pokeName, "move_name_and_" + lowerKey + "_individual.json")
@@ -159,6 +156,53 @@ func main() {
 		err = pscms.WriteJson(pokeName, "move_names2_and_nature.json")
 		if err != nil {
 			panic(err)
+		}
+
+		for key, lowerKey := range KEY_DATA {
+			pscs, err = bippa.NewMoveNames2AndIndividualCombinations(pbk, key)
+			if err != nil {
+				panic(err)
+			}
+			pscms = bippa.NewPokemonStateCombinationModels(pscs, mtRandom)
+			err = pscms.WriteJson(pokeName, "move_names2_and_" + lowerKey + "_individual.json")
+			if err != nil {
+				panic(err)
+			}
+	
+			pscs, err = bippa.NewMoveNames2AndEffortCombinations(pbk, key)
+			if err != nil {
+				panic(err)
+			}
+			pscms = bippa.NewPokemonStateCombinationModels(pscs, mtRandom)
+			err = pscms.WriteJson(pokeName, "move_names2_and_" + lowerKey + "_effort.json")
+			if err != nil {
+				panic(err)
+			}
+
+			pscs = bippa.NewMoveNameAndNatureAndIndividualCombinations(pbk, key)
+			pscms = bippa.NewPokemonStateCombinationModels(pscs, mtRandom)
+			err = pscms.WriteJson(pokeName, "move_name_and_nature_and_" + lowerKey + "_individual.json")
+			if err != nil {
+				panic(err)
+			}
+
+			pscs = bippa.NewMoveNameAndNatureAndEffortCombinations(pbk, key)
+			pscms = bippa.NewPokemonStateCombinationModels(pscs, mtRandom)
+			err = pscms.WriteJson(pokeName, "move_name_and_nature_and_" + lowerKey + ".json")
+			if err != nil {
+				panic(err)
+			}
+		}
+
+		for individualKey, individualLowerKey := range KEY_DATA {
+			for effortKey, effortLowerKey := range KEY_DATA {
+				pscs := bippa.NewMoveNameAndIndividualAndEffortCombinations(pbk, individualKey, effortKey)
+				pscms := bippa.NewPokemonStateCombinationModels(pscs, mtRandom)
+				err := pscms.WriteJson(pokeName, "move_name_and_" + individualLowerKey + "_individual_and_" + effortLowerKey + "_effort.json")
+				if err != nil {
+					panic(err)
+				}
+			}
 		}
 	}
 }
