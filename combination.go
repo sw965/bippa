@@ -531,8 +531,11 @@ func (pscms PokemonStateCombinationModels) InitNumber() {
 
 func (pscms PokemonStateCombinationModels) WriteJson(pokeName PokeName, fileName string) error {
 	folderDirectory := PSCMS_PATH + string(pokeName) + "/"
-	if err := os.Mkdir(folderDirectory, os.ModePerm); err != nil {
-		return err
+
+	if _, err := os.Stat(folderDirectory); err != nil {
+		if mkErr := os.Mkdir(folderDirectory, os.ModePerm); mkErr != nil {
+			return mkErr
+		}
 	}
 
 	fullPath := folderDirectory + fileName
@@ -955,8 +958,10 @@ func (mpscms MultiplePokemonStateCombinationModels) WriteJson(pokeNames ...PokeN
 		folderDirectory += string(pokeName) + "/"
 	}
 
-	if err := os.MkdirAll(folderDirectory, os.ModePerm); err != nil {
-		return err
+	if _, err := os.Stat(folderDirectory); err != nil {
+		if mkErr := os.MkdirAll(folderDirectory, os.ModePerm); mkErr != nil {
+			return mkErr
+		}
 	}
 
 	fullPath := folderDirectory + string(pokeNames[lastIndex]) + ".json"
