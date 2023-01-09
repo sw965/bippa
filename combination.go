@@ -217,6 +217,20 @@ func NewEffortCombinations(key string) PokemonStateCombinations {
 
 }
 
+func NewMoveNamesCombinations(pbk *PokemonBuildCommonKnowledge, r int) (PokemonStateCombinations, error) {
+	combinationMoveNames, err := pbk.MoveNames.Combination(r)
+	if err != nil {
+		return PokemonStateCombinations{}, err
+	}
+	length := len(combinationMoveNames)
+	result := make(PokemonStateCombinations, length)
+
+	for i, moveNames := range combinationMoveNames {
+		result[i] = PokemonStateCombination{MoveNames:moveNames}
+	}
+	return result, nil
+}
+
 func NewMoveNameAndAbilityCombinations(pbk *PokemonBuildCommonKnowledge) PokemonStateCombinations {
 	allAbilities :=  POKEDEX[pbk.PokeName].AllAbilities
 	length := len(pbk.MoveNames) * len(allAbilities)
@@ -284,20 +298,6 @@ func NewMoveNameAndEffortCombinations(pbk *PokemonBuildCommonKnowledge, key stri
 		}
 	}
 	return result
-}
-
-func NewMoveNames3Combinations(pbk *PokemonBuildCommonKnowledge) (PokemonStateCombinations, error) {
-	combination3MoveNames, err := pbk.MoveNames.Combination(3)
-	if err != nil {
-		return PokemonStateCombinations{}, err
-	}
-	length := len(combination3MoveNames)
-	result := make(PokemonStateCombinations, length)
-
-	for i, moveNames := range combination3MoveNames {
-		result[i] = PokemonStateCombination{MoveNames:moveNames}
-	}
-	return result, nil
 }
 
 func NewMoveNames2AndAbilityCombinations(pbk *PokemonBuildCommonKnowledge) (PokemonStateCombinations, error) {
