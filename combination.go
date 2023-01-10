@@ -978,9 +978,9 @@ func NewMultiplePokemonStateCombinationModels(mpscs MultiplePokemonStateCombinat
 	return result
 }
 
-func (mpscms MultiplePokemonStateCombinationModels) WriteJson(pokeNames ...PokeName) error {
+func (mpscms MultiplePokemonStateCombinationModels) WriteJson(folderName string, pokeNames ...PokeName) error {
 	lastIndex := len(pokeNames) - 1
-	folderDirectory := MPSCMS_PATH
+	folderDirectory := MPSCMS_PATH + folderName
 
 	for _, pokeName := range pokeNames[:lastIndex] {
 		folderDirectory += string(pokeName) + "/"
