@@ -549,6 +549,10 @@ func (pscms PokemonStateCombinationModels) WriteJson(pokeName PokeName, fileName
 type MultiplePokemonStateCombination map[PokeName]*PokemonStateCombination
 
 func (mpsc MultiplePokemonStateCombination) OK(pokemons ...*Pokemon) bool {
+	if len(mpsc) > len(pokemons) {
+		return false
+	}
+
 	for _, pokemon := range pokemons {
 		psc, ok := mpsc[pokemon.Name]
 		if !ok {
@@ -563,13 +567,12 @@ func (mpsc MultiplePokemonStateCombination) OK(pokemons ...*Pokemon) bool {
 
 type MultiplePokemonStateCombinations []MultiplePokemonStateCombination
 
-func NewPokemon1MoveNameAndPokemon2NameCombinations(pokeName1, pokeName2 PokeName) MultiplePokemonStateCombinations {
-	learnset := POKEDEX[pokeName1].Learnset
-	result := make(MultiplePokemonStateCombinations, 0, len(learnset))
-	for _, moveName := range learnset {
+func NewPokemon1MoveNameAndPokemon2NameCombinations(pbk1 *PokemonBuildCommonKnowledge, pokeName2 PokeName) MultiplePokemonStateCombinations {
+	result := make(MultiplePokemonStateCombinations, 0, len(pbk1.MoveNames))
+	for _, moveName := range pbk1.MoveNames {
 		psc1 := PokemonStateCombination{MoveNames:MoveNames{moveName}}
 		psc2 := PokemonStateCombination{}
-		result = append(result, MultiplePokemonStateCombination{pokeName1:&psc1, pokeName2:&psc2})
+		result = append(result, MultiplePokemonStateCombination{pbk1.PokeName:&psc1, pokeName2:&psc2})
 	}
 	return result
 }

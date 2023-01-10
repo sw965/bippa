@@ -205,4 +205,15 @@ func main() {
 			}
 		}
 	}
+
+	for _, pbk := range pbks {
+		for _, pokeName := range bippa.ALL_POKE_NAMES {
+			mpscs := bippa.NewPokemon1MoveNameAndPokemon2NameCombinations(pbk, pokeName)
+			mpscms := bippa.NewMultiplePokemonStateCombinationModels(mpscs, mtRandom)
+			err := mpscms.WriteJson(pbk.PokeName, pokeName)
+			if err != nil {
+				panic(err)
+			}
+		}
+	}
 }
