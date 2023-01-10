@@ -229,5 +229,12 @@ func main() {
 		if err != nil {
 			panic(err)
 		}
+
+		mpscs := bippa.NewPokemon1MoveNameAndPokemon2AbilityCombinations(&pbkList[0], &pbkList[1])
+		mpscms := bippa.NewMultiplePokemonStateCombinationModels(mpscs, mtRandom)
+		err := mpscms.WriteJson("pokemon1_move_name_and_pokemon2_ability", pbkList[0].PokeName, pbkList[1].PokeName)
+		if err != nil {
+			panic(err)
+		}
 	}
 }

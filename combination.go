@@ -554,7 +554,7 @@ func (pscms PokemonStateCombinationModels) InitNumber() {
 	}
 }
 
-func (pscms PokemonStateCombinationModels) WriteJson(pokeName PokeName, fileName string) error {
+func (pscms PokemonStateCombinationModels) WriteJson(pokeName PokeName, modelsName string) error {
 	folderDirectory := PSCMS_PATH + string(pokeName) + "/"
 
 	if _, err := os.Stat(folderDirectory); err != nil {
@@ -563,7 +563,7 @@ func (pscms PokemonStateCombinationModels) WriteJson(pokeName PokeName, fileName
 		}
 	}
 
-	fullPath := folderDirectory + fileName
+	fullPath := folderDirectory + modelsName
 	file, err := json.MarshalIndent(pscms, "", " ")
 	if err != nil {
 		return err
@@ -978,9 +978,9 @@ func NewMultiplePokemonStateCombinationModels(mpscs MultiplePokemonStateCombinat
 	return result
 }
 
-func (mpscms MultiplePokemonStateCombinationModels) WriteJson(folderName string, pokeNames ...PokeName) error {
+func (mpscms MultiplePokemonStateCombinationModels) WriteJson(modelsName string, pokeNames ...PokeName) error {
 	lastIndex := len(pokeNames) - 1
-	folderDirectory := MPSCMS_PATH + folderName + "/"
+	folderDirectory := MPSCMS_PATH + modelsName + "/"
 
 	for _, pokeName := range pokeNames[:lastIndex] {
 		folderDirectory += string(pokeName) + "/"
