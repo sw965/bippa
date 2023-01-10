@@ -215,7 +215,7 @@ func main() {
 		for _, pokeName := range bippa.ALL_POKE_NAMES {
 			mpscs := bippa.NewPokemon1MoveNameAndPokemon2NameCombinations(&pbk, pokeName)
 			mpscms := bippa.NewMultiplePokemonStateCombinationModels(mpscs, mtRandom)
-			err := mpscms.WriteJson(pbk.PokeName, pokeName)
+			err := mpscms.WriteJson("pokemon1_move_name_and_pokemon2_name", pbk.PokeName, pokeName)
 			if err != nil {
 				panic(err)
 			}
@@ -225,7 +225,7 @@ func main() {
 	for _, pbkList := range permutation2PBKList {
 		mpscs := bippa.NewPokemon1MoveNameAndPokemon2MoveNameCombinations(&pbkList[0], &pbkList[1])
 		mpscms := bippa.NewMultiplePokemonStateCombinationModels(mpscs, mtRandom)
-		err := mpscms.WriteJson(pbkList[0].PokeName, pbkList[1].PokeName)
+		err := mpscms.WriteJson("pokemon1_move_name_and_pokemon2_move_name", pbkList[0].PokeName, pbkList[1].PokeName)
 		if err != nil {
 			panic(err)
 		}
