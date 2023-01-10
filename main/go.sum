@@ -1,7 +1,7 @@
 github.com/seehuhn/mt19937 v1.0.0 h1:r02DuVkQXfohssWZO8L/TeAlYOah7aNNubEHB/7Vtfs=
 github.com/seehuhn/mt19937 v1.0.0/go.mod h1:RikyXajNu+1Gqxm4hOacc3ckyWRd0usF6IkE3gnEcAM=
-github.com/sw965/bippa v0.0.0-20230109140716-c7c8a2ca6018 h1:B8ZL4nBwirsEYPFYgirggjpgN/1PjqFQzUMxCdlZtfY=
-github.com/sw965/bippa v0.0.0-20230109140716-c7c8a2ca6018/go.mod h1:njnCeUbdIbY8e/l9UbibX7Tlxjip/J2/8gSS0Cl+gyQ=
+github.com/sw965/bippa v0.0.0-20230110100203-6736fbc5f858 h1:Inf+VDb/l+8C2DcJ1nn0W22TRrHQEIPiyqwJVWBNCrY=
+github.com/sw965/bippa v0.0.0-20230110100203-6736fbc5f858/go.mod h1:njnCeUbdIbY8e/l9UbibX7Tlxjip/J2/8gSS0Cl+gyQ=
 github.com/sw965/crow v0.0.0-20221123031325-277683f5d01f h1:LyGaKSt2U8SnO7cEZyFAjIDKNZErtOyU7aHJXpy8uf0=
 github.com/sw965/crow v0.0.0-20221123031325-277683f5d01f/go.mod h1:Rj2eHGdmoAl9YZevjqd4nve3PcX/xir4BkvBUyuJefU=
 github.com/sw965/omw v0.0.0-20230109102037-85b551f974ff h1:qK/+9+etxHitb0ArDvIVFKyIQqwGAaZHHkeJN23YWXQ=

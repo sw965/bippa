@@ -31,6 +31,31 @@ func LoadJsonPokemonBuildCommonKnowledge(pokeName PokeName) (PokemonBuildCommonK
 	return result, nil
 }
 
+type PokemonBuildCommonKnowledgeList []PokemonBuildCommonKnowledge
+
+func (pbkl PokemonBuildCommonKnowledgeList) Access(indices []int) PokemonBuildCommonKnowledgeList {
+	result := make(PokemonBuildCommonKnowledgeList, len(indices))
+	for i, index := range indices {
+		result[i] = pbkl[index]
+	}
+	return result
+}
+
+func (pbkl PokemonBuildCommonKnowledgeList) Permutation(r int) ([]PokemonBuildCommonKnowledgeList, error) {
+	n := len(pbkl)
+	permutationTotalNum := omw.PermutationTotalNum(n, r)
+	permutationNumbers, err := omw.PermutationNumbers(n, r)
+	if err != nil {
+		return []PokemonBuildCommonKnowledgeList{}, err
+	}
+	result := make([]PokemonBuildCommonKnowledgeList, permutationTotalNum)
+
+	for i, indices := range permutationNumbers {
+		result[i] = pbkl.Access(indices)
+	}
+	return result, nil
+}
+
 type PokemonStateCombination struct {
 	MoveNames MoveNames
 	Gender Gender
