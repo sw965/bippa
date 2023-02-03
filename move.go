@@ -2,6 +2,7 @@ package bippa
 
 import (
 	"fmt"
+	"github.com/sw965/omw"
 	"math/rand"
 )
 
@@ -73,11 +74,13 @@ func Toxic(battle Battle, _ *rand.Rand) Battle {
 		return battle
 	}
 
-	if battle.P2Fighters[0].Types.In(POISON) {
+	p2PokeTypes := battle.P2Fighters[0].Types
+
+	if omw.Contains(p2PokeTypes, POISON) {
 		return battle
 	}
 
-	if battle.P2Fighters[0].Types.In(STEEL) {
+	if omw.Contains(p2PokeTypes, STEEL) {
 		return battle
 	}
 
@@ -87,10 +90,9 @@ func Toxic(battle Battle, _ *rand.Rand) Battle {
 
 // やどりぎのタネ
 func LeechSeed(battle Battle, _ *rand.Rand) Battle {
-	if battle.P2Fighters[0].Types.In(GRASS) {
+	if omw.Contains(battle.P2Fighters[0].Types, GRASS) {
 		return battle
 	}
-
 	battle.P2Fighters[0].IsLeechSeed = true
 	return battle
 }

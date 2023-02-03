@@ -1,10 +1,8 @@
 package bippa
 
 import (
-	"encoding/json"
 	"fmt"
 	"github.com/sw965/omw"
-	"io/ioutil"
 	"math/rand"
 )
 
@@ -68,33 +66,24 @@ func (fighters *Fighters) LegalActionCmdMoveNames() MoveNames {
 		return MoveNames{}
 	}
 
-	tmpResult := MoveNames{}
-	for moveName, powerPoint := range fighters[0].Moveset {
-		if powerPoint.Current > 0 {
-			tmpResult = append(tmpResult, moveName)
-		}
-	}
-
-	var result MoveNames
+	ppIsZeroOver := func(moveName MoveName) bool { return fighters[0].Moveset[moveName].Current > 0 }
+	tmpY := omw.Filter(omw.Keys(fighters[0].Moveset), ppIsZeroOver)
+	var y MoveNames
 
 	if fighters[0].ChoiceMoveName != "" {
-		if tmpResult.In(fighters[0].ChoiceMoveName) {
-			result = MoveNames{fighters[0].ChoiceMoveName}
+		if omw.Contains(tmpY, fighters[0].ChoiceMoveName) {
+			y = MoveNames{fighters[0].ChoiceMoveName}
 		}
 	} else if fighters[0].Item == "とつげきチョッキ" {
-		for _, moveName := range tmpResult {
-			if MOVEDEX[moveName].Category != STATUS {
-				result = append(result, moveName)
-			}
-		}
+		categoryIsNotStatus := func(moveName MoveName) bool { return MOVEDEX[moveName].Category != STATUS }
+		y = omw.Filter(tmpY, categoryIsNotStatus)
 	} else {
-		result = tmpResult
+		y = tmpY
 	}
-
-	if len(result) == 0 {
+	if len(y) == 0 {
 		return MoveNames{STRUGGLE}
 	}
-	return result
+	return y
 }
 
 func (fighters *Fighters) LegalActionCmdPokeNames() []PokeName {
@@ -120,24 +109,6 @@ func (fighters *Fighters) LegalActionCmds() ActionCmds {
 		result = append(result, ActionCmd(pokeName))
 	}
 	return result
-}
-
-func (fighters *Fighters) Save(filePath string) error {
-	file, err := json.MarshalIndent(fighters, "", " ")
-	if err != nil {
-		return err
-	}
-	return ioutil.WriteFile(filePath, file, 0644)
-}
-
-func ReadFighters(filePath string) (Fighters, error) {
-	result := Fighters{}
-	file, err := ioutil.ReadFile(filePath)
-	if err != nil {
-		return Fighters{}, err
-	}
-	err = json.Unmarshal(file, &result)
-	return result, err
 }
 
 // https://wiki.xn--rckteqa2e.com/wiki/%E3%81%99%E3%81%B0%E3%82%84%E3%81%95#.E8.A9.B3.E7.B4.B0.E3.81.AA.E4.BB.95.E6.A7.98
@@ -190,11 +161,6 @@ func (actionCmd ActionCmd) PriorityRank() int {
 }
 
 type ActionCmds []ActionCmd
-
-func (actionCmds ActionCmds) RandomChoice(random *rand.Rand) ActionCmd {
-	index := random.Intn(len(actionCmds))
-	return actionCmds[index]
-}
 
 type Battle struct {
 	P1Fighters  Fighters
@@ -259,7 +225,7 @@ func (battle Battle) RankStateFluctuation(fluctuationRankState *RankState) Battl
 	rankState := battle.P1Fighters[0].RankState
 	newRankState := rankState.Add(fluctuationRankState)
 
-	if battle.P1Fighters[0].Item == "しろいハーブ" && newRankState.InDown() {
+	if battle.P1Fighters[0].Item == "しろいハーブ" && newRankState.ContainsDown() {
 		battle.P1Fighters[0].Item = EMPTY_ITEM
 		newRankState = newRankState.ResetDown()
 	}
@@ -362,12 +328,7 @@ func (battle Battle) MoveUse(moveName MoveName, random *rand.Rand) (Battle, erro
 		return statusMove(battle, random), nil
 	}
 
-	attackNum, err := omw.RandomInt(moveData.MinAttackNum, moveData.MaxAttackNum+1, random)
-
-	if err != nil {
-		return Battle{}, err
-	}
-
+	attackNum := omw.RandomInt(moveData.MinAttackNum, moveData.MaxAttackNum+1, random)
 	for i := 0; i < attackNum; i++ {
 		isCritical := battle.IsCritical(moveName, random)
 		finalDamage, err := battle.NewFinalDamage(moveName, isCritical, NewRandomDamageBonus(random))
@@ -447,6 +408,7 @@ func (battle Battle) P1Action(actionCmd ActionCmd, random *rand.Rand) (Battle, e
 		return battle.Switch(PokeName(actionCmd))
 	}
 
+	fmt.Println("1lg", battle.P1Fighters.LegalActionCmdMoveNames())
 	errMsg := fmt.Sprintf("「%v」は、actionCmdとして不適", actionCmd)
 	return Battle{}, fmt.Errorf(errMsg)
 }
@@ -465,6 +427,10 @@ func (battle Battle) P2Action(actionCmd ActionCmd, random *rand.Rand) (Battle, e
 		return battle.Reverse(), err
 	}
 
+	fmt.Println("2lg", battle.P1Fighters.LegalActionCmdMoveNames())
+	for i, m := range battle.P1Fighters.LegalActionCmdMoveNames() {
+		fmt.Println(i, m)
+	}
 	errMsg := fmt.Sprintf("「%v」は、actionCmdとして不適", actionCmd)
 	return Battle{}, fmt.Errorf(errMsg)
 }

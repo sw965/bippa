@@ -2,6 +2,7 @@ package bippa
 
 import (
 	"fmt"
+	"github.com/sw965/omw"
 )
 
 const (
@@ -15,8 +16,8 @@ func NewTeam(pokemons []Pokemon) (Team, error) {
 	team := Team(pokemons)
 	pokeNames := team.PokeNames()
 
-	if !pokeNames.IsUnique() {
-		return Team{}, fmt.Errorf("同じポケモンを、チームに入れる事は出来ない")
+	if !omw.IsUnique(pokeNames) {
+		return Team{}, fmt.Errorf("同じポケモンを、同じチームに入れようとした")
 	}
 
 	if team.IsValidLength() {
@@ -64,7 +65,7 @@ func (team Team) Items() Items {
 }
 
 func (team Team) Find(pokeName PokeName) (Pokemon, error) {
-	index := team.PokeNames().Index(pokeName)
+	index := omw.Index(team.PokeNames(), pokeName)
 	if index == -1 {
 		errMsg := fmt.Sprintf("ポケモン名 : %v は チームに存在しない", pokeName)
 		return Pokemon{}, fmt.Errorf(errMsg)

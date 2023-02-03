@@ -1,9 +1,7 @@
 package bippa
 
 import (
-	"encoding/json"
 	"github.com/sw965/omw"
-	"io/ioutil"
 	"os"
 	"strings"
 )
@@ -11,23 +9,20 @@ import (
 var (
 	SW965_PATH = os.Getenv("GOPATH") + "sw965/"
 
-	DATA_PATH      = SW965_PATH + "/arbok/data/"
+	DATA_PATH      = SW965_PATH + "arbok/data/"
 	POKEDEX_PATH   = DATA_PATH + "pokedex/"
 	MOVEDEX_PATH   = DATA_PATH + "movedex/"
 	NATUREDEX_PATH = DATA_PATH + "naturedex.json"
 	TYPEDEX_PATH   = DATA_PATH + "typedex.json"
 
-	ALL_POKE_NAMES_PATH = DATA_PATH + "all_poke_names.txt"
-	ALL_NATURES_PATH    = DATA_PATH + "all_natures.txt"
-	ALL_MOVE_NAMES_PATH = DATA_PATH + "all_move_names.txt"
-	ALL_ITEMS_PATH      = DATA_PATH + "all_items.txt"
+	ALL_POKE_NAMES_PATH = DATA_PATH + "all_poke_names.json"
+	ALL_NATURES_PATH    = DATA_PATH + "all_natures.json"
+	ALL_MOVE_NAMES_PATH = DATA_PATH + "all_move_names.json"
+	ALL_ITEMS_PATH      = DATA_PATH + "all_items.json"
 
-	RATTA_PATH = SW965_PATH + "ratta/"
-	SET_LOWER_AND_UPPER_LIMIT_INDIVIDUALS_PATH = RATTA_PATH + "lower_and_upper_limit_individuals.json"
-	SET_LOWER_AND_UPPER_LIMIT_EFFORTS_PATH = RATTA_PATH + "lower_and_upper_limit_efforts.json"
-	PBCK_PATH = RATTA_PATH + "pokemon_build_common_knowledge/"
-	PSCMS_PATH = RATTA_PATH + "pokemon_state_combination_models/"
-	MPSCMS_PATH = RATTA_PATH + "multiple_pokemon_state_combination_models/"
+	RATTA_PATH               = SW965_PATH + "ratta/"
+	BIPARAM_INDIVIDUALS_PATH = RATTA_PATH + "individuals.json"
+	BIPARAM_EFFORTS_PATH     = RATTA_PATH + "efforts.json"
 )
 
 type PokeData struct {
@@ -53,17 +48,12 @@ type PokeData struct {
 	Learnset MoveNames
 }
 
-func LoadPokeData(filePath string) PokeData {
-	bytes, err := ioutil.ReadFile(filePath)
-	if err != nil {
+func LoadPokeData(path string) PokeData {
+	y := PokeData{}
+	if err := omw.LoadJson(&y, path); err != nil {
 		panic(err)
 	}
-
-	result := PokeData{}
-	if err := json.Unmarshal(bytes, &result); err != nil {
-		panic(err)
-	}
-	return result
+	return y
 }
 
 type Pokedex map[PokeName]*PokeData
@@ -73,44 +63,34 @@ var POKEDEX = func() Pokedex {
 	if err != nil {
 		panic(err)
 	}
-
-	result := Pokedex{}
+	y := Pokedex{}
 	for _, fileName := range listDir {
 		fullPath := POKEDEX_PATH + fileName
 		pokeName := strings.TrimRight(fileName, ".json")
 		pokeData := LoadPokeData(fullPath)
-		result[PokeName(pokeName)] = &pokeData
+		y[PokeName(pokeName)] = &pokeData
 	}
-	return result
+	return y
 }()
 
 var ALL_POKE_NAMES = func() PokeNames {
-	allPokeNames, err := omw.ReadTextLines(ALL_POKE_NAMES_PATH)
-	if err != nil {
+	y := make(PokeNames, 0)
+	if err := omw.LoadJson(&y, ALL_POKE_NAMES_PATH); err != nil {
 		panic(err)
 	}
-
-	result := make(PokeNames, len(allPokeNames))
-	for i, pokeName := range allPokeNames {
-		if i == 0 {
-			result[i] = PokeName(strings.TrimLeft(pokeName, "\ufeff"))
-			continue
-		}
-		result[i] = PokeName(pokeName)
-	}
-	return result
+	return y
 }()
 
 var ALL_ABILITIES = func() Abilities {
-	result := make(Abilities, 0)
+	y := make(Abilities, 0)
 	for _, pokeData := range POKEDEX {
 		for _, ability := range pokeData.AllAbilities {
-			if !result.In(ability) {
-				result = append(result, ability)
+			if !omw.Contains(y, ability) {
+				y = append(y, ability)
 			}
 		}
 	}
-	return result
+	return y
 }()
 
 type MoveData struct {
@@ -138,51 +118,34 @@ type MoveData struct {
 	MaxAttackNum int
 }
 
-func LoadMoveData(fullPath string) MoveData {
-	bytes, err := ioutil.ReadFile(fullPath)
-	if err != nil {
-		panic(err)
-	}
-
-	result := MoveData{}
-	if err := json.Unmarshal(bytes, &result); err != nil {
-		panic(err)
-	}
-	return result
+func LoadMoveData(path string) MoveData {
+	y := MoveData{}
+	omw.LoadJson(&y, path)
+	return y
 }
 
 type Movedex map[MoveName]*MoveData
 
 var MOVEDEX = func() Movedex {
-	result := Movedex{}
+	y := Movedex{}
 	listDir, err := omw.ListDir(MOVEDEX_PATH)
 	if err != nil {
 		panic(err)
 	}
-
 	for _, fileName := range listDir {
 		moveName := strings.TrimRight(fileName, ".json")
 		moveData := LoadMoveData(MOVEDEX_PATH + fileName)
-		result[MoveName(moveName)] = &moveData
+		y[MoveName(moveName)] = &moveData
 	}
-	return result
+	return y
 }()
 
 var ALL_MOVE_NAMES = func() MoveNames {
-	allMoveNames, err := omw.ReadTextLines(ALL_MOVE_NAMES_PATH)
-	if err != nil {
+	y := make(MoveNames, 0)
+	if err := omw.LoadJson(&y, ALL_MOVE_NAMES_PATH); err != nil {
 		panic(err)
 	}
-
-	result := make(MoveNames, len(allMoveNames))
-	for i, moveName := range allMoveNames {
-		if i == 0 {
-			result[i] = MoveName(strings.TrimLeft(moveName, "\ufeff"))
-			continue
-		}
-		result[i] = MoveName(moveName)
-	}
-	return result
+	return y
 }()
 
 type NatureData struct {
@@ -196,67 +159,38 @@ type NatureData struct {
 type Naturedex map[Nature]*NatureData
 
 var NATUREDEX = func() Naturedex {
-	bytes, err := ioutil.ReadFile(NATUREDEX_PATH)
-
-	if err != nil {
+	y := Naturedex{}
+	if err := omw.LoadJson(&y, NATUREDEX_PATH); err != nil {
 		panic(err)
 	}
-
-	result := Naturedex{}
-	if err := json.Unmarshal(bytes, &result); err != nil {
-		panic(err)
-	}
-	return result
+	return y
 }()
 
 var ALL_NATURES = func() Natures {
-	allNatures, err := omw.ReadTextLines(ALL_NATURES_PATH)
-	if err != nil {
+	y := make(Natures, 0)
+	if err := omw.LoadJson(&y, ALL_NATURES_PATH); err != nil {
 		panic(err)
 	}
-
-	result := make(Natures, len(allNatures))
-	for i, nature := range allNatures {
-		if i == 0 {
-			result[i] = Nature(strings.TrimLeft(nature, "\ufeff"))
-			continue
-		}
-		result[i] = Nature(nature)
-	}
-	return result
+	return y
 }()
 
 type TypeData map[Type]float64
 type Typedex map[Type]TypeData
 
 var TYPEDEX = func() Typedex {
-	bytes, err := ioutil.ReadFile(TYPEDEX_PATH)
-
-	if err != nil {
+	y := Typedex{}
+	if err := omw.LoadJson(&y, TYPEDEX_PATH); err != nil {
 		panic(err)
 	}
-
-	result := Typedex{}
-	if err := json.Unmarshal(bytes, &result); err != nil {
-		panic(err)
-	}
-	return result
+	return y
 }()
 
 var ALL_ITEMS = func() Items {
-	allItems, err := omw.ReadTextLines(ALL_ITEMS_PATH)
-	if err != nil {
+	y := make(Items, 0)
+	if err := omw.LoadJson(&y, ALL_ITEMS_PATH); err != nil {
 		panic(err)
 	}
-	result := make(Items, 0, len(allItems))
-	for i, item := range allItems {
-		if i == 0 {
-			result = append(result, Item(strings.TrimLeft(item, "\ufeff")))
-			continue
-		}
-		result = append(result, Item(item))
-	}
-	return result
+	return y
 }()
 
 var ALL_POKE_NAMES_LENGTH = len(ALL_POKE_NAMES)

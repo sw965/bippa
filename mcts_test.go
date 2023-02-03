@@ -1,11 +1,11 @@
 package bippa
 
 import (
-	"testing"
 	"fmt"
+	"github.com/seehuhn/mt19937"
 	"math"
 	"math/rand"
-	"github.com/seehuhn/mt19937"
+	"testing"
 	"time"
 )
 
@@ -64,7 +64,7 @@ func TestRunMCTS(t *testing.T) {
 	p1Fighters := Fighters{Putera(), Gaburiasu(), Sanda()}
 	p2Fighters := Fighters{Gaburiasu(), Rapurasu(), Sanda()}
 
-	battle := Battle{P1Fighters:p1Fighters, P2Fighters:p2Fighters}
+	battle := Battle{P1Fighters: p1Fighters, P2Fighters: p2Fighters}
 
 	battle.P1Fighters[0].CurrentHP = 1
 	battle.P1Fighters[1].CurrentHP = 0

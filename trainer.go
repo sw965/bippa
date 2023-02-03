@@ -2,6 +2,7 @@ package bippa
 
 import (
 	"fmt"
+	"github.com/sw965/omw"
 	"math/rand"
 )
 
@@ -10,7 +11,7 @@ type Trainer func(*Battle) (ActionCmd, error)
 func NewRandomInstructionTrainer(random *rand.Rand) Trainer {
 	result := func(battle *Battle) (ActionCmd, error) {
 		legalActionCmds := battle.P1Fighters.LegalActionCmds()
-		return legalActionCmds.RandomChoice(random), nil
+		return omw.RandomChoice(legalActionCmds, random), nil
 	}
 	return result
 }

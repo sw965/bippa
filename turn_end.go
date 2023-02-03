@@ -1,5 +1,9 @@
 package bippa
 
+import (
+	"github.com/sw965/omw"
+)
+
 // https://wiki.xn--rckteqa2e.com/wiki/%E3%82%BF%E3%83%BC%E3%83%B3#5..E3.82.BF.E3.83.BC.E3.83.B3.E7.B5.82.E4.BA.86.E6.99.82.E3.81.AE.E5.87.A6.E7.90.86
 func TurnEndLeftovers(battle Battle) Battle {
 	if battle.P1Fighters[0].Item != "たべのこし" {
@@ -20,17 +24,13 @@ func TurnEndBlackSludge(battle Battle) Battle {
 		return battle
 	}
 
-	if battle.P1Fighters[0].Types.In(POISON) {
+	if omw.Contains(battle.P1Fighters[0].Types, POISON) {
 		heal := int(float64(battle.P1Fighters[0].MaxHP) * 1.0 / 16.0)
-		if heal < 1 {
-			heal = 1
-		}
+		heal = omw.Max(heal, 1)
 		battle = battle.Heal(heal)
 	} else {
 		damage := int(float64(battle.P1Fighters[0].MaxHP) * 1.0 / 8.0)
-		if damage < 1 {
-			damage = 1
-		}
+		damage = omw.Max(damage, 1)
 		battle = battle.Damage(damage)
 	}
 	return battle

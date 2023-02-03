@@ -2,6 +2,7 @@ package bippa
 
 import (
 	"fmt"
+	"github.com/sw965/omw"
 )
 
 type Pokemon struct {
@@ -27,7 +28,7 @@ type Pokemon struct {
 
 	StatusAilment        StatusAilment
 	BadPoisonElapsedTurn int
-	RankState                 RankState
+	RankState            RankState
 	ChoiceMoveName       MoveName
 
 	IsLeechSeed bool
@@ -68,15 +69,19 @@ func NewPokemon(pokeName PokeName, nature Nature, ability Ability, gender Gender
 		return Pokemon{}, fmt.Errorf("性格 %v は 不適", nature)
 	}
 
-	if !ability.IsValid(pokeName) {
+	validAbilities := pokeData.AllAbilities
+
+	if !omw.Contains(validAbilities, ability) {
 		return Pokemon{}, fmt.Errorf("特性 %v の %v は不適", ability, pokeName)
 	}
 
-	if !gender.IsValid(pokeName) {
+	validGenders := NewVaildGenders(pokeName)
+
+	if !omw.Contains(validGenders, gender) {
 		return Pokemon{}, fmt.Errorf("性別 %v の %v は不適", gender, pokeName)
 	}
 
-	if !item.IsValid() {
+	if !omw.Contains(BATTLE_ITEMS, item) {
 		return Pokemon{}, fmt.Errorf("アイテム %v は 不適", item)
 	}
 
@@ -161,7 +166,7 @@ func (pokemon1 *Pokemon) Equal(pokemon2 *Pokemon) bool {
 	}
 
 	for _, pokeType := range pokemon1.Types {
-		if !pokemon2.Types.In(pokeType) {
+		if !omw.Contains(pokemon2.Types, pokeType) {
 			return false
 		}
 	}
@@ -207,55 +212,20 @@ func (pokemon *Pokemon) CurrentDamage() int {
 
 func (pokemon *Pokemon) SameTypeAttackBonus(moveName MoveName) SameTypeAttackBonus {
 	moveType := MOVEDEX[moveName].Type
-	inType := pokemon.Types.In(moveType)
-	return BOOL_TO_SAME_TYPE_ATTACK_BONUS[inType]
+	isSameType := omw.Contains(pokemon.Types, moveType)
+	return NewSameTypeAttackBonus(isSameType)
 }
 
 func (pokemon *Pokemon) EffectivenessBonus(moveName MoveName) EffectivenessBonus {
-	result := 1.0
+	y := 1.0
 	moveType := MOVEDEX[moveName].Type
 	for _, pokeType := range pokemon.Types {
-		result *= TYPEDEX[moveType][pokeType]
+		y *= TYPEDEX[moveType][pokeType]
 	}
-	return EffectivenessBonus(result)
+	return EffectivenessBonus(y)
 }
 
 func (pokemon *Pokemon) BadPoisonDamage() int {
 	damage := int(float64(pokemon.MaxHP) * float64(pokemon.BadPoisonElapsedTurn) / 16.0)
-	if damage < 1 {
-		return 1
-	} else {
-		return damage
-	}
-}
-
-type Pokemons []Pokemon
-
-func (pokemons Pokemons) Filter(f func(Pokemon) bool) Pokemons {
-	result := make(Pokemons, 0, len(pokemons))
-	for _, pokemon := range pokemons {
-		if f(pokemon) {
-			result = append(result, pokemon)
-		}
-	}
-	return result
-}
-
-func (pokemons Pokemons) Count(pokemon Pokemon) int {
-	result := 0
-	for _, iPokemon := range pokemons {
-		iPokemonPointer := &iPokemon
-		if iPokemonPointer.Equal(&pokemon) {
-			result += 1
-		}
-	}
-	return result
-}
-
-func (pokemons Pokemons) Counts() []int {
-	result := make([]int, len(pokemons))
-	for i, pokemon := range pokemons {
-		result[i] = pokemons.Count(pokemon)
-	}
-	return result
+	return omw.Max(damage, 1)
 }

@@ -3,6 +3,7 @@ package bippa
 import (
 	"fmt"
 	"github.com/sw965/crow"
+	"github.com/sw965/omw"
 	"math/rand"
 )
 
@@ -108,7 +109,7 @@ type BattleNode struct {
 	Battle          *Battle
 	LegalActionCmds ActionCmds
 	ActionCmdPUCBs  ActionCmdPUCBs
-	NextBattleNodes       BattleNodes
+	NextBattleNodes BattleNodes
 	IsP1            bool
 	SelectCount     int
 }
@@ -148,7 +149,7 @@ func (battleNode *BattleNode) SelectAndExpansion(battle Battle, allBattleNodes B
 
 	for {
 		maxPUCBActionCmds := battleNode.ActionCmdPUCBs.MaxActionCmds(X)
-		selectActionCmd := maxPUCBActionCmds.RandomChoice(random)
+		selectActionCmd := omw.RandomChoice(maxPUCBActionCmds, random)
 		selects = append(selects, BattleNodeSelect{Node: battleNode, ActionCmd: selectActionCmd})
 		battleNode.SelectCount += 1
 
@@ -241,7 +242,7 @@ func RunMCTS(rootBattle Battle, simuNum int, X float64, battlePolicy BattlePolic
 	selectsLength := 0
 
 	for i := 0; i < simuNum; i++ {
-		battle, allBattleNodes, selects, err = rootBattleNode.SelectAndExpansion(battle, allBattleNodes, battlePolicy, X, selectsLength + 1, random)
+		battle, allBattleNodes, selects, err = rootBattleNode.SelectAndExpansion(battle, allBattleNodes, battlePolicy, X, selectsLength+1, random)
 		if err != nil {
 			return BattleNodes{}, err
 		}
@@ -273,18 +274,18 @@ func NewMCTSTrainer(simuNum int, X float64, battlePolicy BattlePolicy, battleEva
 			return "", err
 		}
 
-		return allBattleNodes[0].ActionCmdPUCBs.MaxTrialActionCmds().RandomChoice(random), nil
+		return omw.RandomChoice(allBattleNodes[0].ActionCmdPUCBs.MaxTrialActionCmds(), random), nil
 	}
 	return result
 }
 
 type TeamNode struct {
-	Team Team
+	Team           Team
 	LegalPokeNames PokeNames
 	LegalAbilities Abilities
-	LegalItems Items
+	LegalItems     Items
 	LegalMoveNames MoveNames
-	LegalNatures Natures
+	LegalNatures   Natures
 
 	Policies []float64
 }

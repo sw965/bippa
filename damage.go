@@ -2,6 +2,7 @@ package bippa
 
 import (
 	"fmt"
+	"github.com/sw965/omw"
 	"math/rand"
 )
 
@@ -187,7 +188,14 @@ var (
 )
 
 var CRITICAL_N = map[CriticalRank]int{0: 24, 1: 8, 2: 2, 3: 1}
-var BOOL_TO_CRITICAL_BONUS = map[bool]CriticalBonus{true: CRITICAL_BONUS, false: NO_CRITICAL_BONUS}
+
+func NewCriticalBonus(x bool) CriticalBonus {
+	if x {
+		return CRITICAL_BONUS
+	} else {
+		return NO_CRITICAL_BONUS
+	}
+}
 
 type SameTypeAttackBonus float64
 
@@ -196,8 +204,12 @@ const (
 	NO_SAME_TYPE_ATTACK_BONUS = SameTypeAttackBonus(4096.0 / 4096.0)
 )
 
-var BOOL_TO_SAME_TYPE_ATTACK_BONUS = map[bool]SameTypeAttackBonus{
-	true: SAME_TYPE_ATTACK_BONUS, false: NO_SAME_TYPE_ATTACK_BONUS,
+func NewSameTypeAttackBonus(x bool) SameTypeAttackBonus {
+	if x {
+		return SAME_TYPE_ATTACK_BONUS
+	} else {
+		return NO_SAME_TYPE_ATTACK_BONUS
+	}
 }
 
 type EffectivenessBonus float64
@@ -212,32 +224,13 @@ func NewRandomDamageBonus(random *rand.Rand) RandomDamageBonus {
 
 type RandomDamageBonuses []RandomDamageBonus
 
-func (randomDamageBonuses RandomDamageBonuses) Average() RandomDamageBonus {
-	sum := RandomDamageBonus(0.0)
-	for _, randomDamageBonus := range randomDamageBonuses {
-		sum += randomDamageBonus
-	}
-	return RandomDamageBonus(sum) / RandomDamageBonus(RANDOM_DAMAGE_BONUSES_LENGTH)
-}
-
-func (randomDamageBonuses RandomDamageBonuses) Max() RandomDamageBonus {
-	result := randomDamageBonuses[0]
-	for _, v := range randomDamageBonuses[1:] {
-		if v > result {
-			result = v
-		}
-	}
-	return result
-}
-
 var RANDOM_DAMAGE_BONUSES = RandomDamageBonuses{
 	0.85, 0.86, 0.87, 0.88, 0.89, 0.9, 0.91, 0.92, 0.93, 0.94, 0.95, 0.96, 0.97, 0.98, 0.99, 1.0,
 }
 
 var RANDOM_DAMAGE_BONUSES_LENGTH = len(RANDOM_DAMAGE_BONUSES)
-
-var MAX_RANDOM_DAMAGE_BONUS = RANDOM_DAMAGE_BONUSES.Max()
-var AVERAGE_RANDOM_DAMAGE_BONUS = RANDOM_DAMAGE_BONUSES.Average()
+var MAX_RANDOM_DAMAGE_BONUS = omw.Max(RANDOM_DAMAGE_BONUSES...)
+var MEAN_RANDOM_DAMAGE_BONUS = omw.Mean(RANDOM_DAMAGE_BONUSES...)
 
 type DamageBonus int
 
@@ -272,7 +265,7 @@ func NewFinalDamage(attackPokemon, defensePokemon *Pokemon, moveName MoveName, i
 		return 0, err
 	}
 
-	criticalBonus := BOOL_TO_CRITICAL_BONUS[isCritical]
+	criticalBonus := NewCriticalBonus(isCritical)
 	sameTypeAttackBonus := attackPokemon.SameTypeAttackBonus(moveName)
 	effectivenessBonus := defensePokemon.EffectivenessBonus(moveName)
 
