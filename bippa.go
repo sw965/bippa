@@ -5,6 +5,7 @@ import (
 	"golang.org/x/exp/slices"
 	"golang.org/x/exp/maps"
 	"github.com/sw965/omw"
+	"github.com/sw965/crow"
 	"math/rand"
 	"strings"
 )
@@ -1822,38 +1823,198 @@ func TurnEndBadPoison(bt Battle) Battle {
 	return bt.Damage(dmg)
 }
 
-type TeamFeature interface {
-	PokeName | MoveName | Nature
-}
-
-type TwoLengthArrayKeyTeamModelPart [F TeamFeature] map[[2]F]float64
-
-func NewInitTwoLengthArrayKeyTeamModelPart[FS ~[]F, F TeamFeature](features FS, r *rand.Rand) TwoLengthArrayKeyTeamModelPart[F] {
-	y := TwoLengthArrayKeyTeamModelPart[F]{}
-	for _, f1 := range features {
-		for _, f2 := range features {
-			k := [2]F{f1, f2}
-			y[k] = omw.RandFloat64(0.0, 16.0, r)
+func GetAllHPs(base BaseState) States {
+	y := make(States, 0, len(ALL_INDIVIDUALS) * len(EFFECTIVE_EFFORTS))
+	for _, iv := range ALL_INDIVIDUALS {
+		for _, ev := range EFFECTIVE_EFFORTS {
+			hp := GetHP(base, iv, ev)
+			if !slices.Contains(y, hp) {
+				y = append(y, hp)
+			}
 		}
 	}
 	return y
 }
 
-type Combination2FeatureTeamModelPart[F1, F2 TeamFeature] map[F1]map[F2]float64
-
-func NewCombination2FeatureTeamModelPart[FS1 ~[]F1, FS2 ~[]F2, F1, F2 TeamFeature](features1 FS1, features2 FS2, r *rand.Rand) Combination2FeatureTeamModelPart[F1, F2] {
-	y := Combination2FeatureTeamModelPart[F1, F2]{}
-	for _, f1 := range features1 {
-		if _, ok := y[f1]; !ok {
-			y[f1] = map[F2]float64{}
-		}
-		for _, f2 := range features2 {
-			y[f1][f2] = omw.RandFloat64(0.0, 16.0, r)
+func GetAllStates(base BaseState) States {
+	y := make(States, 0, len(ALL_INDIVIDUALS) * len(EFFECTIVE_EFFORTS) * len(ALL_NATURE_BONUSES))
+	for _, iv := range ALL_INDIVIDUALS {
+		for _, ev := range EFFECTIVE_EFFORTS {
+			for _, bonus := range ALL_NATURE_BONUSES {
+				state := GetState(base, iv, ev, bonus)
+				if !slices.Contains(y, state) {
+					y = append(y, state)
+				}
+			}
 		}
 	}
 	return y
 }
 
-type TeamModel struct {
+type BaseModel[K comparable] map[K]float64
+type TwoRelationshipModel[K1, K2 comparable] map[K1]BaseModel[K2]
 
+func NewInitSameFeatureValueTwoRelationshipModel[FS ~[]K, K comparable](features FS, r *rand.Rand) TwoRelationshipModel[K, K] {
+	y := TwoRelationshipModel[K, K]{}
+	permutation2 := omw.Permutation[[]FS](features, 2)
+	for _, vs := range permutation2 {
+		k1 := vs[0]
+		if _, ok := y[k1]; !ok {
+			y[k1] = BaseModel[K]{}
+		}
+		k2 := vs[1]
+		y[k1][k2] = omw.RandFloat64(0.0, 16.0, r)
+	}
+	return y
+}
+
+func NewInitDifferentFeatureValueTwoRelationshipModel[FS1 ~[]K1, FS2 ~[]K2, K1, K2 comparable](features1 FS1, features2 FS2, r *rand.Rand) TwoRelationshipModel[K1, K2] {
+	y := TwoRelationshipModel[K1, K2]{}
+	for _, k1 := range features1 {
+		if _, ok := y[k1]; !ok {
+			y[k1] = BaseModel[K2]{}
+		}
+		for _, k2 := range features2 {
+			y[k1][k2] = omw.RandFloat64(0.0, 16.0, r)
+		}
+	}
+	return y
+}
+
+type PokemonModel struct {
+	MoveNameAndMoveName TwoRelationshipModel[MoveName, MoveName]
+	MoveNameAndGender TwoRelationshipModel[MoveName, Gender]
+	MoveNameAndAbility TwoRelationshipModel[MoveName, Ability]
+	MoveNameAndItem TwoRelationshipModel[MoveName, Item]
+	MoveNameAndHP TwoRelationshipModel[MoveName, State]
+	MoveNameAndAtk TwoRelationshipModel[MoveName, State]
+	MoveNameAndDef TwoRelationshipModel[MoveName, State]
+	MoveNameAndSpAtk TwoRelationshipModel[MoveName, State]
+	MoveNameAndSpDef TwoRelationshipModel[MoveName, State]
+	MoveNameAndSpeed TwoRelationshipModel[MoveName, State]
+}
+
+func NewInitPokemonModel(pokeName PokeName, r *rand.Rand) PokemonModel {
+	pokeData := POKEDEX[pokeName]
+	genders := NewValidGenders(pokeName)
+	hps := GetAllHPs(pokeData.BaseHP)
+	atks := GetAllStates(pokeData.BaseAtk)
+	defs := GetAllStates(pokeData.BaseDef)
+	spAtks := GetAllStates(pokeData.BaseSpAtk)
+	spDefs := GetAllStates(pokeData.BaseSpDef)
+	speeds := GetAllStates(pokeData.BaseSpeed)
+
+	moveNameAndMoveName := NewInitSameFeatureValueTwoRelationshipModel[MoveNames](pokeData.Learnset, r)
+	moveNameAndGender := NewInitDifferentFeatureValueTwoRelationshipModel[MoveNames, Genders](pokeData.Learnset, genders, r)
+	moveNameAndAbility := NewInitDifferentFeatureValueTwoRelationshipModel[MoveNames, Abilities](pokeData.Learnset, pokeData.AllAbilities, r)
+	moveNameAndItem := NewInitDifferentFeatureValueTwoRelationshipModel[MoveNames, Items](pokeData.Learnset, ALL_ITEMS, r)
+	moveNameAndHP := NewInitDifferentFeatureValueTwoRelationshipModel[MoveNames, States](pokeData.Learnset, hps, r)
+	moveNameAndAtk := NewInitDifferentFeatureValueTwoRelationshipModel[MoveNames, States](pokeData.Learnset, atks, r)
+	moveNameAndDef := NewInitDifferentFeatureValueTwoRelationshipModel[MoveNames, States](pokeData.Learnset, defs, r)
+	moveNameAndSpAtk := NewInitDifferentFeatureValueTwoRelationshipModel[MoveNames, States](pokeData.Learnset, spAtks, r)
+	moveNameAndSpDef := NewInitDifferentFeatureValueTwoRelationshipModel[MoveNames, States](pokeData.Learnset, spDefs, r)
+	moveNameAndSpeed := NewInitDifferentFeatureValueTwoRelationshipModel[MoveNames, States](pokeData.Learnset, speeds, r)
+
+	return PokemonModel{
+		MoveNameAndMoveName:moveNameAndMoveName,
+		MoveNameAndGender:moveNameAndGender,
+		MoveNameAndAbility:moveNameAndAbility,
+		MoveNameAndItem:moveNameAndItem,
+		MoveNameAndHP:moveNameAndHP,
+		MoveNameAndAtk:moveNameAndAtk,
+		MoveNameAndDef:moveNameAndDef,
+		MoveNameAndSpAtk:moveNameAndSpAtk,
+		MoveNameAndSpDef:moveNameAndSpDef,
+		MoveNameAndSpeed:moveNameAndSpeed,
+	}
+}
+
+func (model PokemonModel) ParameterSize() int {
+	y := 0
+	y += omw.NestMapSize(model.MoveNameAndMoveName)
+	y += omw.NestMapSize(model.MoveNameAndGender)
+	y += omw.NestMapSize(model.MoveNameAndAbility)
+	y += omw.NestMapSize(model.MoveNameAndItem)
+	y += omw.NestMapSize(model.MoveNameAndHP)
+	y += omw.NestMapSize(model.MoveNameAndAtk)
+	y += omw.NestMapSize(model.MoveNameAndDef)
+	y += omw.NestMapSize(model.MoveNameAndSpAtk)
+	y += omw.NestMapSize(model.MoveNameAndSpDef)
+	y += omw.NestMapSize(model.MoveNameAndSpeed)
+	return y
+}
+
+func (model *PokemonModel) Output(pokemon *Pokemon) float64 {
+	y := 0.0
+	moveNames := maps.Keys(pokemon.Moveset)
+
+	permutation2 := omw.Permutation[[]MoveNames, MoveNames](moveNames, 2)
+	for _, mns := range permutation2 {
+		y += model.MoveNameAndMoveName[mns[0]][mns[1]]
+	}
+
+	for _, moveName := range moveNames {
+		y += model.MoveNameAndGender[moveName][pokemon.Gender]
+		y += model.MoveNameAndAbility[moveName][pokemon.Ability]
+		y += model.MoveNameAndItem[moveName][pokemon.Item]
+		y += model.MoveNameAndHP[moveName][pokemon.MaxHP]
+		y += model.MoveNameAndAtk[moveName][pokemon.Atk]
+		y += model.MoveNameAndDef[moveName][pokemon.Def]
+		y += model.MoveNameAndSpAtk[moveName][pokemon.SpAtk]
+		y += model.MoveNameAndSpDef[moveName][pokemon.SpDef]
+		y += model.MoveNameAndSpeed[moveName][pokemon.Speed]
+	}
+	return y
+}
+
+func NewTeamBuildPUCTFunCaller(model *PokemonModel, r *rand.Rand) crow.PUCT_FunCaller[Team, TeamBuildCmd] {
+	legalActions := func(team *Team) []TeamBuildCmd {
+		return team.LegalBuildCmds()
+	}
+
+	push := func(team Team, action TeamBuildCmd) Team {
+		return team.Push(&action)
+	}
+
+	isEnd := func(team *Team) bool {
+		return len(team.LegalBuildCmds()) == 0
+	}
+
+	equal := func(team1, team2 *Team) bool {
+		return team1.Equal(*team2)
+	}
+
+	game := crow.AlternatelyMoveGameFunCaller[Team, TeamBuildCmd]{
+		LegalActions:legalActions,
+		Push:push,
+		EqualState:equal,
+		IsEnd:isEnd,
+	}
+
+	game.SetRandomActionPlayer(r)
+	
+	leaf := func(team *Team) crow.PUCT_LeafEvalY {
+		y := 0.0
+		for _, pokemon := range *team {
+			y += model.Output(&pokemon)
+		}
+		return crow.PUCT_LeafEvalY(y)
+	}
+
+	backward := func(y crow.PUCT_LeafEvalY, team *Team) crow.PUCT_BackwardEvalY {
+		return crow.PUCT_BackwardEvalY(y)
+	}
+
+	eval := crow.PUCT_EvalFunCaller[Team]{
+		Leaf:leaf,
+		Backward:backward,
+	}
+
+	fnCaller := crow.PUCT_FunCaller[Team, TeamBuildCmd]{
+		Game:game,
+		Eval:eval,
+	}
+
+	fnCaller.SetNoPolicy()
+	return fnCaller
 }
