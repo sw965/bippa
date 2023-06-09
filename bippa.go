@@ -1,209 +1,20 @@
 package bippa
 
 import (
-	"os"
-	"golang.org/x/exp/slices"
-	"golang.org/x/exp/maps"
 	"github.com/sw965/omw"
-	"github.com/sw965/crow"
+	"golang.org/x/exp/maps"
+	"golang.org/x/exp/slices"
 	"math/rand"
-	"strings"
+	"fmt"
 )
-
-var (
-	SW965_PATH = os.Getenv("GOPATH") + "sw965/"
-
-	DATA_PATH      = SW965_PATH + "arbok/data/"
-	POKEDEX_PATH   = DATA_PATH + "pokedex/"
-	MOVEDEX_PATH   = DATA_PATH + "movedex/"
-	NATUREDEX_PATH = DATA_PATH + "naturedex.json"
-	TYPEDEX_PATH   = DATA_PATH + "typedex.json"
-
-	ALL_POKE_NAMES_PATH = DATA_PATH + "all_poke_names.json"
-	ALL_NATURES_PATH    = DATA_PATH + "all_natures.json"
-	ALL_MOVE_NAMES_PATH = DATA_PATH + "all_move_names.json"
-	ALL_ITEMS_PATH      = DATA_PATH + "all_items.json"
-
-	RATTA_PATH               = SW965_PATH + "ratta/"
-)
-
-type BaseState int
-
-type PokeData struct {
-	NormalAbilities Abilities
-	HiddenAbility   Ability
-	AllAbilities    Abilities
-
-	Gender string
-	Types  Types
-
-	BaseHP    BaseState
-	BaseAtk   BaseState
-	BaseDef   BaseState
-	BaseSpAtk BaseState
-	BaseSpDef BaseState
-	BaseSpeed BaseState
-
-	Height    float64
-	Weight    float64
-	EggGroups []string
-	Category  string
-
-	Learnset MoveNames
-}
-
-func LoadPokeData(path string) PokeData {
-	y, err := omw.LoadJson[PokeData](path)
-	if err != nil {
-		panic(err)
-	}
-	return y
-}
-
-type Pokedex map[PokeName]*PokeData
-
-var POKEDEX = func() Pokedex {
-	names, err := omw.DirNames(POKEDEX_PATH)
-	if err != nil {
-		panic(err)
-	}
-	y := Pokedex{}
-	for _, name := range names {
-		full := POKEDEX_PATH + name
-		pokeName := strings.TrimRight(name, ".json")
-		pokeData := LoadPokeData(full)
-		y[PokeName(pokeName)] = &pokeData
-	}
-	return y
-}()
-
-var ALL_POKE_NAMES = func() PokeNames {
-	y, err := omw.LoadJson[PokeNames](ALL_POKE_NAMES_PATH)
-	if err != nil {
-		panic(err)
-	}
-	return y
-}()
-
-var ALL_ABILITIES = func() Abilities {
-	y := make(Abilities, 0)
-	for _, pokeData := range POKEDEX {
-		for _, ability := range pokeData.AllAbilities {
-			if !slices.Contains(y, ability) {
-				y = append(y, ability)
-			}
-		}
-	}
-	return y
-}()
-
-type MoveData struct {
-	Type     Type
-	Category string
-	Power    int
-	Accuracy int
-	BasePP   int
-	Target   string
-
-	Contact    string
-	Protect    string
-	MagicCoat  string
-	Snatch     string
-	MirrorMove string
-	Substitute string
-
-	GigantamaxMove  string
-	GigantamaxPower int
-
-	PriorityRank int
-	CriticalRank CriticalRank
-
-	MinAttackNum int
-	MaxAttackNum int
-}
-
-func LoadMoveData(path string) MoveData {
-	y, err := omw.LoadJson[MoveData](path)
-	if err != nil {
-		panic(err)
-	}
-	return y
-}
-
-type Movedex map[MoveName]*MoveData
-
-var MOVEDEX = func() Movedex {
-	y := Movedex{}
-	names, err := omw.DirNames(MOVEDEX_PATH)
-	if err != nil {
-		panic(err)
-	}
-	for _, name := range names {
-		moveName := strings.TrimRight(name, ".json")
-		moveData := LoadMoveData(MOVEDEX_PATH + name)
-		y[MoveName(moveName)] = &moveData
-	}
-	return y
-}()
-
-var ALL_MOVE_NAMES = func() MoveNames {
-	y, err := omw.LoadJson[MoveNames](ALL_MOVE_NAMES_PATH)	
-	if err != nil {
-		panic(err)
-	}
-	return y
-}()
-
-type NatureData struct {
-	AtkBonus   NatureBonus
-	DefBonus   NatureBonus
-	SpAtkBonus NatureBonus
-	SpDefBonus NatureBonus
-	SpeedBonus NatureBonus
-}
-
-type Naturedex map[Nature]*NatureData
-
-var NATUREDEX = func() Naturedex {
-	y, err := omw.LoadJson[Naturedex](NATUREDEX_PATH)
-	if err != nil {
-		panic(err)
-	}
-	return y
-}()
-
-var ALL_NATURES = func() Natures {
-	y, err := omw.LoadJson[Natures](ALL_NATURES_PATH)
-	if err != nil {
-		panic(err)
-	}
-	return y
-}()
-
-type TypeData map[Type]float64
-type Typedex map[Type]TypeData
-
-var TYPEDEX = func() Typedex {
-	y, err := omw.LoadJson[Typedex](TYPEDEX_PATH)
-	if err != nil {
-		panic(err)
-	}
-	return y
-}()
-
-var ALL_ITEMS = func() Items {
-	y, err := omw.LoadJson[Items](ALL_ITEMS_PATH)
-	if err != nil {
-		panic(err)
-	}
-	return y
-}()
 
 type PokeName string
 type PokeNames []PokeName
 
 func (pns PokeNames) Sort() {
-	isSwap := func(name1, name2 PokeName) bool { return slices.Index(ALL_POKE_NAMES, name1) > slices.Index(ALL_POKE_NAMES, name2)}
+	isSwap := func(name1, name2 PokeName) bool {
+		return slices.Index(ALL_POKE_NAMES, name1) > slices.Index(ALL_POKE_NAMES, name2)
+	}
 	slices.SortFunc(pns, isSwap)
 }
 
@@ -263,20 +74,6 @@ func NewValidGenders(pn PokeName) Genders {
 	}
 }
 
-type Nature string
-type Natures []Nature
-type NatureBonus float64
-
-const (
-	NO_NATURE_BONUS   = NatureBonus(1.0)
-	UP_NATURE_BONUS   = NatureBonus(1.1)
-	DOWN_NATURE_BONUS = NatureBonus(0.9)
-)
-
-type NatureBonuses []NatureBonus
-
-var ALL_NATURE_BONUSES = NatureBonuses{NO_NATURE_BONUS, UP_NATURE_BONUS, DOWN_NATURE_BONUS}
-
 type Ability string
 type Abilities []Ability
 
@@ -297,74 +94,6 @@ var BATTLE_ITEMS = func() Items {
 	return append(y, ALL_ITEMS...)
 }()
 
-type MoveName string
-
-const (
-	EMPTY_MOVE_NAME = MoveName("なし")
-	STRUGGLE        = MoveName("わるあがき")
-)
-
-type MoveNames []MoveName
-
-type PowerPointUp int
-
-var (
-	MIN_POWER_POINT_UP = PowerPointUp(0)
-	MAX_POWER_POINT_UP = PowerPointUp(3)
-)
-
-type PowerPointUps []PowerPointUp
-
-var ALL_POWER_POINT_UPS = omw.MakeIntegerRange[PowerPointUps](MIN_POWER_POINT_UP, MAX_POWER_POINT_UP+1, 1)
-
-type PowerPoint struct {
-	Max     int
-	Current int
-}
-
-func NewPowerPoint(base int, up PowerPointUp) PowerPoint {
-	bonus := (5.0 + float64(up)) / 5.0
-	max := int(float64(base) * bonus)
-	return PowerPoint{Max: max, Current: max}
-}
-
-func NewMaxPowerPoint(moveName MoveName) PowerPoint {
-	base := MOVEDEX[moveName].BasePP
-	return NewPowerPoint(base, MAX_POWER_POINT_UP)
-}
-
-type PowerPoints []PowerPoint
-
-type Moveset map[MoveName]*PowerPoint
-
-const (
-	MIN_MOVESET_LENGTH = 1
-	MAX_MOVESET_LENGTH = 4
-)
-
-func (ms Moveset) Copy() Moveset {
-	y := Moveset{}
-	for k, v := range ms {
-		pp := PowerPoint{Max:v.Max, Current:v.Current}
-		y[k] = &pp
-	}
-	return y
-}
-
-func (ms1 Moveset) Equal(ms2 Moveset) bool {
-	for k1, v1 := range ms1 {
-		v2, ok := ms2[k1]
-		if !ok {
-			return false
-		}
-
-		if *v1 != *v2 {
-			return false
-		}
-	}
-	return true
-}
-
 func GetHP(base BaseState, iv Individual, ev Effort) State {
 	lv := int(DEFAULT_LEVEL)
 	y := ((int(base)*2)+int(iv)+(int(ev)/4))*lv/100 + lv + 10
@@ -377,6 +106,10 @@ func GetState(base BaseState, iv Individual, ev Effort, bonus NatureBonus) State
 	return State(float64(y) * float64(bonus))
 }
 
+const (
+	EMPTY_STATE = State(-1)
+)
+
 type StatusAilment string
 
 const (
@@ -387,75 +120,6 @@ const (
 	PARALYSIS     = StatusAilment("まひ")
 	FREEZE        = StatusAilment("こおり")
 )
-
-type Individual int
-
-const (
-	EMPTY_INDIVIDUAL = Individual(-1)
-	MIN_INDIVIDUAL   = Individual(0)
-	MAX_INDIVIDUAL   = Individual(31)
-)
-
-type Individuals []Individual
-
-var ALL_INDIVIDUALS Individuals = omw.MakeIntegerRange[Individuals](MIN_INDIVIDUAL, MAX_INDIVIDUAL+1, 1)
-
-type IndividualState struct {
-	HP    Individual
-	Atk   Individual
-	Def   Individual
-	SpAtk Individual
-	SpDef Individual
-	Speed Individual
-}
-
-var ALL_MIN_INDIVIDUAL_STATE = IndividualState{
-	HP: MIN_INDIVIDUAL, Atk: MIN_INDIVIDUAL, Def: MIN_INDIVIDUAL,
-	SpAtk: MIN_INDIVIDUAL, SpDef: MIN_INDIVIDUAL, Speed: MIN_INDIVIDUAL,
-}
-
-var ALL_MAX_INDIVIDUAL_STATE = IndividualState{
-	HP: MAX_INDIVIDUAL, Atk: MAX_INDIVIDUAL, Def: MAX_INDIVIDUAL,
-	SpAtk: MAX_INDIVIDUAL, SpDef: MAX_INDIVIDUAL, Speed: MAX_INDIVIDUAL,
-}
-
-var INIT_INDIVIDUAL_STATE = IndividualState{HP:-1, Atk:-1, Def:-1, SpAtk:-1, SpDef:-1, Speed:-1}
-
-type Effort int
-
-var (
-	EMPTY_EFFORT   = Effort(-1)
-	MIN_EFFORT     = Effort(0)
-	MAX_EFFORT     = Effort(252)
-	MAX_SUM_EFFORT = Effort(510)
-	EFFECTIVE_EFFORT = Effort(4)
-)
-
-type Efforts []Effort
-
-var ALL_EFFORTS Efforts = omw.MakeIntegerRange[Efforts](MIN_EFFORT, MAX_EFFORT+1, 1)
-var EFFECTIVE_EFFORTS Efforts = omw.Filter(ALL_EFFORTS, omw.IsRemainderZero(EFFECTIVE_EFFORT))
-
-type EffortState struct {
-	HP    Effort
-	Atk   Effort
-	Def   Effort
-	SpAtk Effort
-	SpDef Effort
-	Speed Effort
-}
-
-var INIT_EFFORT_STATE = EffortState{HP:-1, Atk:-1, Def:-1, SpAtk:-1, SpDef:-1, Speed:-1}
-
-func (es *EffortState) Sum() Effort {
-	hp := es.HP
-	atk := es.Atk
-	def := es.Def
-	spAtk := es.SpAtk
-	spDef := es.SpDef
-	speed := es.Speed
-	return hp + atk + def + spAtk + spDef + speed
-}
 
 type Rank int
 
@@ -567,6 +231,54 @@ type Pokemon struct {
 	ChoiceMoveName       MoveName
 
 	IsLeechSeed bool
+}
+
+func NewPokemon(pokeName PokeName, gender Gender, nature Nature, ability Ability, item Item,
+	moveNames MoveNames, ppups PowerPointUps, ivState *IndividualState, evState *EffortState) (Pokemon, error) {
+	pokeData, ok := POKEDEX[pokeName]
+	if !ok {
+		var msg string
+		if pokeName == "" {
+			msg = "ポケモン名 が ゼロ値 に なっている"
+		} else {
+			msg = fmt.Sprintf("%v という ポケモン名 は 存在しない", pokeName)
+		}
+		return Pokemon{}, fmt.Errorf(msg)
+	}
+
+	if !slices.Contains(ALL_GENDERS, gender) {
+		return Pokemon{}, fmt.Errorf("性別 が 不適")
+	}
+
+	if !slices.Contains(ALL_NATURES, nature) {
+		return Pokemon{}, fmt.Errorf("性格 が 不適")
+	}
+
+	if !slices.Contains(pokeData.AllAbilities, ability) {
+		return Pokemon{}, fmt.Errorf("特性 が 不適")
+	}
+
+	if item == "" {
+		return Pokemon{}, fmt.Errorf("アイテム が ゼロ値 に なっている (何も持たせない場合は、EMPTY_ITEM を 使って)")
+	}
+
+	if !slices.Contains(ALL_ITEMS, item) {
+		return Pokemon{}, fmt.Errorf("アイテム が 不適")
+	}
+
+	moveset, err := NewMoveset(pokeName, moveNames, ppups)
+	if err != nil {
+		return Pokemon{}, err
+	}
+
+	pokemon := Pokemon{
+		Name:pokeName, Types:pokeData.Types, Level:DEFAULT_LEVEL,
+		Gender:gender, Nature:nature, Ability:ability, Item:item,
+		Moveset:moveset, IndividualState:*ivState, EffortState:*evState,
+	}
+
+	pokemon.UpdateState()
+	return pokemon, nil
 }
 
 func (p1 *Pokemon) Equal(p2 *Pokemon) bool {
@@ -695,188 +407,21 @@ func (p *Pokemon) BadPoisonDamage() int {
 	return omw.Max(dmg, 1)
 }
 
-const (
-	MIN_TEAM_LENGTH = 3
-	MAX_TEAM_LENGTH = 6
-)
+func (p *Pokemon) UpdateState() {
+	pokeData := POKEDEX[p.Name]
+	natureData, ok := NATUREDEX[p.Nature]
+	if !ok {
+		natureData = NATUREDEX["てれや"]
+	}
 
-type Team []Pokemon
-
-func (team Team) IsValidLength() bool {
-	n := len(team)
-	return MIN_TEAM_LENGTH <= n && n <= MAX_TEAM_LENGTH
+	p.MaxHP = GetHP(pokeData.BaseHP, p.IndividualState.HP, p.EffortState.HP)
+	p.CurrentHP = p.MaxHP
+	p.Atk = GetState(pokeData.BaseAtk, p.IndividualState.Atk, p.EffortState.Atk, natureData.AtkBonus)
+	p.Def = GetState(pokeData.BaseDef, p.IndividualState.Def, p.EffortState.Def, natureData.DefBonus)
+	p.SpAtk = GetState(pokeData.BaseSpAtk, p.IndividualState.SpAtk, p.EffortState.SpAtk, natureData.SpAtkBonus)
+	p.SpDef = GetState(pokeData.BaseSpDef, p.IndividualState.SpDef, p.EffortState.SpDef, natureData.SpDefBonus)
+	p.Speed = GetState(pokeData.BaseSpeed, p.IndividualState.Speed, p.EffortState.Speed, natureData.SpeedBonus)
 }
-
-func (team Team) PokeNames() PokeNames {
-	y := make(PokeNames, len(team))
-	for i, poke := range team {
-		y[i] = poke.Name
-	}
-	return y
-}
-
-func (team Team) Items() Items {
-	y := make(Items, len(team))
-	for i, poke := range team {
-		y[i] = poke.Item
-	}
-	return y
-}
-
-func (team Team) Find(name PokeName) Pokemon {
-	idx := slices.Index(team.PokeNames(), name)
-	return team[idx]
-}
-
-func (team Team) Sort() Team {
-	names := team.PokeNames()
-	names.Sort()
-	y := make(Team, 0, len(team))
-	for _, name := range names {
-		poke := team.Find(name)
-		y = append(y, poke)
-	}
-	return y
-}
-
-func (team1 Team) Equal(team2 Team) bool {
-	if len(team1) != len(team2) {
-		return false
-	}
-	team1 = team1.Sort()
-	team2 = team2.Sort()
-	for i, poke := range team1 {
-		if !poke.Equal(&team2[i]) {
-			return false
-		}
-	}
-	return true
-}
-
-func (team Team) LegalBuildCmds() TeamBuildCmds {
-	pokeNames := team.PokeNames()
-	if len(team.PokeNames()) < MAX_TEAM_LENGTH {
-		f := func(pokeName PokeName) bool { return !slices.Contains(pokeNames, pokeName) }
-		legalPokeNames := omw.Filter(ALL_POKE_NAMES, f)
-		y := make(TeamBuildCmds, len(legalPokeNames))
-		for i, pokeName := range legalPokeNames {
-			y[i] = TeamBuildCmd{PokeName:pokeName}
-		}
-		return y
-	}
-
-	for i, pokemon := range team {
-		if pokemon.Gender == "" {
-			legalGenders := NewValidGenders(pokemon.Name)
-			y := make(TeamBuildCmds, len(legalGenders))
-			for j, gender := range legalGenders {
-				y[j] = TeamBuildCmd{Gender:gender, Index:i}
-			}
-			return y
-		}
-	}
-
-	for i, pokemon := range team {
-		if pokemon.Nature == "" {
-			y := make(TeamBuildCmds, len(ALL_NATURES))
-			for j, nature := range ALL_NATURES {
-				y[j] = TeamBuildCmd{Nature:nature, Index:i}
-			}
-			return y
-		}
-	}
-
-	for i, pokemon := range team {
-		if pokemon.Ability == "" {
-			legalAbilities := POKEDEX[pokemon.Name].AllAbilities
-			y := make(TeamBuildCmds, len(legalAbilities))
-			for j, ability := range legalAbilities {
-				y[j] = TeamBuildCmd{Ability:ability, Index:i}
-			}
-			return y
-		}
-	}
-
-	for i, pokemon := range team {
-		if pokemon.Item == "" {
-			y := make(TeamBuildCmds, 0, len(ALL_ITEMS))
-			items := team.Items()
-			for _, item := range ALL_ITEMS {
-				if slices.Contains(items, item) {
-					continue
-				}
-				y = append(y, TeamBuildCmd{Item:item, Index:i})
-			}
-			return y
-		}
-	}
-
-	for i, pokemon := range team {
-		learnset := POKEDEX[pokemon.Name].Learnset
-		n := omw.Min(len(learnset), MAX_MOVESET_LENGTH)
-		if len(pokemon.Moveset) < n {
-			legalMoveNames := POKEDEX[pokemon.Name].Learnset
-			y := make(TeamBuildCmds, len(legalMoveNames))
-			for j, moveName := range legalMoveNames {
-				y[j] = TeamBuildCmd{MoveName:moveName, Index:i}
-			}
-			return y
-		}
-	}
-	return TeamBuildCmds{}
-}
-
-func (team Team) Push(cmd *TeamBuildCmd) Team {
-	y := make(Team, 0, MAX_TEAM_LENGTH)
-	for _, pokemon := range team {
-		y = append(y, pokemon)
-	}
-
-	if cmd.PokeName != "" {
-		y = append(y, Pokemon{Name:cmd.PokeName, Moveset:Moveset{}, IndividualState:INIT_INDIVIDUAL_STATE, EffortState:INIT_EFFORT_STATE})
-		return y
-	}
-
-	idx := cmd.Index
-	if cmd.Gender != "" {
-		y[idx].Gender = cmd.Gender
-		return y
-	}
-
-	if cmd.Nature != "" {
-		y[idx].Nature = cmd.Nature
-		return y
-	}
-
-	if cmd.Ability != "" {
-		y[idx].Ability = cmd.Ability
-		return y
-	}
-
-	if cmd.Item != "" {
-		y[idx].Item = cmd.Item
-		return y
-	}
-
-	if cmd.MoveName != "" {
-		pp := NewMaxPowerPoint(cmd.MoveName)
-		y[idx].Moveset[cmd.MoveName] = &pp
-		return y
-	}
-	return Team{}
-}
-
-type TeamBuildCmd struct {
-	PokeName PokeName
-	Gender Gender
-	Nature Nature
-	Ability Ability
-	Item Item
-	MoveName MoveName
-	Index int
-}
-
-type TeamBuildCmds []TeamBuildCmd
 
 type CriticalRank int
 
@@ -1006,12 +551,16 @@ func (a BattleAction) Priority() int {
 type BattleActions []BattleAction
 
 type Battle struct {
-	P1Fighters  Fighters
-	P2Fighters  Fighters
+	P1Fighters Fighters
+	P2Fighters Fighters
 }
 
-func (bt *Battle) Reverse() Battle {
+func (bt Battle) Reverse() Battle {
 	return Battle{P1Fighters: bt.P2Fighters, P2Fighters: bt.P1Fighters}
+}
+
+func (bt1 *Battle) Equal(bt2 *Battle) bool {
+	return bt1.P1Fighters.Equal(&bt2.P1Fighters) && bt1.P2Fighters.Equal(&bt2.P2Fighters)
 }
 
 func (bt *Battle) Accuracy(moveName MoveName) int {
@@ -1356,7 +905,7 @@ func (bt *Battle) IsGameEnd() bool {
 	return bt.P1Fighters.IsAllFaint() || bt.P2Fighters.IsAllFaint()
 }
 
-func (bt *Battle) Winner() Winner{
+func (bt *Battle) Winner() Winner {
 	isP1AllFaint := bt.P1Fighters.IsAllFaint()
 	isP2AllFaint := bt.P2Fighters.IsAllFaint()
 
@@ -1367,6 +916,29 @@ func (bt *Battle) Winner() Winner{
 	} else {
 		return WINNER_PLAYER1
 	}
+}
+
+func (bt *Battle) LegalActionss() []BattleActions {
+	var p1 BattleActions
+	var p2 BattleActions
+
+	isP1Faint := bt.P1Fighters[0].IsFaint()
+	isP2Faint := bt.P2Fighters[0].IsFaint()
+
+	if !isP1Faint {
+		p1 = bt.P1Fighters.LegalBattleActions()
+	}
+
+	if !isP2Faint {
+		p2 = bt.P2Fighters.LegalBattleActions()
+	}
+
+	if isP1Faint && isP2Faint {
+		p1 = bt.P1Fighters.LegalBattleActions()
+		p2 = bt.P2Fighters.LegalBattleActions()
+	}
+
+	return []BattleActions{p1, p2}
 }
 
 func (bt *Battle) NewFinalDamage(moveName MoveName, isCrit bool, randDmgBonus RandomDamageBonus) FinalDamage {
@@ -1383,7 +955,7 @@ type Winner struct {
 var (
 	WINNER_PLAYER1 = Winner{IsPlayer1: true, IsPlayer2: false}
 	WINNER_PLAYER2 = Winner{IsPlayer1: false, IsPlayer2: true}
-	DRAW      = Winner{IsPlayer1: false, IsPlayer2: false}
+	DRAW           = Winner{IsPlayer1: false, IsPlayer2: false}
 )
 
 var WINNER_REWARD = map[Winner]float64{WINNER_PLAYER1: 1.0, WINNER_PLAYER2: 0.0, DRAW: 0.5}
@@ -1459,12 +1031,12 @@ func NewFinalAttack(poke *Pokemon, moveName MoveName, isCrit bool) FinalAttack {
 	var rank Rank
 
 	switch moveData.Category {
-		case PHYSICS:
-			atk = poke.Atk
-			rank = poke.RankState.Atk
-		case SPECIAL:
-			atk = poke.SpAtk
-			rank = poke.RankState.SpAtk
+	case PHYSICS:
+		atk = poke.Atk
+		rank = poke.RankState.Atk
+	case SPECIAL:
+		atk = poke.SpAtk
+		rank = poke.RankState.SpAtk
 	}
 
 	atkBonus := NewAttackBonus(poke, moveName)
@@ -1504,12 +1076,12 @@ func NewFinalDefense(poke *Pokemon, moveName MoveName, isCrit bool) FinalDefense
 	var rank Rank
 
 	switch moveData.Category {
-		case PHYSICS:
-			def = poke.Def
-			rank = poke.RankState.Def
-		case SPECIAL:
-			def = poke.SpDef
-			rank = poke.RankState.SpDef
+	case PHYSICS:
+		def = poke.Def
+		rank = poke.RankState.Def
+	case SPECIAL:
+		def = poke.SpDef
+		rank = poke.RankState.SpDef
 	}
 
 	if rank > 0 && isCrit {
@@ -1627,204 +1199,8 @@ const (
 	STATUS  = "変化"
 )
 
-type StatusMove func(Battle, *rand.Rand) Battle
-
-// あさのひざし
-func MorningSun(bt Battle, _ *rand.Rand) Battle {
-	heal := int(float64(bt.P1Fighters[0].MaxHP) * (1.0 / 2.0))
-	return bt.Heal(heal)
-}
-
-// こうごうせい
-func Synthesis(bt Battle, _ *rand.Rand) Battle {
-	heal := int(float64(bt.P1Fighters[0].MaxHP) * (1.0 / 2.0))
-	return bt.Heal(heal)
-}
-
-// じこさいせい
-func Recover(bt Battle, _ *rand.Rand) Battle {
-	heal := int(float64(bt.P1Fighters[0].MaxHP) * (1.0 / 2.0))
-	return bt.Heal(heal)
-}
-
-// すなあつめ
-func ShoreUp(bt Battle, _ *rand.Rand) Battle {
-	heal := int(float64(bt.P1Fighters[0].MaxHP) * (1.0 / 2.0))
-	return bt.Heal(heal)
-}
-
-// タマゴうみ
-func SoftBoiled(bt Battle, _ *rand.Rand) Battle {
-	heal := int(float64(bt.P1Fighters[0].MaxHP) * (1.0 / 2.0))
-	return bt.Heal(heal)
-}
-
-// つきのひかり
-func Moonlight(bt Battle, _ *rand.Rand) Battle {
-	heal := int(float64(bt.P1Fighters[0].MaxHP) * (1.0 / 2.0))
-	return bt.Heal(heal)
-}
-
-// なまける
-func SlackOff(bt Battle, _ *rand.Rand) Battle {
-	heal := int(float64(bt.P1Fighters[0].MaxHP) * (1.0 / 2.0))
-	return bt.Heal(heal)
-}
-
-// はねやすめ
-func Roost(bt Battle, _ *rand.Rand) Battle {
-	heal := int(float64(bt.P1Fighters[0].MaxHP) * (1.0 / 2.0))
-	return bt.Heal(heal)
-}
-
-// ミルクのみ
-func MilkDrink(bt Battle, _ *rand.Rand) Battle {
-	heal := int(float64(bt.P1Fighters[0].MaxHP) * (1.0 / 2.0))
-	return bt.Heal(heal)
-}
-
-// どくどく
-func Toxic(bt Battle, _ *rand.Rand) Battle {
-	if bt.P2Fighters[0].StatusAilment != "" {
-		return bt
-	}
-
-	p2PokeTypes := bt.P2Fighters[0].Types
-
-	if slices.Contains(p2PokeTypes, POISON) {
-		return bt
-	}
-
-	if slices.Contains(p2PokeTypes, STEEL) {
-		return bt
-	}
-
-	bt.P2Fighters[0].StatusAilment = BAD_POISON
-	return bt
-}
-
-// やどりぎのタネ
-func LeechSeed(bt Battle, _ *rand.Rand) Battle {
-	if slices.Contains(bt.P2Fighters[0].Types, GRASS) {
-		return bt
-	}
-	bt.P2Fighters[0].IsLeechSeed = true
-	return bt
-}
-
-// つるぎのまい
-func SwordsDance(bt Battle, _ *rand.Rand) Battle {
-	return bt.RankStateFluctuation(&RankState{Atk: 2})
-}
-
-// りゅうのまい
-func DragonDance(bt Battle, _ *rand.Rand) Battle {
-	return bt.RankStateFluctuation(&RankState{Atk: 1, Speed: 1})
-}
-
-// からをやぶる
-func ShellSmash(bt Battle, _ *rand.Rand) Battle {
-	return bt.RankStateFluctuation(&RankState{Atk: 2, Def: -1, SpAtk: 2, SpDef: -1, Speed: 2})
-}
-
-// てっぺき
-func IronDefense(bt Battle, _ *rand.Rand) Battle {
-	return bt.RankStateFluctuation(&RankState{Def: 2})
-}
-
-// めいそう
-func CalmMind(bt Battle, _ *rand.Rand) Battle {
-	return bt.RankStateFluctuation(&RankState{SpAtk: 1, SpDef: 1})
-}
-
-var STATUS_MOVES = map[MoveName]StatusMove{
-	"あさのひざし":  Moonlight,
-	"こうごうせい":  Synthesis,
-	"じこさいせい":  Recover,
-	"すなあつめ":   ShoreUp,
-	"タマゴうみ":   SoftBoiled,
-	"つきのひかり":  Moonlight,
-	"なまける":    SlackOff,
-	"はねやすめ":   Roost,
-	"ミルクのみ":   MorningSun,
-	"どくどく":    Toxic,
-	"やどりぎのタネ": LeechSeed,
-	"つるぎのまい":  SwordsDance,
-	"りゅうのまい":  DragonDance,
-	"からをやぶる":  ShellSmash,
-	"てっぺき":    IronDefense,
-}
-
-// https://wiki.xn--rckteqa2e.com/wiki/%E3%82%BF%E3%83%BC%E3%83%B3#5..E3.82.BF.E3.83.BC.E3.83.B3.E7.B5.82.E4.BA.86.E6.99.82.E3.81.AE.E5.87.A6.E7.90.86
-func TurnEndLeftovers(bt Battle) Battle {
-	if bt.P1Fighters[0].Item != "たべのこし" {
-		return bt
-	}
-
-	if bt.P1Fighters[0].IsFullHP() {
-		return bt
-	}
-
-	heal := int(float64(bt.P1Fighters[0].MaxHP) * 1.0 / 16.0)
-	bt = bt.Heal(heal)
-	return bt
-}
-
-func TurnEndBlackSludge(bt Battle) Battle {
-	if bt.P1Fighters[0].Item != "くろいヘドロ" {
-		return bt
-	}
-
-	if slices.Contains(bt.P1Fighters[0].Types, POISON) {
-		heal := int(float64(bt.P1Fighters[0].MaxHP) * 1.0 / 16.0)
-		heal = omw.Max(heal, 1)
-		bt = bt.Heal(heal)
-	} else {
-		dmg := int(float64(bt.P1Fighters[0].MaxHP) * 1.0 / 8.0)
-		dmg = omw.Max(dmg, 1)
-		bt = bt.Damage(dmg)
-	}
-	return bt
-}
-
-func TurnEndLeechSeed(bt Battle) Battle {
-	if bt.P1Fighters[0].IsFaint() {
-		return bt
-	}
-
-	if bt.P2Fighters[0].IsFaint() {
-		return bt
-	}
-
-	if !bt.P2Fighters[0].IsLeechSeed {
-		return bt
-	}
-
-	dmg := int(float64(bt.P2Fighters[0].MaxHP) * 1.0 / 8.0)
-	heal := dmg
-
-	bt = bt.Reverse()
-	bt = bt.Damage(dmg)
-	bt = bt.Reverse()
-	bt = bt.Heal(heal)
-	return bt
-}
-
-func TurnEndBadPoison(bt Battle) Battle {
-	if bt.P1Fighters[0].StatusAilment != BAD_POISON {
-		return bt
-	}
-
-	if bt.P1Fighters[0].BadPoisonElapsedTurn < 16 {
-		bt.P1Fighters[0].BadPoisonElapsedTurn += 1
-	}
-
-	dmg := bt.P1Fighters[0].BadPoisonDamage()
-	return bt.Damage(dmg)
-}
-
 func GetAllHPs(base BaseState) States {
-	y := make(States, 0, len(ALL_INDIVIDUALS) * len(EFFECTIVE_EFFORTS))
+	y := make(States, 0, len(ALL_INDIVIDUALS)*len(EFFECTIVE_EFFORTS))
 	for _, iv := range ALL_INDIVIDUALS {
 		for _, ev := range EFFECTIVE_EFFORTS {
 			hp := GetHP(base, iv, ev)
@@ -1837,7 +1213,7 @@ func GetAllHPs(base BaseState) States {
 }
 
 func GetAllStates(base BaseState) States {
-	y := make(States, 0, len(ALL_INDIVIDUALS) * len(EFFECTIVE_EFFORTS) * len(ALL_NATURE_BONUSES))
+	y := make(States, 0, len(ALL_INDIVIDUALS)*len(EFFECTIVE_EFFORTS)*len(ALL_NATURE_BONUSES))
 	for _, iv := range ALL_INDIVIDUALS {
 		for _, ev := range EFFECTIVE_EFFORTS {
 			for _, bonus := range ALL_NATURE_BONUSES {
@@ -1849,172 +1225,4 @@ func GetAllStates(base BaseState) States {
 		}
 	}
 	return y
-}
-
-type BaseModel[K comparable] map[K]float64
-type TwoRelationshipModel[K1, K2 comparable] map[K1]BaseModel[K2]
-
-func NewInitSameFeatureValueTwoRelationshipModel[FS ~[]K, K comparable](features FS, r *rand.Rand) TwoRelationshipModel[K, K] {
-	y := TwoRelationshipModel[K, K]{}
-	permutation2 := omw.Permutation[[]FS](features, 2)
-	for _, vs := range permutation2 {
-		k1 := vs[0]
-		if _, ok := y[k1]; !ok {
-			y[k1] = BaseModel[K]{}
-		}
-		k2 := vs[1]
-		y[k1][k2] = omw.RandFloat64(0.0, 16.0, r)
-	}
-	return y
-}
-
-func NewInitDifferentFeatureValueTwoRelationshipModel[FS1 ~[]K1, FS2 ~[]K2, K1, K2 comparable](features1 FS1, features2 FS2, r *rand.Rand) TwoRelationshipModel[K1, K2] {
-	y := TwoRelationshipModel[K1, K2]{}
-	for _, k1 := range features1 {
-		if _, ok := y[k1]; !ok {
-			y[k1] = BaseModel[K2]{}
-		}
-		for _, k2 := range features2 {
-			y[k1][k2] = omw.RandFloat64(0.0, 16.0, r)
-		}
-	}
-	return y
-}
-
-type PokemonModel struct {
-	MoveNameAndMoveName TwoRelationshipModel[MoveName, MoveName]
-	MoveNameAndGender TwoRelationshipModel[MoveName, Gender]
-	MoveNameAndAbility TwoRelationshipModel[MoveName, Ability]
-	MoveNameAndItem TwoRelationshipModel[MoveName, Item]
-	MoveNameAndHP TwoRelationshipModel[MoveName, State]
-	MoveNameAndAtk TwoRelationshipModel[MoveName, State]
-	MoveNameAndDef TwoRelationshipModel[MoveName, State]
-	MoveNameAndSpAtk TwoRelationshipModel[MoveName, State]
-	MoveNameAndSpDef TwoRelationshipModel[MoveName, State]
-	MoveNameAndSpeed TwoRelationshipModel[MoveName, State]
-}
-
-func NewInitPokemonModel(pokeName PokeName, r *rand.Rand) PokemonModel {
-	pokeData := POKEDEX[pokeName]
-	genders := NewValidGenders(pokeName)
-	hps := GetAllHPs(pokeData.BaseHP)
-	atks := GetAllStates(pokeData.BaseAtk)
-	defs := GetAllStates(pokeData.BaseDef)
-	spAtks := GetAllStates(pokeData.BaseSpAtk)
-	spDefs := GetAllStates(pokeData.BaseSpDef)
-	speeds := GetAllStates(pokeData.BaseSpeed)
-
-	moveNameAndMoveName := NewInitSameFeatureValueTwoRelationshipModel[MoveNames](pokeData.Learnset, r)
-	moveNameAndGender := NewInitDifferentFeatureValueTwoRelationshipModel[MoveNames, Genders](pokeData.Learnset, genders, r)
-	moveNameAndAbility := NewInitDifferentFeatureValueTwoRelationshipModel[MoveNames, Abilities](pokeData.Learnset, pokeData.AllAbilities, r)
-	moveNameAndItem := NewInitDifferentFeatureValueTwoRelationshipModel[MoveNames, Items](pokeData.Learnset, ALL_ITEMS, r)
-	moveNameAndHP := NewInitDifferentFeatureValueTwoRelationshipModel[MoveNames, States](pokeData.Learnset, hps, r)
-	moveNameAndAtk := NewInitDifferentFeatureValueTwoRelationshipModel[MoveNames, States](pokeData.Learnset, atks, r)
-	moveNameAndDef := NewInitDifferentFeatureValueTwoRelationshipModel[MoveNames, States](pokeData.Learnset, defs, r)
-	moveNameAndSpAtk := NewInitDifferentFeatureValueTwoRelationshipModel[MoveNames, States](pokeData.Learnset, spAtks, r)
-	moveNameAndSpDef := NewInitDifferentFeatureValueTwoRelationshipModel[MoveNames, States](pokeData.Learnset, spDefs, r)
-	moveNameAndSpeed := NewInitDifferentFeatureValueTwoRelationshipModel[MoveNames, States](pokeData.Learnset, speeds, r)
-
-	return PokemonModel{
-		MoveNameAndMoveName:moveNameAndMoveName,
-		MoveNameAndGender:moveNameAndGender,
-		MoveNameAndAbility:moveNameAndAbility,
-		MoveNameAndItem:moveNameAndItem,
-		MoveNameAndHP:moveNameAndHP,
-		MoveNameAndAtk:moveNameAndAtk,
-		MoveNameAndDef:moveNameAndDef,
-		MoveNameAndSpAtk:moveNameAndSpAtk,
-		MoveNameAndSpDef:moveNameAndSpDef,
-		MoveNameAndSpeed:moveNameAndSpeed,
-	}
-}
-
-func (model PokemonModel) ParameterSize() int {
-	y := 0
-	y += omw.NestMapSize(model.MoveNameAndMoveName)
-	y += omw.NestMapSize(model.MoveNameAndGender)
-	y += omw.NestMapSize(model.MoveNameAndAbility)
-	y += omw.NestMapSize(model.MoveNameAndItem)
-	y += omw.NestMapSize(model.MoveNameAndHP)
-	y += omw.NestMapSize(model.MoveNameAndAtk)
-	y += omw.NestMapSize(model.MoveNameAndDef)
-	y += omw.NestMapSize(model.MoveNameAndSpAtk)
-	y += omw.NestMapSize(model.MoveNameAndSpDef)
-	y += omw.NestMapSize(model.MoveNameAndSpeed)
-	return y
-}
-
-func (model *PokemonModel) Output(pokemon *Pokemon) float64 {
-	y := 0.0
-	moveNames := maps.Keys(pokemon.Moveset)
-
-	permutation2 := omw.Permutation[[]MoveNames, MoveNames](moveNames, 2)
-	for _, mns := range permutation2 {
-		y += model.MoveNameAndMoveName[mns[0]][mns[1]]
-	}
-
-	for _, moveName := range moveNames {
-		y += model.MoveNameAndGender[moveName][pokemon.Gender]
-		y += model.MoveNameAndAbility[moveName][pokemon.Ability]
-		y += model.MoveNameAndItem[moveName][pokemon.Item]
-		y += model.MoveNameAndHP[moveName][pokemon.MaxHP]
-		y += model.MoveNameAndAtk[moveName][pokemon.Atk]
-		y += model.MoveNameAndDef[moveName][pokemon.Def]
-		y += model.MoveNameAndSpAtk[moveName][pokemon.SpAtk]
-		y += model.MoveNameAndSpDef[moveName][pokemon.SpDef]
-		y += model.MoveNameAndSpeed[moveName][pokemon.Speed]
-	}
-	return y
-}
-
-func NewTeamBuildPUCTFunCaller(model *PokemonModel, r *rand.Rand) crow.PUCT_FunCaller[Team, TeamBuildCmd] {
-	legalActions := func(team *Team) []TeamBuildCmd {
-		return team.LegalBuildCmds()
-	}
-
-	push := func(team Team, action TeamBuildCmd) Team {
-		return team.Push(&action)
-	}
-
-	isEnd := func(team *Team) bool {
-		return len(team.LegalBuildCmds()) == 0
-	}
-
-	equal := func(team1, team2 *Team) bool {
-		return team1.Equal(*team2)
-	}
-
-	game := crow.AlternatelyMoveGameFunCaller[Team, TeamBuildCmd]{
-		LegalActions:legalActions,
-		Push:push,
-		EqualState:equal,
-		IsEnd:isEnd,
-	}
-
-	game.SetRandomActionPlayer(r)
-	
-	leaf := func(team *Team) crow.PUCT_LeafEvalY {
-		y := 0.0
-		for _, pokemon := range *team {
-			y += model.Output(&pokemon)
-		}
-		return crow.PUCT_LeafEvalY(y)
-	}
-
-	backward := func(y crow.PUCT_LeafEvalY, team *Team) crow.PUCT_BackwardEvalY {
-		return crow.PUCT_BackwardEvalY(y)
-	}
-
-	eval := crow.PUCT_EvalFunCaller[Team]{
-		Leaf:leaf,
-		Backward:backward,
-	}
-
-	fnCaller := crow.PUCT_FunCaller[Team, TeamBuildCmd]{
-		Game:game,
-		Eval:eval,
-	}
-
-	fnCaller.SetNoPolicy()
-	return fnCaller
 }
