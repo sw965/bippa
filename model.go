@@ -26,7 +26,7 @@ type TeamPokemonModelPart struct {
 	Number int
 }
 
-func (part *TeamPokemonModelPart) OK(pokemon *Pokemon) bool {
+func (part *TeamPokemonModelPart) Ok(pokemon *Pokemon) bool {
 	if part.Ability != "" {
 		if part.Ability != pokemon.Ability {
 			return false
@@ -104,9 +104,9 @@ func (part *TeamPokemonModelPart) OK(pokemon *Pokemon) bool {
 type TeamPokemonModel []*TeamPokemonModelPart
 
 func NewMoveNamesAndAbilityTeamPokemonModel(moveNames MoveNames, r int, abilities Abilities) TeamPokemonModel {
-	comb := omw.Combination[[]MoveNames, MoveNames](moveNames, r)
-	result := make(TeamPokemonModel, 0, len(comb) * len(abilities))
-	for _, mns := range comb {
+	c := omw.Combination[[]MoveNames, MoveNames](moveNames, r)
+	result := make(TeamPokemonModel, 0, len(c) * len(abilities))
+	for _, mns := range c {
 		for _, ability := range abilities {
 			part := TeamPokemonModelPart{Ability:ability, MoveNames:mns}
 			result = append(result, &part)
@@ -115,8 +115,39 @@ func NewMoveNamesAndAbilityTeamPokemonModel(moveNames MoveNames, r int, abilitie
 	return result
 }
 
+func NewMoveNamesAndNatureTeamPokemonModel(moveNames MoveNames, r int, natures Natures) TeamPokemonModel {
+	c := omw.Combination[[]MoveNames, MoveNames](moveNames, r)
+	result := make(TeamPokemonModel, 0, len(c) * len(natures))
+	for _, mns := range c {
+		for _, nature := range natures {
+			part := TeamPokemonModelPart{Nature:nature, MoveNames:mns}
+			result = append(result, &part)
+		}
+	}
+	return result
+}
+
+func NewMoveNamesAndGenderTeamPokemonModel(moveNames MoveNames, r int, genders Genders) TeamPokemonModel {
+	c := omw.Combination[[]MoveNames, MoveNames](moveNames, r)
+	result := make(TeamPokemonModel, 0, len(c) * len(genders))
+	for _, mns := range c {
+		for _, gender := range genders {
+			part := TeamPokemonModelPart{Gender:gender, MoveNames:mns}
+			result = append(result, &part)
+		}
+	}
+	return result
+}
+
 func (model TeamPokemonModel) Init(r *rand.Rand) {
 	for i, part := range model {
+		part.HP = EMPTY_STATE
+		part.Atk = EMPTY_STATE
+		part.Def = EMPTY_STATE
+		part.SpAtk = EMPTY_STATE
+		part.SpDef = EMPTY_STATE
+		part.Speed = EMPTY_STATE
+		
 		part.Value = omw.RandFloat64(0, 16.0, r)
 		part.Number = i
 	}
@@ -125,7 +156,7 @@ func (model TeamPokemonModel) Init(r *rand.Rand) {
 func (model TeamPokemonModel) GetOK(pokemon *Pokemon) TeamPokemonModel {
 	result := make(TeamPokemonModel, 0, len(model))
 	for _, part := range model {
-		if part.OK(pokemon) {
+		if part.Ok(pokemon) {
 			result = append(result, part)
 		}
 	}
@@ -148,6 +179,21 @@ func (model TeamPokemonModel) Write(pokeName PokeName, modelName string, isOverw
 		}
 	}
 
-	filePath := TEAM_POKEMON_MODEL_PATH + string(pokeName) + modelName + ".json"
+	filePath := folderPath + modelName
 	return omw.WriteJson(&model, filePath)
+}
+
+type TeamMultiPokemonModelPart map[PokeName]*TeamPokemonModelPart
+
+func (part TeamMultiPokemonModelPart) OK(pokemons ...*Pokemon) bool {
+	for _, pokemon := range pokemons {
+		mp, ok := part[pokemon.Name]
+		if !ok {
+			return false
+		}
+		if !mp.Ok(pokemon) {
+			return false
+		}
+	}
+	return true
 }
