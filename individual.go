@@ -1,9 +1,5 @@
 package bippa
 
-import (
-	"github.com/sw965/omw"
-)
-
 type Individual int
 
 const (
@@ -14,7 +10,14 @@ const (
 
 type Individuals []Individual
 
-var ALL_INDIVIDUALS Individuals = omw.MakeIntegerRange[Individuals](MIN_INDIVIDUAL, MAX_INDIVIDUAL+1, 1)
+var ALL_INDIVIDUALS = func() Individuals {
+	n := int(MAX_INDIVIDUAL - MIN_INDIVIDUAL) + 1
+	result := make(Individuals, n)
+	for i := 0; i < n; i++ {
+		result[i] = Individual(i)
+	}
+	return result
+}()
 
 type IndividualState struct {
 	HP    Individual

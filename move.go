@@ -3,9 +3,38 @@ package bippa
 import (
 	"golang.org/x/exp/slices"
 	"math/rand"
-	"github.com/sw965/omw"
 	"fmt"
 )
+
+type Target int
+
+const (
+	ONE_SELECT Target = iota
+	OPPONENT_WHOLE
+	SELF
+	ALLY_ONE
+	WHOLE
+	OTHER_THAN_ONESELF
+)
+
+func NewTarget(s string) (Target, error) {
+	switch s {
+		case "１体選択":
+			return ONE_SELECT, nil
+		case "相手全体":
+			return OPPONENT_WHOLE, nil
+		case "自分":
+			return SELF, nil
+		case "味方１体":
+			return ALLY_ONE, nil
+		case "全体の場":
+			return WHOLE, nil
+		case "自分以外":
+			return OTHER_THAN_ONESELF, nil
+		default:
+			return -1, fmt.Errorf("不適切なtarget")
+	}
+}
 
 type MoveName string
 
@@ -16,16 +45,9 @@ const (
 
 type MoveNames []MoveName
 
-func (mns MoveNames) Sort() {
-	isSwap := func(moveName1, moveName2 MoveName) bool {
-		return slices.Index(ALL_MOVE_NAMES, moveName1) > slices.Index(ALL_MOVE_NAMES, moveName2)
-	}
-	slices.SortFunc(mns, isSwap)
-}
-
 type PowerPointUp int
 
-var (
+const (
 	MIN_POWER_POINT_UP = PowerPointUp(0)
 	MAX_POWER_POINT_UP = PowerPointUp(3)
 )
@@ -40,7 +62,14 @@ func NewMaxPowerPointUps(n int) PowerPointUps {
 	return result
 }
 
-var ALL_POWER_POINT_UPS = omw.MakeIntegerRange[PowerPointUps](MIN_POWER_POINT_UP, MAX_POWER_POINT_UP+1, 1)
+var ALL_POWER_POINT_UPS = func() PowerPointUps {
+	n := int(MAX_POWER_POINT_UP - MIN_POWER_POINT_UP) + 1
+	result := make(PowerPointUps, n)
+	for i := 0; i < n; i++ {
+		result[i] = PowerPointUp(i)
+	}
+	return result
+}
 
 type PowerPoint struct {
 	Max     int
@@ -115,124 +144,142 @@ func (ms1 Moveset) Equal(ms2 Moveset) bool {
 	return true
 }
 
-type StatusMove func(Battle, *rand.Rand) Battle
+type StatusMove func(*Battle, *rand.Rand)
 
 // あさのひざし
-func MorningSun(bt Battle, _ *rand.Rand) Battle {
+func MorningSun(bt *Battle, _ *rand.Rand) {
 	heal := int(float64(bt.P1Fighters[0].MaxHP) * (1.0 / 2.0))
-	return bt.Heal(heal)
+	bt.Heal(heal)
 }
 
 // こうごうせい
-func Synthesis(bt Battle, _ *rand.Rand) Battle {
+func Synthesis(bt *Battle, _ *rand.Rand) {
 	heal := int(float64(bt.P1Fighters[0].MaxHP) * (1.0 / 2.0))
-	return bt.Heal(heal)
+	bt.Heal(heal)
 }
 
 // じこさいせい
-func Recover(bt Battle, _ *rand.Rand) Battle {
+func Recover(bt *Battle, _ *rand.Rand) {
 	heal := int(float64(bt.P1Fighters[0].MaxHP) * (1.0 / 2.0))
-	return bt.Heal(heal)
+	bt.Heal(heal)
+}
+
+//しっぽをふる
+func TailWhip(bt *Battle, _ *rand.Rand) {
+	bt.Reverse()
+	bt.RankStateFluctuation(&RankState{Def:-1})
+	bt.Reverse()
 }
 
 // すなあつめ
-func ShoreUp(bt Battle, _ *rand.Rand) Battle {
+func ShoreUp(bt *Battle, _ *rand.Rand) {
 	heal := int(float64(bt.P1Fighters[0].MaxHP) * (1.0 / 2.0))
-	return bt.Heal(heal)
+	bt.Heal(heal)
 }
 
-// タマゴうみ
-func SoftBoiled(bt Battle, _ *rand.Rand) Battle {
+//タマゴうみ
+func SoftBoiled(bt *Battle, _ *rand.Rand) {
 	heal := int(float64(bt.P1Fighters[0].MaxHP) * (1.0 / 2.0))
-	return bt.Heal(heal)
+	bt.Heal(heal)
 }
 
-// つきのひかり
-func Moonlight(bt Battle, _ *rand.Rand) Battle {
+//つきのひかり
+func Moonlight(bt *Battle, _ *rand.Rand) {
 	heal := int(float64(bt.P1Fighters[0].MaxHP) * (1.0 / 2.0))
-	return bt.Heal(heal)
+	bt.Heal(heal)
+}
+
+//つめとぎ
+func HoneClaws(bt *Battle, _ *rand.Rand) {
+	bt.RankStateFluctuation(&RankState{Atk:1, Accuracy:1})
 }
 
 // なまける
-func SlackOff(bt Battle, _ *rand.Rand) Battle {
+func SlackOff(bt *Battle, _ *rand.Rand) {
 	heal := int(float64(bt.P1Fighters[0].MaxHP) * (1.0 / 2.0))
-	return bt.Heal(heal)
+	bt.Heal(heal)
 }
 
 // はねやすめ
-func Roost(bt Battle, _ *rand.Rand) Battle {
+func Roost(bt *Battle, _ *rand.Rand) {
 	heal := int(float64(bt.P1Fighters[0].MaxHP) * (1.0 / 2.0))
-	return bt.Heal(heal)
+	bt.Heal(heal)
 }
 
 // ミルクのみ
-func MilkDrink(bt Battle, _ *rand.Rand) Battle {
+func MilkDrink(bt *Battle, _ *rand.Rand) {
 	heal := int(float64(bt.P1Fighters[0].MaxHP) * (1.0 / 2.0))
-	return bt.Heal(heal)
+	bt.Heal(heal)
 }
 
 // どくどく
-func Toxic(bt Battle, _ *rand.Rand) Battle {
+func Toxic(bt *Battle, _ *rand.Rand) {
 	if bt.P2Fighters[0].StatusAilment != "" {
-		return bt
+		return
 	}
 
 	p2PokeTypes := bt.P2Fighters[0].Types
 
 	if slices.Contains(p2PokeTypes, POISON) {
-		return bt
+		return
 	}
 
 	if slices.Contains(p2PokeTypes, STEEL) {
-		return bt
+		return
 	}
 
 	bt.P2Fighters[0].StatusAilment = BAD_POISON
-	return bt
+}
+
+//なやみのタネ
+func WorrySeed(bt *Battle, _ *rand.Rand) {
+	bt.P2Fighters[0].Ability = "ふみん"
 }
 
 // やどりぎのタネ
-func LeechSeed(bt Battle, _ *rand.Rand) Battle {
+func LeechSeed(bt *Battle, _ *rand.Rand) {
 	if slices.Contains(bt.P2Fighters[0].Types, GRASS) {
-		return bt
+		return
 	}
 	bt.P2Fighters[0].IsLeechSeed = true
-	return bt
 }
 
 // つるぎのまい
-func SwordsDance(bt Battle, _ *rand.Rand) Battle {
-	return bt.RankStateFluctuation(&RankState{Atk: 2})
+func SwordsDance(bt *Battle, _ *rand.Rand) {
+	bt.RankStateFluctuation(&RankState{Atk: 2})
 }
 
 // りゅうのまい
-func DragonDance(bt Battle, _ *rand.Rand) Battle {
-	return bt.RankStateFluctuation(&RankState{Atk: 1, Speed: 1})
+func DragonDance(bt *Battle, _ *rand.Rand) {
+	bt.RankStateFluctuation(&RankState{Atk: 1, Speed: 1})
 }
 
 // からをやぶる
-func ShellSmash(bt Battle, _ *rand.Rand) Battle {
-	return bt.RankStateFluctuation(&RankState{Atk: 2, Def: -1, SpAtk: 2, SpDef: -1, Speed: 2})
+func ShellSmash(bt *Battle, _ *rand.Rand) {
+	bt.RankStateFluctuation(&RankState{Atk: 2, Def: -1, SpAtk: 2, SpDef: -1, Speed: 2})
 }
 
 // てっぺき
-func IronDefense(bt Battle, _ *rand.Rand) Battle {
-	return bt.RankStateFluctuation(&RankState{Def: 2})
+func IronDefense(bt *Battle, _ *rand.Rand) {
+	bt.RankStateFluctuation(&RankState{Def: 2})
 }
 
 // めいそう
-func CalmMind(bt Battle, _ *rand.Rand) Battle {
-	return bt.RankStateFluctuation(&RankState{SpAtk: 1, SpDef: 1})
+func CalmMind(bt *Battle, _ *rand.Rand) {
+	bt.RankStateFluctuation(&RankState{SpAtk: 1, SpDef: 1})
 }
 
 var STATUS_MOVES = map[MoveName]StatusMove{
 	"あさのひざし":  Moonlight,
 	"こうごうせい":  Synthesis,
 	"じこさいせい":  Recover,
+	"しっぽをふる": TailWhip,
 	"すなあつめ":   ShoreUp,
 	"タマゴうみ":   SoftBoiled,
 	"つきのひかり":  Moonlight,
+	"つめとぎ":HoneClaws,
 	"なまける":    SlackOff,
+	"なやみのタネ":WorrySeed,
 	"はねやすめ":   Roost,
 	"ミルクのみ":   MorningSun,
 	"どくどく":    Toxic,

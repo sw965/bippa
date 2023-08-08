@@ -1,7 +1,7 @@
 package bippa
 
 import (
-	"github.com/sw965/omw"
+	"github.com/sw965/omw/fn"
 )
 
 type Effort int
@@ -16,8 +16,16 @@ var (
 
 type Efforts []Effort
 
-var ALL_EFFORTS Efforts = omw.MakeIntegerRange[Efforts](MIN_EFFORT, MAX_EFFORT+1, 1)
-var EFFECTIVE_EFFORTS Efforts = omw.Filter(ALL_EFFORTS, omw.IsRemainderZero(EFFECTIVE_EFFORT))
+var ALL_EFFORTS = func() Efforts {
+	n := int(MAX_EFFORT - MIN_EFFORT) + 1
+	result := make(Efforts, n)
+	for i := 0; i < n; i++ {
+		result[i] = Effort(i)
+	}
+	return result
+}()
+
+var EFFECTIVE_EFFORTS Efforts = fn.Filter(ALL_EFFORTS, func(effrot Effort) bool { return effrot%4 == 0 } )
 
 type EffortState struct {
 	HP    Effort
@@ -27,8 +35,6 @@ type EffortState struct {
 	SpDef Effort
 	Speed Effort
 }
-
-var INIT_EFFORT_STATE = EffortState{HP: -1, Atk: -1, Def: -1, SpAtk: -1, SpDef: -1, Speed: -1}
 
 func (es *EffortState) Sum() Effort {
 	hp := es.HP
