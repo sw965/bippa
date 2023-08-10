@@ -4,7 +4,29 @@ import (
 	"golang.org/x/exp/slices"
 	"math/rand"
 	"fmt"
+	"math"
 )
+
+type MoveCategory int
+
+const (
+	PHYSICS MoveCategory = iota
+	SPECIAL
+	STATUS
+)
+
+func NewMoveCategory(s string) (MoveCategory, error) {
+	switch s {
+		case "物理":
+			return PHYSICS, nil
+		case "特殊":
+			return SPECIAL, nil
+		case "変化":
+			return STATUS, nil
+		default:
+			return -1, fmt.Errorf("不適なmoveCategory")
+	}
+}
 
 type Target int
 
@@ -152,10 +174,28 @@ func MorningSun(bt *Battle, _ *rand.Rand) {
 	bt.Heal(heal)
 }
 
-// こうごうせい
+//うそなき
+func FakeTears(bt *Battle, _ *rand.Rand) {
+	bt.RankStateFluctuation(&RankState{SpDef:-2})
+}
+
+//こうごうせい
 func Synthesis(bt *Battle, _ *rand.Rand) {
 	heal := int(float64(bt.P1Fighters[0].MaxHP) * (1.0 / 2.0))
 	bt.Heal(heal)
+}
+
+//こらえる
+func Endure(bt *Battle, r *rand.Rand) {
+	count := bt.P1Fighters[0].EndureConsecutiveSuccessCount
+	p := math.Pow(1.0/3.0, float64(count))
+	isSuccess := p > r.Float64()
+	if isSuccess {
+		bt.P1Fighters[0].IsEndure = isSuccess
+		bt.P1Fighters[0].EndureConsecutiveSuccessCount += 1
+	} else {
+		bt.P1Fighters[0].EndureConsecutiveSuccessCount = 0
+	}
 }
 
 // じこさいせい
@@ -194,27 +234,27 @@ func HoneClaws(bt *Battle, _ *rand.Rand) {
 	bt.RankStateFluctuation(&RankState{Atk:1, Accuracy:1})
 }
 
-// なまける
+//なまける
 func SlackOff(bt *Battle, _ *rand.Rand) {
 	heal := int(float64(bt.P1Fighters[0].MaxHP) * (1.0 / 2.0))
 	bt.Heal(heal)
 }
 
-// はねやすめ
+//はねやすめ
 func Roost(bt *Battle, _ *rand.Rand) {
 	heal := int(float64(bt.P1Fighters[0].MaxHP) * (1.0 / 2.0))
 	bt.Heal(heal)
 }
 
-// ミルクのみ
+//ミルクのみ
 func MilkDrink(bt *Battle, _ *rand.Rand) {
 	heal := int(float64(bt.P1Fighters[0].MaxHP) * (1.0 / 2.0))
 	bt.Heal(heal)
 }
 
-// どくどく
+//どくどく
 func Toxic(bt *Battle, _ *rand.Rand) {
-	if bt.P2Fighters[0].StatusAilment != "" {
+	if bt.P2Fighters[0].StatusAilment != NO_AILMENT {
 		return
 	}
 
@@ -236,7 +276,7 @@ func WorrySeed(bt *Battle, _ *rand.Rand) {
 	bt.P2Fighters[0].Ability = "ふみん"
 }
 
-// やどりぎのタネ
+//やどりぎのタネ
 func LeechSeed(bt *Battle, _ *rand.Rand) {
 	if slices.Contains(bt.P2Fighters[0].Types, GRASS) {
 		return
@@ -244,27 +284,27 @@ func LeechSeed(bt *Battle, _ *rand.Rand) {
 	bt.P2Fighters[0].IsLeechSeed = true
 }
 
-// つるぎのまい
+//つるぎのまい
 func SwordsDance(bt *Battle, _ *rand.Rand) {
 	bt.RankStateFluctuation(&RankState{Atk: 2})
 }
 
-// りゅうのまい
+//りゅうのまい
 func DragonDance(bt *Battle, _ *rand.Rand) {
 	bt.RankStateFluctuation(&RankState{Atk: 1, Speed: 1})
 }
 
-// からをやぶる
+//からをやぶる
 func ShellSmash(bt *Battle, _ *rand.Rand) {
 	bt.RankStateFluctuation(&RankState{Atk: 2, Def: -1, SpAtk: 2, SpDef: -1, Speed: 2})
 }
 
-// てっぺき
+//てっぺき
 func IronDefense(bt *Battle, _ *rand.Rand) {
 	bt.RankStateFluctuation(&RankState{Def: 2})
 }
 
-// めいそう
+//めいそう
 func CalmMind(bt *Battle, _ *rand.Rand) {
 	bt.RankStateFluctuation(&RankState{SpAtk: 1, SpDef: 1})
 }

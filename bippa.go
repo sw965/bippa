@@ -1,9 +1,7 @@
 package bippa
 
 import (
-	"github.com/sw965/omw/fn"
 	omwmath "github.com/sw965/omw/math"
-	"golang.org/x/exp/maps"
 	"golang.org/x/exp/slices"
 	"math/rand"
 	"fmt"
@@ -23,118 +21,14 @@ func (pns PokeNames) Sort() {
 	slices.SortFunc(pns, isSwap)
 }
 
-type Type int
-
-const (
-	NORMAL Type  = iota
-	FIRE
-	WATER
-	GRASS
-	ELECTRIC
-	ICE
-	FIGHTING
-	POISON
-	GROUND
-	FLYING
-	PSYCHIC
-	BUG
-	ROCK
-	GHOST
-	DRAGON
-	DARK
-	STEEL
-	FAIRY
-)
-
-func NewType(s string) (Type, error) {
-	switch s {
-		case "ノーマル":
-			return NORMAL, nil
-		case "ほのお":
-			return FIRE, nil
-		case "みず":
-			return WATER, nil
-		case "くさ":
-			return GRASS, nil
-		case "でんき":
-			return ELECTRIC, nil
-		case "こおり":
-			return ICE, nil
-		case "かくとう":
-			return FIGHTING, nil
-		case "どく":
-			return POISON, nil
-		case "じめん":
-			return GROUND, nil
-		case "ひこう":
-			return FLYING, nil
-		case "エスパー":
-			return PSYCHIC, nil
-		case "むし":
-			return BUG, nil
-		case "いわ":
-			return ROCK, nil
-		case "ゴースト":
-			return GHOST, nil
-		case "ドラゴン":
-			return DRAGON, nil
-		case "あく":
-			return DARK, nil
-		case "はがね":
-			return STEEL, nil
-		case "フェアリー":
-			return FAIRY, nil
-		default:
-			return -1, fmt.Errorf("不適なtype")
-	}
-}
-
-type Types []Type
-
-func NewTypes(ss []string) (Types, error) {
-	ys := make(Types, len(ss))
-	for i, s := range ss {
-		y, err := NewType(s)
-		if err != nil {
-			return ys, err
-		}
-		ys[i] = y
-	}
-	return ys, nil
-}
-
 type Level int
 
 const (
 	DEFAULT_LEVEL = Level(50)
 )
 
-type Gender string
-
-const (
-	MALE    = Gender("♂")
-	FEMALE  = Gender("♀")
-	UNKNOWN = Gender("不明")
-)
-
-type Genders []Gender
-
-var ALL_GENDERS = Genders{MALE, FEMALE, UNKNOWN}
-
 type Ability string
 type Abilities []Ability
-
-type Item string
-
-const (
-	EMPTY_ITEM = Item("なし")
-)
-
-func (item Item) IsChoice() bool {
-	return item == "こだわりハチマキ" || item == "こだわりメガネ" || item == "こだわりスカーフ"
-}
-
-type Items []Item
 
 type stateCalculator struct{}
 var StateCalculator = stateCalculator{}
@@ -150,17 +44,6 @@ func (sc *stateCalculator) OtherThanHP(base BaseState, iv Individual, ev Effort,
 	y := ((int(base)*2)+int(iv)+(int(ev)/4))*lv/100 + 5
 	return State(float64(y) * float64(bonus))
 }
-
-type StatusAilment string
-
-const (
-	NORMAL_POISON = StatusAilment("どく")
-	BAD_POISON    = StatusAilment("もうどく")
-	SLEEP         = StatusAilment("ねむり")
-	BURN          = StatusAilment("やけど")
-	PARALYSIS     = StatusAilment("まひ")
-	FREEZE        = StatusAilment("こおり")
-)
 
 type State int
 type States []State
@@ -191,8 +74,15 @@ type Pokemon struct {
 	RankState            RankState
 	ChoiceMoveName       MoveName
 
+	//ひるみ
 	IsFlinch bool
+	//こらえる
+	IsEndure bool
+	//やどりぎのタネ
 	IsLeechSeed bool
+	//こらえるの連続成功数
+	EndureConsecutiveSuccessCount int
+	//とんぼがえり・ボルトチェンジなどの攻撃後に交代する技
 	AfterUTurn bool
 }
 
@@ -219,10 +109,6 @@ func NewPokemon(pokeName PokeName, gender Gender, nature Nature, ability Ability
 
 	if !slices.Contains(pokeData.Abilities, ability) {
 		return Pokemon{}, fmt.Errorf("特性 が 不適")
-	}
-
-	if item == "" {
-		return Pokemon{}, fmt.Errorf("アイテム が ゼロ値 に なっている (何も持たせない場合は、EMPTY_ITEM を 使って)")
 	}
 
 	if !slices.Contains(ALL_ITEMS, item) {
@@ -380,80 +266,6 @@ func (p *Pokemon) BadPoisonDamage() int {
 
 type CriticalRank int
 
-const (
-	FIGHTERS_LENGTH = 3
-)
-
-type Fighters [FIGHTERS_LENGTH]Pokemon
-
-func (fg1 *Fighters) Equal(fg2 *Fighters) bool {
-	for i, poke := range fg1 {
-		if !poke.Equal(&fg2[i]) {
-			return false
-		}
-	}
-	return true
-}
-
-func (fg *Fighters) PokeNames() PokeNames {
-	y := make(PokeNames, FIGHTERS_LENGTH)
-	for i, poke := range fg {
-		y[i] = poke.Name
-	}
-	return y
-}
-
-func (fg *Fighters) IsAllFaint() bool {
-	for _, poke := range fg {
-		if !poke.IsFaint() {
-			return false
-		}
-	}
-	return true
-}
-
-func (fg *Fighters) LegalMoveNames() MoveNames {
-	if fg[0].IsFaint() {
-		return MoveNames{}
-	}
-
-	isPPZeroOver := func(moveName MoveName) bool { return fg[0].Moveset[moveName].Current > 0 }
-	y := fn.Filter(maps.Keys(fg[0].Moveset), isPPZeroOver)
-
-	if fg[0].ChoiceMoveName != "" {
-		if slices.Contains(y, fg[0].ChoiceMoveName) {
-			y = MoveNames{fg[0].ChoiceMoveName}
-		}
-	} else if fg[0].Item == "とつげきチョッキ" {
-		isNotStatusMove := func(moveName MoveName) bool { return MOVEDEX[moveName].Category != STATUS }
-		y = fn.Filter(y, isNotStatusMove)
-	}
-
-	if len(y) == 0 {
-		return MoveNames{STRUGGLE}
-	}
-	return y
-}
-
-func (fg *Fighters) LegalPokeNames() PokeNames {
-	y := make([]PokeName, 0, 2)
-	for _, poke := range fg[1:] {
-		if !poke.IsFaint() {
-			y = append(y, poke.Name)
-		}
-	}
-	return y
-}
-
-func (fg *Fighters) LegalActions() Actions {
-	moveNames := fg.LegalMoveNames()
-	pokeNames := fg.LegalPokeNames()
-	y := make(Actions, 0, len(moveNames)+len(pokeNames))
-	y = append(y, fn.Map[Actions](moveNames, fn.ToStrTilde[MoveName, Action])...)
-	y = append(y, fn.Map[Actions](pokeNames, fn.ToStrTilde[PokeName, Action])...)
-	return y
-}
-
 // https://wiki.xn--rckteqa2e.com/wiki/%E3%81%99%E3%81%B0%E3%82%84%E3%81%95#.E8.A9.B3.E7.B4.B0.E3.81.AA.E4.BB.95.E6.A7.98
 type SpeedBonus int
 
@@ -463,7 +275,7 @@ const (
 
 func NewSpeedBonus(bt *Battle) SpeedBonus {
 	y := int(INIT_SPEED_BONUS)
-	if bt.P1Fighters[0].Item == "こだわりスカーフ" {
+	if bt.P1Fighters[0].Item == CHOICE_SCARF {
 		y = FiveOrMoreRounding(float64(y) * 6144.0 / 4096.0)
 	}
 	return SpeedBonus(y)
@@ -544,7 +356,7 @@ const (
 
 func NewPhysicsAttackBonus(poke *Pokemon) PhysicsAttackBonus {
 	y := int(INIT_PHYSICS_ATTACK_BONUS)
-	if poke.Item == "こだわりハチマキ" {
+	if poke.Item == CHOICE_BAND {
 		y = FiveOrMoreRounding(float64(y) * 6144.0 / 4096.0)
 	}
 	return PhysicsAttackBonus(y)
@@ -558,7 +370,7 @@ const (
 
 func NewSpecialAttackBonus(poke *Pokemon) SpecialAttackBonus {
 	y := int(INIT_SPECIAL_ATTACK_BONUS)
-	if poke.Item == "こだわりメガネ" {
+	if poke.Item == CHOICE_SPECS {
 		y = FiveOrMoreRounding(float64(y) * 6144.0 / 4096.0)
 	}
 	return SpecialAttackBonus(y)
@@ -618,7 +430,7 @@ const (
 
 func NewDefenseBonus(poke *Pokemon) DefenseBonus {
 	y := INIT_DEFENSE_BONUS
-	if poke.Item == "とつげきチョッキ" {
+	if poke.Item == ASSAULT_VEST {
 		v := FiveOrMoreRounding(float64(y) * (6144.0 / 4096.0))
 		y = DefenseBonus(v)
 	}
@@ -721,7 +533,7 @@ const (
 
 func NewDamageBonus(poke *Pokemon) DamageBonus {
 	y := INIT_DAMAGE_BONUS
-	if poke.Item == "いのちのたま" {
+	if poke.Item == LIFE_ORB {
 		v := FiveOrMoreRounding(float64(y) * 5324.0 / 4096.0)
 		y = DamageBonus(v)
 	}
@@ -749,25 +561,4 @@ func NewFinalDamage(attacker, defender *Pokemon, moveName MoveName, isCrit bool,
 	y = int(float64(y) * float64(effeBonus))
 	y = FiveOverRounding(float64(y) * float64(dmgBonus) / 4096.0)
 	return FinalDamage(y)
-}
-
-type MoveCategory int
-
-const (
-	PHYSICS MoveCategory = iota
-	SPECIAL
-	STATUS
-)
-
-func NewMoveCategory(s string) (MoveCategory, error) {
-	switch s {
-		case "物理":
-			return PHYSICS, nil
-		case "特殊":
-			return SPECIAL, nil
-		case "変化":
-			return STATUS, nil
-		default:
-			return -1, fmt.Errorf("不適なmoveCategory")
-	}
 }

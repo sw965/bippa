@@ -23,7 +23,7 @@ type pokeData struct {
 	Weight    float64
 
 	Types  []string
-	Genders Genders
+	Genders []string
 	Abilities   Abilities
 
 	Learnset MoveNames	
@@ -57,6 +57,11 @@ func LoadPokeData(path string) PokeData {
 		panic(err)
 	}
 
+	genders, err := NewGenders(d.Genders)
+	if err != nil {
+		panic(err)
+	}
+
 	y := PokeData{
 		BaseHP:d.BaseHP,
 		BaseAtk:d.BaseAtk,
@@ -65,7 +70,7 @@ func LoadPokeData(path string) PokeData {
 		BaseSpeed:d.BaseSpeed,
 		Weight:d.Weight,
 		Types:types,
-		Genders:d.Genders,
+		Genders:genders,
 		Abilities:d.Abilities,
 		Learnset:d.Learnset,
 	}
@@ -278,14 +283,6 @@ var TYPEDEX = func() Typedex {
 				y[type1][type2] = v
 			}
 		}
-	}
-	return y
-}()
-
-var ALL_ITEMS = func() Items {
-	y, err := omwjson.Load[Items](ALL_ITEMS_PATH)
-	if err != nil {
-		panic(err)
 	}
 	return y
 }()

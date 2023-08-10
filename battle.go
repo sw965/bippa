@@ -3,9 +3,103 @@ package bippa
 import (
 	"math/rand"
 	"golang.org/x/exp/slices"
+	"golang.org/x/exp/maps"
 	omwmath "github.com/sw965/omw/math"
 	omwrand "github.com/sw965/omw/rand"
+	"github.com/sw965/omw/fn"
 )
+
+type StatusAilment int
+
+const (
+	NO_AILMENT StatusAilment = iota
+	NORMAL_POISON //どく
+	BAD_POISON //もうどく
+	SLEEP //ねむり
+	BURN //やけど
+	PARALYSIS //まひ
+	FREEZE //こおり
+)
+
+const (
+	FIGHTERS_LENGTH = 3
+)
+
+type Fighters [FIGHTERS_LENGTH]Pokemon
+
+func (fg1 *Fighters) Equal(fg2 *Fighters) bool {
+	for i, poke := range fg1 {
+		if !poke.Equal(&fg2[i]) {
+			return false
+		}
+	}
+	return true
+}
+
+func (fg *Fighters) PokeNames() PokeNames {
+	y := make(PokeNames, FIGHTERS_LENGTH)
+	for i, poke := range fg {
+		y[i] = poke.Name
+	}
+	return y
+}
+
+func (fg *Fighters) IsAllFaint() bool {
+	for _, poke := range fg {
+		if !poke.IsFaint() {
+			return false
+		}
+	}
+	return true
+}
+
+func (fg *Fighters) LegalMoveNames() MoveNames {
+	if fg[0].IsFaint() {
+		return MoveNames{}
+	}
+
+	isPPZeroOver := func(moveName MoveName) bool { return fg[0].Moveset[moveName].Current > 0 }
+	y := fn.Filter(maps.Keys(fg[0].Moveset), isPPZeroOver)
+
+	if fg[0].ChoiceMoveName != "" {
+		if slices.Contains(y, fg[0].ChoiceMoveName) {
+			y = MoveNames{fg[0].ChoiceMoveName}
+		}
+	} else if fg[0].Item == ASSAULT_VEST {
+		isNotStatusMove := func(moveName MoveName) bool { return MOVEDEX[moveName].Category != STATUS }
+		y = fn.Filter(y, isNotStatusMove)
+	}
+
+	if len(y) == 0 {
+		return MoveNames{STRUGGLE}
+	}
+	return y
+}
+
+func (fg *Fighters) LegalPokeNames() PokeNames {
+	y := make([]PokeName, 0, 2)
+	for _, poke := range fg[1:] {
+		if !poke.IsFaint() {
+			y = append(y, poke.Name)
+		}
+	}
+	return y
+}
+
+func (fg *Fighters) LegalActions() Actions {
+	var moveNames MoveNames
+	if fg[0].AfterUTurn {
+		moveNames = MoveNames{}
+	} else {
+		moveNames = fg.LegalMoveNames()
+	}
+
+	pokeNames := fg.LegalPokeNames()
+	y := make(Actions, 0, len(moveNames)+len(pokeNames))
+	y = append(y, fn.Map[Actions](moveNames, fn.ToStrTilde[MoveName, Action])...)
+	y = append(y, fn.Map[Actions](pokeNames, fn.ToStrTilde[PokeName, Action])...)
+	return y
+}
 
 type Battle struct {
 	P1Fighters Fighters
@@ -69,7 +163,7 @@ func (bt *Battle) Heal(heal int) {
 }
 
 func (bt *Battle) SitrusBerryHeal() {
-	if bt.P1Fighters[0].Item != "オボンのみ" {
+	if bt.P1Fighters[0].Item != SITRUS_BERRY {
 		return
 	}
 
@@ -81,7 +175,7 @@ func (bt *Battle) SitrusBerryHeal() {
 	current := bt.P1Fighters[0].CurrentHP
 
 	if int(current) <= int(float64(max)*1.0/2.0) {
-		bt.P1Fighters[0].Item = EMPTY_ITEM
+		bt.P1Fighters[0].Item = NO_ITEM
 		heal := int(float64(max) * (1.0 / 4.0))
 		bt.Heal(heal)
 	}
@@ -94,24 +188,12 @@ func (bt *Battle) RankStateFluctuation(rs *RankState) {
 
 	state := bt.P1Fighters[0].RankState.Add(rs)
 
-	if bt.P1Fighters[0].Item == "しろいハーブ" && state.ContainsDown() {
-		bt.P1Fighters[0].Item = EMPTY_ITEM
+	if bt.P1Fighters[0].Item == WHITE_HERB && state.ContainsDown() {
+		bt.P1Fighters[0].Item = NO_ITEM
 		state = state.ResetDown()
 	}
 
 	bt.P1Fighters[0].RankState = state.Regulate()
-}
-
-func (bt *Battle) AfterContact() {
-	if bt.P2Fighters[0].Ability == "てつのトゲ" {
-		dmg := int(float64(bt.P1Fighters[0].MaxHP) * 1.0 / 8.0)
-		bt.Damage(dmg)
-	}
-
-	if bt.P2Fighters[0].Item == "ゴツゴツメット" {
-		dmg := int(float64(bt.P1Fighters[0].MaxHP) * 1.0 / 6.0)
-		bt.Damage(dmg)
-	}
 }
 
 // https://latest.pokewiki.net/%E3%83%90%E3%83%88%E3%83%AB%E4%B8%AD%E3%81%AE%E5%87%A6%E7%90%86%E3%81%AE%E9%A0%86%E7%95%AA
@@ -176,14 +258,23 @@ func (bt *Battle) MoveUse(moveName MoveName, r *rand.Rand) {
 			bt.P2Fighters[0].IsFlinch = IsHit(moveData.FlinchPercent, r)
 		}
 
-		switch moveName {
-			case "とんぼがえり":
-				bt.P1Fighters[0].AfterUTurn = true
-				return
+		if bt.P2Fighters[0].Ability == "てつのトゲ" {
+			dmg := int(float64(bt.P1Fighters[0].MaxHP) * 1.0 / 8.0)
+			bt.Damage(dmg)
 		}
 
-		if moveData.IsContact {
-			bt.AfterContact()
+		if bt.P2Fighters[0].Item == ROCKY_HELMET {
+			dmg := int(float64(bt.P1Fighters[0].MaxHP) * 1.0 / 6.0)
+			bt.Damage(dmg)
+		}
+
+		if bt.P1Fighters[0].IsFaint() {
+			return
+		}
+
+		if moveName == "とんぼがえり" {
+			bt.P1Fighters[0].AfterUTurn = true
+			return
 		}
 
 		if bt.P1Fighters[0].IsFaint() || bt.P2Fighters[0].IsFaint() {
@@ -191,7 +282,7 @@ func (bt *Battle) MoveUse(moveName MoveName, r *rand.Rand) {
 		}
 	}
 
-	if bt.P1Fighters[0].Item == "いのちのたま" {
+	if bt.P1Fighters[0].Item == LIFE_ORB {
 		dmg := int(float64(bt.P1Fighters[0].MaxHP) * 1.0 / 10.0)
 		bt.Damage(dmg)
 	}

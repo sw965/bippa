@@ -7,7 +7,7 @@ import (
 
 // https://wiki.xn--rckteqa2e.com/wiki/%E3%82%BF%E3%83%BC%E3%83%B3#5..E3.82.BF.E3.83.BC.E3.83.B3.E7.B5.82.E4.BA.86.E6.99.82.E3.81.AE.E5.87.A6.E7.90.86
 func TurnEndLeftovers(bt *Battle) {
-	if bt.P1Fighters[0].Item != "たべのこし" {
+	if bt.P1Fighters[0].Item != LEFTOVERS {
 		return
 	}
 
@@ -20,7 +20,7 @@ func TurnEndLeftovers(bt *Battle) {
 }
 
 func TurnEndBlackSludge(bt *Battle) {
-	if bt.P1Fighters[0].Item != "くろいヘドロ" {
+	if bt.P1Fighters[0].Item !=  BLACK_SLUDGE {
 		return
 	}
 
