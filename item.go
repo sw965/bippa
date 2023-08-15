@@ -6,8 +6,6 @@ import (
 	"github.com/sw965/omw/fn"
 )
 
-type item string
-
 type Item int
 
 const (
@@ -58,6 +56,8 @@ func (item Item) IsChoice() bool {
 }
 
 type Items []Item
+
+var CHOICE_ITEMS = Items{CHOICE_BAND, CHOICE_SPECS, CHOICE_SCARF}
 
 var ALL_ITEMS = func() Items {
 	d, err := omwjson.Load[[]string](ALL_ITEMS_PATH)

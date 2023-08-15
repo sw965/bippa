@@ -21,6 +21,20 @@ const (
 	FREEZE //こおり
 )
 
+type StatusAilments []StatusAilment
+
+type Weather int
+
+const (
+	NO_WEATHER Weather = iota
+	SUNNY_DAY
+	RAIN
+	SANDSTORM
+	SNOW
+)
+
+type Weathers []Weather
+
 const (
 	FIGHTERS_LENGTH = 3
 )
@@ -53,61 +67,74 @@ func (fg *Fighters) IsAllFaint() bool {
 	return true
 }
 
-func (fg *Fighters) LegalMoveNames() MoveNames {
+func (fg *Fighters) LegalMoveUseActions() Actions {
 	if fg[0].IsFaint() {
-		return MoveNames{}
+		return Actions{}
+	}
+
+	if fg[0].AfterUTurn {
+		return Actions{}
 	}
 
 	isPPZeroOver := func(moveName MoveName) bool { return fg[0].Moveset[moveName].Current > 0 }
-	y := fn.Filter(maps.Keys(fg[0].Moveset), isPPZeroOver)
+	moveNames := fn.Filter(maps.Keys(fg[0].Moveset), isPPZeroOver)
 
-	if fg[0].ChoiceMoveName != "" {
-		if slices.Contains(y, fg[0].ChoiceMoveName) {
-			y = MoveNames{fg[0].ChoiceMoveName}
+	if fg[0].ChoiceMoveName != NO_MOVE_NAME {
+		if slices.Contains(moveNames, fg[0].ChoiceMoveName) {
+			moveNames = MoveNames{fg[0].ChoiceMoveName}
 		}
 	} else if fg[0].Item == ASSAULT_VEST {
 		isNotStatusMove := func(moveName MoveName) bool { return MOVEDEX[moveName].Category != STATUS }
-		y = fn.Filter(y, isNotStatusMove)
+		moveNames = fn.Filter(moveNames, isNotStatusMove)
 	}
 
-	if len(y) == 0 {
-		return MoveNames{STRUGGLE}
+	if len(moveNames) == 0 {
+		moveNames = MoveNames{WA_RU_A_GA_KI}
 	}
-	return y
+	return fn.Map[Actions](moveNames, NewMoveUseAction)
 }
 
-func (fg *Fighters) LegalPokeNames() PokeNames {
-	y := make([]PokeName, 0, 2)
+func (fg *Fighters) LegalSwitchActions() Actions {
+	pokeNames := make([]PokeName, 0, 2)
 	for _, poke := range fg[1:] {
 		if !poke.IsFaint() {
-			y = append(y, poke.Name)
+			pokeNames = append(pokeNames, poke.Name)
 		}
 	}
-	return y
+	return fn.Map[Actions](pokeNames, NewSwitchAction)
 }
 
 func (fg *Fighters) LegalActions() Actions {
-	var moveNames MoveNames
-	if fg[0].AfterUTurn {
-		moveNames = MoveNames{}
-	} else {
-		moveNames = fg.LegalMoveNames()
+	if fg[0].IsSolarBeamCharge {
+		return Actions{}
 	}
-
-	pokeNames := fg.LegalPokeNames()
-	y := make(Actions, 0, len(moveNames)+len(pokeNames))
-	y = append(y, fn.Map[Actions](moveNames, fn.ToStrTilde[MoveName, Action])...)
-	y = append(y, fn.Map[Actions](pokeNames, fn.ToStrTilde[PokeName, Action])...)
+	mActions := fg.LegalMoveUseActions()
+	sActions := fg.LegalSwitchActions()
+	y := make(Actions, 0, len(mActions)+len(sActions))
+	y = append(y, mActions...)
+	y = append(y, sActions...)
 	return y
 }
 
 type Battle struct {
 	P1Fighters Fighters
 	P2Fighters Fighters
+	Weather Weather
+	Field Field
+	IsP1Acted bool
+	IsP2Acted bool
 }
 
-func (bt Battle) Reverse() Battle {
-	return Battle{P1Fighters: bt.P2Fighters, P2Fighters: bt.P1Fighters}
+func (bt *Battle) Reverse() {
+	p1Fighters := bt.P1Fighters
+	p2Fighters := bt.P2Fighters
+	isP1Acted := bt.IsP1Acted
+	isP2Acted := bt.IsP2Acted
+
+	bt.P1Fighters = p2Fighters
+	bt.P2Fighters = p1Fighters
+	bt.IsP1Acted = isP2Acted
+	bt.IsP2Acted = isP1Acted
 }
 
 func (bt1 *Battle) Equal(bt2 *Battle) bool {
@@ -197,7 +224,7 @@ func (bt *Battle) RankStateFluctuation(rs *RankState) {
 }
 
 // https://latest.pokewiki.net/%E3%83%90%E3%83%88%E3%83%AB%E4%B8%AD%E3%81%AE%E5%87%A6%E7%90%86%E3%81%AE%E9%A0%86%E7%95%AA
-func (bt *Battle) MoveUse(moveName MoveName, r *rand.Rand) {
+func (bt *Battle) MoveUse(moveName MoveName, p2Action *Action, r *rand.Rand) {
 	if bt.P1Fighters[0].IsFaint() {
 		return
 	}
@@ -206,7 +233,7 @@ func (bt *Battle) MoveUse(moveName MoveName, r *rand.Rand) {
 		return
 	}
 
-	if moveName == STRUGGLE {
+	if moveName == WA_RU_A_GA_KI {
 		if bt.P2Fighters[0].IsFaint() {
 			return
 		}
@@ -241,6 +268,26 @@ func (bt *Battle) MoveUse(moveName MoveName, r *rand.Rand) {
 		return
 	}
 
+	if moveName == SO_RA_BI_MU && bt.Weather != SUNNY_DAY {
+		bt.P1Fighters[0].IsSolarBeamCharge = true
+		return
+	}
+
+	if moveName == HU_I_U_TI {
+		//相手が先に動いた
+		if bt.IsP2Acted {
+			return
+		}
+
+		moveData, ok := MOVEDEX[p2Action.MoveName]
+		if !ok {
+			return
+		}
+		if moveData.Category == STATUS {
+			return
+		}
+	}
+
 	attackNum := omwrand.Int(moveData.MinAttackNum, moveData.MaxAttackNum+1, r)
 	for i := 0; i < attackNum; i++ {
 		isCrit := bt.IsCritical(moveName, r)
@@ -258,6 +305,17 @@ func (bt *Battle) MoveUse(moveName MoveName, r *rand.Rand) {
 			bt.P2Fighters[0].IsFlinch = IsHit(moveData.FlinchPercent, r)
 		}
 
+		if moveName == GI_GA_DO_RE_I_N {
+			heal := int(float64(dmg)/2.0)
+			bt.Heal(heal)
+		} else if moveName == RI_HU_SU_TO_MU {
+			bt.RankStateFluctuation(&RankState{SpAtk:-2})
+		} else if moveName == ZYA_RE_TU_KU {
+			if !bt.P2Fighters[0].IsFaint() && IsHit(10, r){
+				bt.RankStateFluctuation(&RankState{Atk:-1})
+			}
+		}
+
 		if bt.P2Fighters[0].Ability == "てつのトゲ" {
 			dmg := int(float64(bt.P1Fighters[0].MaxHP) * 1.0 / 8.0)
 			bt.Damage(dmg)
@@ -272,7 +330,7 @@ func (bt *Battle) MoveUse(moveName MoveName, r *rand.Rand) {
 			return
 		}
 
-		if moveName == "とんぼがえり" {
+		if moveName == TO_N_BO_GA_E_RI {
 			bt.P1Fighters[0].AfterUTurn = true
 			return
 		}
@@ -294,7 +352,7 @@ func (bt *Battle) Switch(pokeName PokeName) {
 
 	bt.P1Fighters[0].RankState = RankState{}
 	bt.P1Fighters[0].BadPoisonElapsedTurn = 0
-	bt.P1Fighters[0].ChoiceMoveName = ""
+	bt.P1Fighters[0].ChoiceMoveName = NO_MOVE_NAME
 	bt.P1Fighters[0].IsLeechSeed = false
 
 	fg := bt.P1Fighters
@@ -312,28 +370,29 @@ func (bt *Battle) Switch(pokeName PokeName) {
 	bt.P1Fighters[0].AfterUTurn = false
 }
 
-func (bt *Battle) P1Action(action Action, r *rand.Rand) {
-	if action.IsMoveName() || action == Action(STRUGGLE) {
-		bt.MoveUse(MoveName(action), r)
+func (bt *Battle) P1Action(p1Action, p2Action *Action, r *rand.Rand) {
+	if p1Action.MoveName != NO_MOVE_NAME {
+		bt.MoveUse(p1Action.MoveName, p2Action, r)
 	} else {
-		bt.Switch(PokeName(action))
+		bt.Switch(p1Action.PokeName)
 	}
 }
 
-func (bt *Battle) P2Action(action Action, r *rand.Rand) {
+func (bt *Battle) P2Action(p2Action, p1Action *Action, r *rand.Rand) {
 	bt.Reverse()
-	if action.IsMoveName() || action == Action(STRUGGLE) {
-		bt.MoveUse(MoveName(action), r)
+	if p2Action.MoveName != NO_MOVE_NAME {
+		bt.MoveUse(p2Action.MoveName, p1Action, r)
 	} else {
-		bt.Switch(PokeName(action))
+		bt.Switch(p2Action.PokeName)
 	}
 	bt.Reverse()
 }
 
 func (bt *Battle) FinalSpeedWinner() Winner {
 	p1 := NewFinalSpeed(bt)
-	tb := bt.Reverse()
-	p2 := NewFinalSpeed(&tb)
+	bt.Reverse()
+	p2 := NewFinalSpeed(bt)
+	bt.Reverse()
 
 	if p1 > p2 {
 		return WINNER_PLAYER1
@@ -345,7 +404,7 @@ func (bt *Battle) FinalSpeedWinner() Winner {
 	return DRAW
 }
 
-func (bt *Battle) ActionPriorityWinner(p1Action, p2Action Action) Winner {
+func (bt *Battle) ActionPriorityWinner(p1Action, p2Action *Action) Winner {
 	p1 := p1Action.Priority()
 	p2 := p2Action.Priority()
 
@@ -359,7 +418,7 @@ func (bt *Battle) ActionPriorityWinner(p1Action, p2Action Action) Winner {
 	return DRAW
 }
 
-func (bt *Battle) ActionOrderWinner(p1, p2 Action, r *rand.Rand) Winner {
+func (bt *Battle) ActionOrderWinner(p1, p2 *Action, r *rand.Rand) Winner {
 	priorityWin := bt.ActionPriorityWinner(p1, p2)
 
 	if priorityWin == WINNER_PLAYER1 {
@@ -427,20 +486,20 @@ func (bt *Battle) TurnEnd(r *rand.Rand) {
 	run([]func(*Battle) {TurnEndBadPoison})
 }
 
-func (bt Battle) Push(p1Action, p2Action Action, r *rand.Rand) Battle {
+func (bt Battle) Push(p1Action, p2Action *Action, r *rand.Rand) Battle {
 	isP1Faint := bt.P1Fighters[0].IsFaint()
 	isP2Faint := bt.P2Fighters[0].IsFaint()
 
 	if isP1Faint {
-		bt.P1Action(p1Action, r)
+		bt.P1Action(p1Action, p2Action, r)
 		if isP2Faint {
-			bt.P2Action(p2Action, r)
+			bt.P2Action(p2Action, p1Action, r)
 		}
 		return bt
 	}
 
 	if isP2Faint {
-		bt.P2Action(p2Action, r)
+		bt.P2Action(p2Action, p1Action, r)
 		return bt
 	}
 
@@ -456,9 +515,9 @@ func (bt Battle) Push(p1Action, p2Action Action, r *rand.Rand) Battle {
 
 	for _, isP1 := range isP1s {
 		if isP1 {
-			bt.P1Action(p1Action, r)
+			bt.P1Action(p1Action, p2Action, r)
 		} else {
-			bt.P2Action(p2Action, r)
+			bt.P2Action(p2Action, p1Action, r)
 		}
 	}
 
@@ -510,7 +569,5 @@ func (bt *Battle) LegalActionss() []Actions {
 }
 
 func (bt *Battle) NewFinalDamage(moveName MoveName, isCrit bool, randDmgBonus RandomDamageBonus) FinalDamage {
-	attaker := bt.P1Fighters[0]
-	defender := bt.P2Fighters[0]
-	return NewFinalDamage(&attaker, &defender, moveName, isCrit, randDmgBonus)
+	return NewFinalDamage(bt, moveName, isCrit, randDmgBonus)
 }

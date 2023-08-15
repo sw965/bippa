@@ -5,12 +5,14 @@ import (
 	omwjson "github.com/sw965/omw/json"
 	omwos "github.com/sw965/omw/os"
 	omwmath "github.com/sw965/omw/math"
+	"github.com/sw965/omw/fn"
 	"golang.org/x/exp/slices"
 	"strings"
 	"fmt"
 )
 
 type BaseState int
+type Weight float64
 
 type pokeData struct {
 	BaseHP    BaseState
@@ -20,13 +22,13 @@ type pokeData struct {
 	BaseSpDef BaseState
 	BaseSpeed BaseState
 
-	Weight    float64
+	Weight    Weight
 
 	Types  []string
 	Genders []string
 	Abilities   Abilities
 
-	Learnset MoveNames	
+	Learnset []string
 }
 
 type PokeData struct {
@@ -37,7 +39,7 @@ type PokeData struct {
 	BaseSpDef BaseState
 	BaseSpeed BaseState
 
-	Weight    float64
+	Weight    Weight
 
 	Types  Types
 	Genders Genders
@@ -62,6 +64,8 @@ func LoadPokeData(path string) PokeData {
 		panic(err)
 	}
 
+	learnset := fn.Map[MoveNames](d.Learnset, StringToMoveName)
+
 	y := PokeData{
 		BaseHP:d.BaseHP,
 		BaseAtk:d.BaseAtk,
@@ -72,7 +76,7 @@ func LoadPokeData(path string) PokeData {
 		Types:types,
 		Genders:genders,
 		Abilities:d.Abilities,
-		Learnset:d.Learnset,
+		Learnset:learnset,
 	}
 	return y
 }
@@ -93,17 +97,26 @@ var POKEDEX = func() Pokedex {
 		full := POKEDEX_PATH + name
 		pokeName := strings.TrimRight(name, ".json")
 		pokeData := LoadPokeData(full)
-		y[PokeName(pokeName)] = &pokeData
+		k := STRING_TO_POKE_NAME[pokeName]
+		y[k] = &pokeData
 	}
 	return y
 }()
 
 var ALL_POKE_NAMES = func() PokeNames {
-	y, err := omwjson.Load[PokeNames](ALL_POKE_NAMES_PATH)
+	ss, err := omwjson.Load[[]string](ALL_POKE_NAMES_PATH)
 	if err != nil {
 		panic(err)
 	}
-	return y
+	return fn.Map[PokeNames](ss, StringToPokeName)
+}()
+
+var WEIGHT_DEPENDENT_ATTACK_MOVE_NAMES = func() MoveNames {
+	ss, err := omwjson.Load[[]string](WEIGHT_DEPENDENT_ATTACK_MOVE_NAMES_PATH)
+	if err != nil {
+		panic(err)
+	}
+	return fn.Map[MoveNames](ss, StringToMoveName)
 }()
 
 var ALL_ABILITIES = func() Abilities {
@@ -122,7 +135,7 @@ var ALL_ABILITIES = func() Abilities {
 type moveData struct {
 	Type     string
 	Category string
-	Power    int
+	Power    Power
 	Accuracy int
 	BasePP   int
 	Target   string
@@ -139,7 +152,7 @@ type moveData struct {
 type MoveData struct {
 	Type     Type
 	Category MoveCategory
-	Power    int
+	Power    Power
 	Accuracy int
 	BasePP   int
 	Target   Target
@@ -213,17 +226,18 @@ var MOVEDEX = func() Movedex {
 			fmt.Println(name, " の BasePPが0になっている")
 		}
 		fmt.Println(name + " 読み込み完了")
-		y[MoveName(moveName)] = &moveData
+		k := STRING_TO_MOVE_NAME[moveName]
+		y[k] = &moveData
 	}
 	return y
 }()
 
 var NEVER_MISS_HIT_MOVE_NAMES = func() MoveNames{
-	y, err := omwjson.Load[MoveNames](NEVER_MISS_HIT_MOVE_NAMES_PATH)
+	ss, err := omwjson.Load[[]string](NEVER_MISS_HIT_MOVE_NAMES_PATH)
 	if err != nil {
 		panic(err)
 	}
-	return y
+	return fn.Map[MoveNames](ss, StringToMoveName)
 }()
 
 type NatureData struct {
