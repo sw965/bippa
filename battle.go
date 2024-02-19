@@ -142,10 +142,6 @@ func (bt1 *Battle) Equal(bt2 *Battle) bool {
 }
 
 func (bt *Battle) FinalAccuracy(moveName MoveName) int {
-	if slices.Contains(NEVER_MISS_HIT_MOVE_NAMES, moveName) {
-		return 100
-	}
-
 	a := float64(bt.P1Fighters[0].RankState.Accuracy - bt.P2Fighters[0].RankState.Evasion)
 	var bonus float64
 	if a <= -6 {
@@ -206,6 +202,14 @@ func (bt *Battle) SitrusBerryHeal() {
 		heal := int(float64(max) * (1.0 / 4.0))
 		bt.Heal(heal)
 	}
+}
+
+func IsSitrusBerryHealActivation(max, current int) {
+	return int(current) <= int(float64(max)*SitrusBerryHeal)
+}
+
+type SitrusBerryHeal struct {
+
 }
 
 func (bt *Battle) RankStateFluctuation(rs *RankState) {

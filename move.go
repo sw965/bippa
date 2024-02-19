@@ -130,6 +130,17 @@ func StringToMoveName(s string) MoveName {
 
 type MoveNames []MoveName
 
+type Power int
+
+func NewPower(bt *Battle, moveName MoveName) Power {
+	moveData := MOVEDEX[moveName]
+	if moveName == A_KU_RO_BA_TTO {
+		return moveData.Power * 2
+	} else {
+		return moveData.Power
+	}
+}
+
 type PowerPointUp int
 
 const (

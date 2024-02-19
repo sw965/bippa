@@ -28,7 +28,7 @@ type pokeData struct {
 	Genders []string
 	Abilities   Abilities
 
-	Learnset []string
+	Learnset MoveNames
 }
 
 type PokeData struct {
@@ -111,16 +111,8 @@ var ALL_POKE_NAMES = func() PokeNames {
 	return fn.Map[PokeNames](ss, StringToPokeName)
 }()
 
-var WEIGHT_DEPENDENT_ATTACK_MOVE_NAMES = func() MoveNames {
-	ss, err := omwjson.Load[[]string](WEIGHT_DEPENDENT_ATTACK_MOVE_NAMES_PATH)
-	if err != nil {
-		panic(err)
-	}
-	return fn.Map[MoveNames](ss, StringToMoveName)
-}()
-
 var ALL_ABILITIES = func() Abilities {
-	y := make(Abilities, len(ALL_POKE_NAMES) * 3)
+	y := make(Abilities, 0, len(ALL_POKE_NAMES) * 3)
 	for _, pokeName := range ALL_POKE_NAMES {
 		pokeData := POKEDEX[pokeName]
 		for _, ability := range pokeData.Abilities {
@@ -230,14 +222,6 @@ var MOVEDEX = func() Movedex {
 		y[k] = &moveData
 	}
 	return y
-}()
-
-var NEVER_MISS_HIT_MOVE_NAMES = func() MoveNames{
-	ss, err := omwjson.Load[[]string](NEVER_MISS_HIT_MOVE_NAMES_PATH)
-	if err != nil {
-		panic(err)
-	}
-	return fn.Map[MoveNames](ss, StringToMoveName)
 }()
 
 type NatureData struct {

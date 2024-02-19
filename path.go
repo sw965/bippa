@@ -16,8 +16,6 @@ var (
 	ALL_POKE_NAMES_PATH = DATA_PATH + "all_poke_names.json"
 	ALL_NATURES_PATH    = DATA_PATH + "all_natures.json"
 	ALL_MOVE_NAMES_PATH = DATA_PATH + "all_move_names.json"
-	WEIGHT_DEPENDENT_ATTACK_MOVE_NAMES_PATH = DATA_PATH + "weight_dependent_attack_move_names.json"
 
-	NEVER_MISS_HIT_MOVE_NAMES_PATH = DATA_PATH + "never_miss_hit_move_names.json"
 	ALL_ITEMS_PATH      = DATA_PATH + "all_items.json"
 )
