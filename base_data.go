@@ -1,301 +1,176 @@
 package bippa
 
 import (
-	omwslices "github.com/sw965/omw/slices"
-	omwjson "github.com/sw965/omw/json"
-	omwos "github.com/sw965/omw/os"
-	omwmath "github.com/sw965/omw/math"
-	"github.com/sw965/omw/fn"
-	"golang.org/x/exp/slices"
-	"strings"
-	"fmt"
+	"github.com/sw965/omw"
 )
 
-type BaseState int
-type Weight float64
+var (
+	DATA_PATH = omw.SW965_PATH + "bippa/"
+	ALL_POKE_NAMES_PATH = DATA_PATH + "all_poke_names.json"
+	POKE_DATA_PATH = DATA_PATH + "poke_data/"
 
-type pokeData struct {
-	BaseHP    BaseState
-	BaseAtk   BaseState
-	BaseDef   BaseState
-	BaseSpAtk BaseState
-	BaseSpDef BaseState
-	BaseSpeed BaseState
+	MOVE_DATA_PATH = DATA_PATH + "move_data/"
+	ALL_MOVE_NAMES_PATH = DATA_PATH + "all_move_names.json"
 
-	Weight    Weight
+	TYPEDEX_PATH = DATA_PATH + "typedex.json"
+)
 
-	Types  []string
-	Genders []string
-	Abilities   Abilities
+var ALL_POKE_NAMES = func() PokeNames {
+	buff, err := omw.LoadJSON[[]string](ALL_POKE_NAMES_PATH)
+	if err != nil {
+		panic(err)
+	}
+	names := make(PokeNames, len(buff))
+	for i := range names {
+		 names[i] = STRING_TO_POKE_NAME[buff[i]]
+	}
+	return names
+}()
 
-	Learnset MoveNames
+type pokeDataJSONBuffer struct {
+	Name string
+	Types []string
+	HP int
+	Atk int
+	Def int
+	SpAtk int
+	SpDef int
+	Speed int
+	Learnset []string
 }
 
 type PokeData struct {
-	BaseHP    BaseState
-	BaseAtk   BaseState
-	BaseDef   BaseState
-	BaseSpAtk BaseState
-	BaseSpDef BaseState
-	BaseSpeed BaseState
-
-	Weight    Weight
-
-	Types  Types
-	Genders Genders
-	Abilities    Abilities
-
+	Name PokeName
+	Types Types
+	HP int
+	Atk int
+	Def int
+	SpAtk int
+	SpDef int
+	Speed int
 	Learnset MoveNames
 }
 
-func LoadPokeData(path string) PokeData {
-	d, err := omwjson.Load[pokeData](path)
+func LoadPokeData(pokeName PokeName) (PokeData, error) {
+	path := POKE_DATA_PATH + POKE_NAME_TO_STRING[pokeName] + omw.JSON_EXTENSION
+	buff, err := omw.LoadJSON[pokeDataJSONBuffer](path)
 	if err != nil {
-		panic(err)
+		return PokeData{}, err
 	}
 
-	types, err := NewTypes(d.Types)
-	if err != nil {
-		panic(err)
+	types := make(Types, len(buff.Types))
+	for i := range types {
+		types[i] = STRING_TO_TYPE[buff.Types[i]]
 	}
 
-	genders, err := NewGenders(d.Genders)
-	if err != nil {
-		panic(err)
+	learnset := make(MoveNames, len(buff.Learnset))
+	for i := range learnset {
+		learnset[i] = STRING_TO_MOVE_NAME[buff.Learnset[i]]
 	}
 
-	learnset := fn.Map[MoveNames](d.Learnset, StringToMoveName)
-
-	y := PokeData{
-		BaseHP:d.BaseHP,
-		BaseAtk:d.BaseAtk,
-		BaseDef:d.BaseDef,
-		BaseSpAtk:d.BaseSpAtk,
-		BaseSpeed:d.BaseSpeed,
-		Weight:d.Weight,
+	return PokeData{
+		Name:pokeName,
 		Types:types,
-		Genders:genders,
-		Abilities:d.Abilities,
+		HP:buff.HP,
+		Atk:buff.Atk,
+		Def:buff.Def,
+		SpAtk:buff.SpAtk,
+		SpDef:buff.SpDef,
+		Speed:buff.Speed,
 		Learnset:learnset,
-	}
-	return y
+	}, nil
 }
 
 type Pokedex map[PokeName]*PokeData
 
 var POKEDEX = func() Pokedex {
-	entries, err := omwos.NewDirEntries(POKEDEX_PATH)
+	dex := Pokedex{}
+	for i := range ALL_POKE_NAMES {
+		name := ALL_POKE_NAMES[i]
+		data, err := LoadPokeData(name)
+		if err != nil {
+			panic(err)
+		}
+		dex[name] = &data
+	}
+	return dex
+}()
+
+var ALL_MOVE_NAMES = func() MoveNames {
+	buff, err := omw.LoadJSON[[]string](ALL_MOVE_NAMES_PATH)
 	if err != nil {
 		panic(err)
 	}
-
-	y := Pokedex{}
-	for _, name := range entries.Names() {
-		if name == "テンプレート.json" {
-			continue
-		}
-		full := POKEDEX_PATH + name
-		pokeName := strings.TrimRight(name, ".json")
-		pokeData := LoadPokeData(full)
-		k := STRING_TO_POKE_NAME[pokeName]
-		y[k] = &pokeData
+	names := make(MoveNames, len(buff))
+	for i := range names {
+		names[i] = STRING_TO_MOVE_NAME[buff[i]]
 	}
-	return y
+	return names
 }()
 
-var ALL_POKE_NAMES = func() PokeNames {
-	ss, err := omwjson.Load[[]string](ALL_POKE_NAMES_PATH)
-	if err != nil {
-		panic(err)
-	}
-	return fn.Map[PokeNames](ss, StringToPokeName)
-}()
-
-var ALL_ABILITIES = func() Abilities {
-	y := make(Abilities, 0, len(ALL_POKE_NAMES) * 3)
-	for _, pokeName := range ALL_POKE_NAMES {
-		pokeData := POKEDEX[pokeName]
-		for _, ability := range pokeData.Abilities {
-			if !slices.Contains(y, ability) {
-				y = append(y, ability)
-			}
-		}
-	}
-	return y
-}()
-
-type moveData struct {
-	Type     string
-	Category string
-	Power    Power
-	Accuracy int
-	BasePP   int
-	Target   string
-
-	IsContact    bool
-	PriorityRank int
-	CriticalRank CriticalRank
-	FlinchPercent int
-
-	MinAttackNum int
-	MaxAttackNum int
+type moveDataJSONBuffer struct {
+    Type        string
+    Category    string
+    Power       int
+    Accuracy    int
+    BasePP      int
 }
 
 type MoveData struct {
-	Type     Type
+	Type Type
 	Category MoveCategory
-	Power    Power
+	Power int
 	Accuracy int
-	BasePP   int
-	Target   Target
-
-	IsContact    bool
-	PriorityRank int
-	CriticalRank CriticalRank
-	FlinchPercent int
-
-	MinAttackNum int
-	MaxAttackNum int	
+	BasePP int
 }
 
-func LoadMoveData(path string) MoveData {
-	d, err := omwjson.Load[moveData](path)
+func LoadMoveData(moveName MoveName) (MoveData, error) {
+	path := MOVE_DATA_PATH + MOVE_NAME_TO_STRING[moveName] + omw.JSON_EXTENSION
+	buff, err := omw.LoadJSON[moveDataJSONBuffer](path)
 	if err != nil {
-		panic(err)
+		return MoveData{}, err
 	}
-
-	type_, err := NewType(d.Type)
-	if err != nil {
-		panic(err)
-	}
-
-	c, err := NewMoveCategory(d.Category)
-	if err != nil {
-		panic(err)
-	}
-
-	target, err := NewTarget(d.Target)
-	if err != nil {
-		panic(err)
-	}
-
-	minAttackNum := omwmath.Max(d.MinAttackNum, 1)
-	maxAttackNum := omwmath.Max(d.MaxAttackNum, 1)
-
-	y := MoveData{
-		Type:type_,
-		Category:c,
-		Power:d.Power,
-		Accuracy:d.Accuracy,
-		BasePP:d.BasePP,
-		Target:target,
-		IsContact:d.IsContact,
-		PriorityRank:d.PriorityRank,
-		CriticalRank:d.CriticalRank,
-		FlinchPercent:d.FlinchPercent,
-		MinAttackNum:minAttackNum,
-		MaxAttackNum:maxAttackNum,
-	}
-	return y
+	return MoveData{
+		Type:STRING_TO_TYPE[buff.Type],
+		Category:STRING_TO_MOVE_CATEGORY[buff.Category],
+		Power:buff.Power,
+		Accuracy:buff.Accuracy,
+		BasePP:buff.BasePP,
+	}, nil
 }
 
 type Movedex map[MoveName]*MoveData
 
 var MOVEDEX = func() Movedex {
-	y := Movedex{}
-	entries, err := omwos.NewDirEntries(MOVEDEX_PATH)
-	if err != nil {
-		panic(err)
-	}
-	for _, name := range entries.Names() {
-		if name == "テンプレート.json" {
-			continue
-		}
-		moveName := strings.TrimRight(name, ".json")
-		fmt.Println(name + " 読み込み開始")
-		moveData := LoadMoveData(MOVEDEX_PATH + name)
-		if moveData.BasePP == 0 {
-			fmt.Println(name, " の BasePPが0になっている")
-		}
-		fmt.Println(name + " 読み込み完了")
-		k := STRING_TO_MOVE_NAME[moveName]
-		y[k] = &moveData
-	}
-	return y
-}()
-
-type NatureData struct {
-	AtkBonus   NatureBonus
-	DefBonus   NatureBonus
-	SpAtkBonus NatureBonus
-	SpDefBonus NatureBonus
-	SpeedBonus NatureBonus
-}
-
-type Naturedex map[Nature]*NatureData
-
-var NATUREDEX = func() Naturedex {
-	y, err := omwjson.Load[Naturedex](NATUREDEX_PATH)
-	if err != nil {
-		panic(err)
-	}
-	return y
-}()
-
-var ALL_NATURES = func() Natures {
-	y, err := omwjson.Load[Natures](ALL_NATURES_PATH)
-	if err != nil {
-		panic(err)
-	}
-	return y
-}()
-
-type typeData map[string]float64
-type typedex map[string]typeData
-
-type TypeData map[Type]float64
-type Typedex map[Type]TypeData
-
-var TYPEDEX = func() Typedex {
-	d, err := omwjson.Load[typedex](TYPEDEX_PATH)
-	if err != nil {
-		panic(err)
-	}
-
-	y := Typedex{}
-	for t1, data := range d {
-		type1, err := NewType(t1)
+	dex := Movedex{}
+	for i := range ALL_MOVE_NAMES {
+		name := ALL_MOVE_NAMES[i]
+		data, err := LoadMoveData(name)
 		if err != nil {
 			panic(err)
 		}
-		if _, ok := y[type1]; !ok {
-			y[type1] = TypeData{}
-		}
-
-		for t2, v := range data {
-			type2, err := NewType(t2)
-			if err != nil {
-				panic(err)
-			}
-			if _, ok := y[type1][type2]; !ok {
-				y[type1][type2] = v
-			}
-		}
+		dex[name] = &data
 	}
-	return y
+	return dex
 }()
 
-func init() {
-	for pokeName, pokeData := range POKEDEX {
-		if !omwslices.IsSubset(ALL_GENDERS, pokeData.Genders) {
-			msg := fmt.Sprintf("%v の 性別に %v 以外 の 要素 が 含まれている", pokeName, ALL_GENDERS)
-			fmt.Println(msg)
-		}
+type typedexJSONBuffer map[string]map[string]float64
+type DefTypeData map[Type]float64
+type Typedex map[Type]DefTypeData
 
-		for _, moveName := range pokeData.Learnset {
-			if omwslices.Count(pokeData.Learnset, moveName) != 1 {
-				fmt.Println(pokeName, " の ", moveName, " が 重複している")
-			}
+var TYPEDEX = func() Typedex {
+	buff, err := omw.LoadJSON[typedexJSONBuffer](TYPEDEX_PATH)
+	if err != nil {
+		panic(err)
+	}
+	typedex := Typedex{}
+	for strAtkT, defData := range buff {
+		atkType := STRING_TO_TYPE[strAtkT]
+		typedex[atkType] = DefTypeData{}
+		for strDefT, effect := range defData {
+			defType := STRING_TO_TYPE[strDefT]
+			typedex[atkType][defType] = effect
 		}
 	}
-}
+	return typedex
+}()
