@@ -9,22 +9,9 @@ import (
 	"github.com/sw965/bippa/dmgtools"
 )
 
-type Team []bp.Pokemon
-
-func PushTeam(tesm Team, TeamBuild) Team {
-
-}
-
-type TeamBuild struct {
-	PokeNames PokeNames
-	MoveNames MoveNames
-	
-}
-
 const (
 	FIGHTER_NUM = 3
 )
-
 
 type Fighters [FIGHTER_NUM]bp.Pokemon
 
@@ -46,6 +33,15 @@ func (f *Fighters) IndexByName(name bp.PokeName) int {
 		}
 	}
 	return -1
+}
+
+func (f *Fighters) IsAllFaint() bool {
+	for i := range f {
+		if f[i].CurrentHP > 0 {
+			return false
+		}
+	}
+	return true
 }
 
 type Action struct {
@@ -126,7 +122,7 @@ func (b Battle) CommandMove(moveName bp.MoveName, r *rand.Rand) Battle {
 	randDmgBonus := omw.RandChoice(dmgtools.RANDOM_BONUS, r)
 	dmg := b.CalcDamage(moveName, randDmgBonus)
 	dmg = omw.Min(dmg, b.P2Fighters[0].CurrentHP)
-	moveset := maps.Clone(b.P1Fighters[0].Moveset)
+	moveset := b.P1Fighters[0].Moveset.Clone()
 	moveset[moveName].Current -= 1
 	b.P1Fighters[0].Moveset = moveset
 	b.P2Fighters[0].CurrentHP -= dmg
@@ -204,6 +200,10 @@ func (b *Battle) SortActionsByOrder(p1Action, p2Action *Action, r *rand.Rand) Ac
 
 func EqualBattle(b1, b2 Battle) bool {
 	return b1.P1Fighters.Equal(&b2.P1Fighters) && b1.P2Fighters.Equal(&b2.P2Fighters) 
+}
+
+func IsBattleEnd(b *Battle) bool {
+	return b.P1Fighters.IsAllFaint() || b.P2Fighters.IsAllFaint()
 }
 
 func BattleLegalActionss(b *Battle) Actionss {

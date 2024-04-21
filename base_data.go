@@ -28,26 +28,24 @@ var ALL_POKE_NAMES = func() PokeNames {
 }()
 
 type pokeDataJSONBuffer struct {
-	Name string
 	Types []string
-	HP int
-	Atk int
-	Def int
-	SpAtk int
-	SpDef int
-	Speed int
+	BaseHP int
+	BaseAtk int
+	BaseDef int
+	BaseSpAtk int
+	BaseSpDef int
+	BaseSpeed int
 	Learnset []string
 }
 
 type PokeData struct {
-	Name PokeName
 	Types Types
-	HP int
-	Atk int
-	Def int
-	SpAtk int
-	SpDef int
-	Speed int
+	BaseHP int
+	BaseAtk int
+	BaseDef int
+	BaseSpAtk int
+	BaseSpDef int
+	BaseSpeed int
 	Learnset MoveNames
 }
 
@@ -69,14 +67,13 @@ func LoadPokeData(pokeName PokeName) (PokeData, error) {
 	}
 
 	return PokeData{
-		Name:pokeName,
 		Types:types,
-		HP:buff.HP,
-		Atk:buff.Atk,
-		Def:buff.Def,
-		SpAtk:buff.SpAtk,
-		SpDef:buff.SpDef,
-		Speed:buff.Speed,
+		BaseHP:buff.BaseHP,
+		BaseAtk:buff.BaseAtk,
+		BaseDef:buff.BaseDef,
+		BaseSpAtk:buff.BaseSpAtk,
+		BaseSpDef:buff.BaseSpDef,
+		BaseSpeed:buff.BaseSpeed,
 		Learnset:learnset,
 	}, nil
 }

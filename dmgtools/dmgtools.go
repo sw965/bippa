@@ -61,9 +61,9 @@ func (c *Calculator) Execute(randBonus float64) int {
 	power := moveData.Power
 
 	lv := int(attacker.Level)
-	dmg := (lv*2)/5 + 2
-	dmg = dmg * (power * atkVal / defVal)
-	dmg = (dmg / 50) + 2
+	dmg := (lv*2/5) + 2
+	dmg = dmg * power * atkVal / defVal
+	dmg = (dmg/50) + 2
 
 	var typeMatchBonus float64 
 	if slices.Contains(attackerPokeData.Types, moveData.Type) {
@@ -73,7 +73,6 @@ func (c *Calculator) Execute(randBonus float64) int {
 	}
 
 	dmg = RoundOverHalf(float64(dmg) * typeMatchBonus)
-
 	for _, defType := range defenderPokeData.Types {
 		dmg = int(float64(dmg) * bp.TYPEDEX[moveData.Type][defType])
 	}
