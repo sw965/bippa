@@ -29,7 +29,7 @@ func (team Team) Clone() Team {
 
 func LegalTeamBuildActions(team Team) TeamBuildActions {
 	if len(team) < MAX_TEAM_NUM {
-		
+
 		actions := make(TeamBuildActions, 0, len(ALL_POKE_NAMES))
 		for _, name := range ALL_POKE_NAMES {
 			actions = append(actions, TeamBuildAction{PokeName:name})
@@ -37,7 +37,6 @@ func LegalTeamBuildActions(team Team) TeamBuildActions {
 		return actions
 	}
 
-	var index int
 	for i := range team {
 		pokemon := team[i]
 		learnset := POKEDEX[pokemon.Name].Learnset
@@ -46,7 +45,7 @@ func LegalTeamBuildActions(team Team) TeamBuildActions {
 			actions := make(TeamBuildActions, 0, len(learnset))
 			for _, moveName := range learnset {
 				if _, ok := pokemon.Moveset[moveName]; !ok {
-					actions = append(actions, TeamBuildAction{MoveName:moveName, Index:index})
+					actions = append(actions, TeamBuildAction{MoveName:moveName, Index:i})
 				}
 				return actions
 			}
