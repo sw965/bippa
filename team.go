@@ -28,8 +28,8 @@ func (team Team) Clone() Team {
 }
 
 func LegalTeamBuildActions(team Team) TeamBuildActions {
+	//ポケモンを選ぶ行動
 	if len(team) < MAX_TEAM_NUM {
-
 		actions := make(TeamBuildActions, 0, len(ALL_POKE_NAMES))
 		for _, name := range ALL_POKE_NAMES {
 			actions = append(actions, TeamBuildAction{PokeName:name})
@@ -37,6 +37,7 @@ func LegalTeamBuildActions(team Team) TeamBuildActions {
 		return actions
 	}
 
+	//技を選ぶ行動
 	for i := range team {
 		pokemon := team[i]
 		learnset := POKEDEX[pokemon.Name].Learnset
@@ -54,7 +55,7 @@ func LegalTeamBuildActions(team Team) TeamBuildActions {
 	return TeamBuildActions{}
 }
 
-func PushTeam(team Team, action *TeamBuildAction) Team {
+func PushTeam(team Team, action *TeamBuildAction) (Team, error) {
 	team = team.Clone()
 
 	if action.PokeName != EMPTY_POKE_NAME {
@@ -66,5 +67,6 @@ func PushTeam(team Team, action *TeamBuildAction) Team {
 		basePP := MOVEDEX[action.MoveName].BasePP
 		team[action.Index].Moveset[action.MoveName] = &PowerPoint{Max:basePP, Current:basePP}
 	}
-	return team
+	return team, nil
 }
+

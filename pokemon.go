@@ -171,3 +171,27 @@ func (p Pokemon) Clone() Pokemon {
 	p.Moveset = p.Moveset.Clone()
 	return p
 }
+
+func NewTemplateBulbasaur() Pokemon {
+	pokemon, err := NewPokemon(BULBASAUR, MoveNames{TACKLE})
+	if err != nil {
+		panic(err)
+	}
+	return pokemon
+}
+
+func NewTemplateCharmander() Pokemon {
+	pokemon, err := NewPokemon(CHARMANDER, MoveNames{EMBER})
+	if err != nil {
+		panic(err)
+	}
+	return pokemon
+}
+
+func NewTemplateSquirtle() Pokemon {
+	pokemon, err := NewPokemon(SQUIRTLE, MoveNames{WATER_GUN})
+	if err != nil {
+		panic(err)
+	}
+	return pokemon
+}

@@ -3,10 +3,11 @@ package single
 import (
 	"fmt"
 	"math/rand"
-	"golang.org/x/exp/maps"
 	bp "github.com/sw965/bippa"
 	"github.com/sw965/omw"
 	"github.com/sw965/bippa/dmgtools"
+	"github.com/sw965/crow/game/simultaneous"
+	"github.com/sw965/crow/mcts/dpuct"
 )
 
 const (
@@ -123,6 +124,7 @@ func (b Battle) CommandMove(moveName bp.MoveName, r *rand.Rand) Battle {
 	dmg := b.CalcDamage(moveName, randDmgBonus)
 	dmg = omw.Min(dmg, b.P2Fighters[0].CurrentHP)
 	moveset := b.P1Fighters[0].Moveset.Clone()
+	fmt.Println(moveset, moveset[moveName], b.P1Fighters[0].Name)
 	moveset[moveName].Current -= 1
 	b.P1Fighters[0].Moveset = moveset
 	b.P2Fighters[0].CurrentHP -= dmg
@@ -130,7 +132,7 @@ func (b Battle) CommandMove(moveName bp.MoveName, r *rand.Rand) Battle {
 }
 
 func (b *Battle) SwitchablePokeNamess() bp.PokeNamess {
-	namess := make(bp.PokeNamess, 0, SINGLE_BATTLE_MAX_SIMULTANEOUS_ACTION_NUM)
+	namess := make(bp.PokeNamess, SINGLE_BATTLE_MAX_SIMULTANEOUS_ACTION_NUM)
 	appendSwitchablePokeNames := func(fighters *Fighters, idx int) {
 		for _, pokemon := range fighters {
 			if pokemon.CurrentHP > 0 {
@@ -198,37 +200,39 @@ func (b *Battle) SortActionsByOrder(p1Action, p2Action *Action, r *rand.Rand) Ac
 	}
 }
 
-func EqualBattle(b1, b2 Battle) bool {
+func Equal(b1, b2 *Battle) bool {
 	return b1.P1Fighters.Equal(&b2.P1Fighters) && b1.P2Fighters.Equal(&b2.P2Fighters) 
 }
 
-func IsBattleEnd(b *Battle) bool {
+func IsEnd(b *Battle) bool {
 	return b.P1Fighters.IsAllFaint() || b.P2Fighters.IsAllFaint()
 }
 
-func BattleLegalActionss(b *Battle) Actionss {
+func LegalActionss(b *Battle) Actionss {
 	moveNamess := b.CommandableMoveNamess()
 	pokeNamess := b.SwitchablePokeNamess()
 	actionss := make(Actionss, SINGLE_BATTLE_MAX_SIMULTANEOUS_ACTION_NUM)
+	isPlayer1s := []bool{true, false}
 	for playerI := range actionss {
+		isPlayer1 := isPlayer1s[playerI]
 		moveNames := moveNamess[playerI]
 		pokeNames := pokeNamess[playerI]
 		actions := make(Actions, 0, len(moveNames) + len(pokeNames))
 		for _, name := range moveNames {
-			actions = append(actions, Action{CmdMoveName:name})
+			actions = append(actions, Action{CmdMoveName:name, IsPlayer1:isPlayer1})
 		}
 		for _, name := range pokeNames {
-			actions = append(actions, Action{SwitchPokeName:name})
+			actions = append(actions, Action{SwitchPokeName:name, IsPlayer1:isPlayer1})
 		}
 		actionss[playerI] = actions
 	}
 	return actionss
 }
 
-func PushBattle(r *rand.Rand) func(Battle, ...*Action) Battle {
-	return func(battle Battle, actions ...*Action) Battle {
+func Push(r *rand.Rand) func(Battle, Actions) (Battle, error) {
+	return func(battle Battle, actions Actions) (Battle, error) {
 		var err error
-		sorted := battle.SortActionsByOrder(actions[0], actions[1], r)
+		sorted := battle.SortActionsByOrder(&actions[0], &actions[1], r)
 		for i := range sorted {
 			action := sorted[i]
 			if action.IsPlayer1 {
@@ -239,9 +243,38 @@ func PushBattle(r *rand.Rand) func(Battle, ...*Action) Battle {
 				battle = battle.SwapPlayers()
 			}
 			if err != nil {
-				panic(err)
+				return Battle{}, err
 			}
 		}
-		return battle
+		return battle, nil
 	}
+}
+
+func NewMCTS(r *rand.Rand) dpuct.MCTS[Battle, Actionss, Actions, Action] {
+	game := simultaneous.Game[Battle, Actionss, Actions, Action]{
+		Equal:Equal,
+		IsEnd:IsEnd,
+		LegalActionss:LegalActionss,
+		Push:Push(r),
+	}
+	game.SetRandomActionPlayer(r)
+
+	leafNodeEvalsFunc := func(battle *Battle) dpuct.LeafNodeEvalYs {
+		b1 := battle.P1Fighters.IsAllFaint()
+		b2 := battle.P2Fighters.IsAllFaint()
+		if b1 && b2 {
+			return dpuct.LeafNodeEvalYs{0.5, 0.5}
+		} else if b1 {
+			return dpuct.LeafNodeEvalYs{1.0, 0.0}
+		} else {
+			return dpuct.LeafNodeEvalYs{0.0, 1.0}
+		}
+	}
+
+	mcts := dpuct.MCTS[Battle, Actionss, Actions, Action]{
+		Game:game,
+		LeafNodeEvalsFunc:leafNodeEvalsFunc,
+	}
+	mcts.SetUniformActionPoliciesFunc()
+	return mcts
 }
