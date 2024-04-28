@@ -1,6 +1,7 @@
 package bippa
 
 import (
+	"fmt"
 	"github.com/sw965/omw"
 )
 
@@ -172,8 +173,28 @@ func (p Pokemon) Clone() Pokemon {
 	return p
 }
 
+func (p *Pokemon) IsFaint() bool {
+	return p.CurrentHP <= 0
+}
+
+func (p *Pokemon) ToString() string {
+	s := "name:" + POKE_NAME_TO_STRING[p.Name] + ", "
+	s += fmt.Sprintf("level:%d, ", p.Level)
+	s += fmt.Sprintf("maxHP:%d, ", p.MaxHP)
+	s += fmt.Sprintf("currentHP:%d, ", p.CurrentHP)
+	s += fmt.Sprintf("atk:%d, ", p.Atk)
+	s += fmt.Sprintf("def:%d, ", p.Def)
+	s += fmt.Sprintf("spAtk:%d, ", p.SpAtk)
+	s += fmt.Sprintf("spDef:%d, ", p.SpDef)
+	s += fmt.Sprintf("speed:%d, ", p.Speed)
+	for moveName, pp := range p.Moveset {
+		s += fmt.Sprintf("moveName:%s, pp.Max:%d, pp.Current:%d", MOVE_NAME_TO_STRING[moveName], pp.Max, pp.Current)
+	}
+	return s
+}
+
 func NewTemplateBulbasaur() Pokemon {
-	pokemon, err := NewPokemon(BULBASAUR, MoveNames{TACKLE})
+	pokemon, err := NewPokemon(BULBASAUR, MoveNames{TACKLE, VINE_WHIP})
 	if err != nil {
 		panic(err)
 	}
@@ -190,6 +211,14 @@ func NewTemplateCharmander() Pokemon {
 
 func NewTemplateSquirtle() Pokemon {
 	pokemon, err := NewPokemon(SQUIRTLE, MoveNames{WATER_GUN})
+	if err != nil {
+		panic(err)
+	}
+	return pokemon
+}
+
+func NewTemplateGarchomp() Pokemon {
+	pokemon, err := NewPokemon(GARCHOMP, MoveNames{STONE_EDGE})
 	if err != nil {
 		panic(err)
 	}

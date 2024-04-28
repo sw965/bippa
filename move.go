@@ -13,6 +13,7 @@ const (
 	STONE_EDGE
 	EMBER
 	TACKLE
+	VINE_WHIP
 	WATER_GUN
 )
 
@@ -21,6 +22,7 @@ var STRING_TO_MOVE_NAME = map[string]MoveName{
 	"ストーンエッジ":STONE_EDGE,
 	"ひのこ":     EMBER,
 	"たいあたり": TACKLE,
+	"つるのムチ":VINE_WHIP,
 	"みずでっぽう": WATER_GUN,
 }
 

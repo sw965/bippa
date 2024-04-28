@@ -34,6 +34,7 @@ func Test(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
+	battle.P1Fighters[0].CurrentHP = 0
 	fmt.Println(battle.P1Fighters[0].CurrentHP, battle.P2Fighters[0].CurrentHP)
 }
 
@@ -52,12 +53,27 @@ func TestMCTS(t *testing.T) {
 		bp.NewTemplateBulbasaur(),
 	}
 	battle := sb.Battle{P1Fighters:p1Fighters, P2Fighters:p2Fighters}
-
-	allNodes, err := mcts.Run(1960, battle, 1.41, r)
+	//endBattle, err := mcts.Game.Playout(battle)
+	//if err != nil {
+	//	panic(err)
+	//}
+	//fmt.Println(endBattle)
+	allNodes, err := mcts.Run(25600, battle, 1.41, r)
 	if err != nil {
 		panic(err)
 	}
-	for _, as := range allNodes[0].MaxTrialActionsPath(r, 8) {
-		fmt.Println(as)
+	for i, actions := range allNodes[0].MaxTrialActionsPath(r, 16) {
+		fmt.Println(
+			i, bp.MOVE_NAME_TO_STRING[actions[0].CmdMoveName],
+			bp.POKE_NAME_TO_STRING[actions[0].SwitchPokeName],
+			bp.MOVE_NAME_TO_STRING[actions[1].CmdMoveName],
+			bp.POKE_NAME_TO_STRING[actions[1].SwitchPokeName],
+		)
+	}
+
+	for _, m := range allNodes[0].PUCBManagers {
+		for k, v := range m {
+			fmt.Println(k, v.AverageValue())
+		}
 	}
 }

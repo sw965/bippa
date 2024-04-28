@@ -1,6 +1,7 @@
 package bippa
 
 import (
+	"fmt"
 	"github.com/sw965/omw"
 )
 
@@ -127,6 +128,12 @@ func LoadMoveData(moveName MoveName) (MoveData, error) {
 	if err != nil {
 		return MoveData{}, err
 	}
+	if buff.BasePP == 0 {
+		moveNameStr := MOVE_NAME_TO_STRING[moveName]
+		msg := fmt.Sprintf("%s の MoveDataのjsonファイルのbasePPが0になっている。", moveNameStr)
+		return MoveData{}, fmt.Errorf(msg)
+	}
+
 	return MoveData{
 		Type:STRING_TO_TYPE[buff.Type],
 		Category:STRING_TO_MOVE_CATEGORY[buff.Category],

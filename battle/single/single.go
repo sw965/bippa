@@ -51,6 +51,10 @@ type Action struct {
 	IsPlayer1 bool
 }
 
+func (a *Action) IsEmpty() bool {
+	return a.CmdMoveName == bp.EMPTY_MOVE_NAME && a.SwitchPokeName == bp.EMPTY_POKE_NAME
+}
+
 func (a *Action) IsCommandMove() bool {
 	return a.CmdMoveName != bp.EMPTY_MOVE_NAME
 }
@@ -61,8 +65,17 @@ func (a *Action) IsSwitch() bool {
 
 type Actions []Action
 
+func (as Actions) IsAllEmpty() bool {
+	for i := range as {
+		if !as[i].IsEmpty() {
+			return false
+		}
+	}
+	return true
+}
+
 const (
-	SINGLE_BATTLE_MAX_SIMULTANEOUS_ACTION_NUM = 2
+	MAX_SIMULTANEOUS_ACTION_NUM = 2
 )
 
 type Actionss []Actions
@@ -72,8 +85,8 @@ type Battle struct {
 	P2Fighters Fighters
 }
 
-func (b *Battle) SwapPlayers() Battle {
-    return Battle{P1Fighters: b.P2Fighters, P2Fighters: b.P1Fighters}
+func (b *Battle) SwapPlayers() {
+	b.P1Fighters, b.P2Fighters = b.P2Fighters, b.P1Fighters
 }
 
 func (b *Battle) CalcDamage(moveName bp.MoveName, randDmgBonus float64) int {
@@ -98,51 +111,73 @@ func (b *Battle) CalcDamage(moveName bp.MoveName, randDmgBonus float64) int {
 	return calculator.Execute(randDmgBonus)
 }
 
-func (b *Battle) CommandableMoveNamess() bp.MoveNamess {
-	namess := make(bp.MoveNamess, SINGLE_BATTLE_MAX_SIMULTANEOUS_ACTION_NUM)
-	for i := range namess {
-		namess[i] = make(bp.MoveNames, 0, bp.MAX_MOVESET_NUM)
+func (b *Battle) p1CommandableMoveNames() bp.MoveNames {
+	if b.P2Fighters[0].IsFaint() {
+		return bp.MoveNames{}
 	}
 
-	appendCommandableMoveNames := func(sellFighters, opponentFighters *Fighters, idx int) {
-		if opponentFighters[0].CurrentHP > 0 {
-			for moveName, pp := range sellFighters[0].Moveset {
-				if pp.Current > 0 {
-					namess[idx] = append(namess[idx], moveName)
-				}
-			}
+	names := make(bp.MoveNames, 0)
+	for moveName, pp := range b.P1Fighters[0].Moveset {
+		if pp.Current > 0 {
+			names = append(names, moveName)
 		}
 	}
+	return names
+}
 
-	appendCommandableMoveNames(&b.P1Fighters, &b.P2Fighters, 0)
-	appendCommandableMoveNames(&b.P2Fighters, &b.P1Fighters, 1)
-	return namess
+func (b *Battle) p2CommandableMoveNames() bp.MoveNames {
+	b.SwapPlayers()
+	names := b.p1CommandableMoveNames()
+	b.SwapPlayers()
+	return names
+}
+
+func (b *Battle) CommandableMoveNamess() bp.MoveNamess {
+	p1 := b.p1CommandableMoveNames()
+	p2 := b.p2CommandableMoveNames()
+	return bp.MoveNamess{p1, p2}
 }
 
 func (b Battle) CommandMove(moveName bp.MoveName, r *rand.Rand) Battle {
+	if b.P2Fighters[0].CurrentHP <= 0 {
+		return b
+	}
+	moveset := b.P1Fighters[0].Moveset.Clone()
+	//moveset[moveName].Current -= 1
+
+	b.P1Fighters[0].Moveset = moveset
 	randDmgBonus := omw.RandChoice(dmgtools.RANDOM_BONUS, r)
 	dmg := b.CalcDamage(moveName, randDmgBonus)
 	dmg = omw.Min(dmg, b.P2Fighters[0].CurrentHP)
-	moveset := b.P1Fighters[0].Moveset.Clone()
-	fmt.Println(moveset, moveset[moveName], b.P1Fighters[0].Name)
-	moveset[moveName].Current -= 1
-	b.P1Fighters[0].Moveset = moveset
 	b.P2Fighters[0].CurrentHP -= dmg
 	return b
 }
 
-func (b *Battle) SwitchablePokeNamess() bp.PokeNamess {
-	namess := make(bp.PokeNamess, SINGLE_BATTLE_MAX_SIMULTANEOUS_ACTION_NUM)
-	appendSwitchablePokeNames := func(fighters *Fighters, idx int) {
-		for _, pokemon := range fighters {
-			if pokemon.CurrentHP > 0 {
-				namess[idx] = append(namess[idx], pokemon.Name)
-			}
+func (b *Battle) p1SwitchablePokeNames() bp.PokeNames {
+	//相手だけ瀕死状態ならば、自分は行動出来ない。
+	if b.P1Fighters[0].CurrentHP > 0 && b.P2Fighters[0].CurrentHP <= 0 {
+		return bp.PokeNames{}
+	}
+	names := make(bp.PokeNames, 0, FIGHTER_NUM-1)
+	for _, pokemon := range b.P1Fighters[1:] {
+		if pokemon.CurrentHP > 0 {
+			names = append(names, pokemon.Name)
 		}
 	}
-	appendSwitchablePokeNames(&b.P1Fighters, 0)
-	appendSwitchablePokeNames(&b.P2Fighters, 1)
-	return namess
+	return names
+}
+
+func (b *Battle) p2SwitchablePokeNames() bp.PokeNames {
+	b.SwapPlayers()
+	names := b.p1SwitchablePokeNames()
+	b.SwapPlayers()
+	return names
+}
+
+func (b *Battle) SwitchablePokeNamess() bp.PokeNamess {
+	p1 := b.p1SwitchablePokeNames()
+	p2 := b.p2SwitchablePokeNames()
+	return bp.PokeNamess{p1, p2}
 }
 
 func (b Battle) Switch(pokeName bp.PokeName) (Battle, error) {
@@ -172,6 +207,14 @@ func (b *Battle) Action(action Action, r *rand.Rand) (Battle, error) {
 }
 
 func (b *Battle) IsActionFirst(p1Action, p2Action *Action, r *rand.Rand) bool {
+	if p1Action.IsEmpty() {
+		return false
+	}
+
+	if p2Action.IsEmpty() {
+		return true
+	}
+
 	if p1Action.IsSwitch() && p2Action.IsCommandMove() {
 		return true
 	}
@@ -211,7 +254,7 @@ func IsEnd(b *Battle) bool {
 func LegalActionss(b *Battle) Actionss {
 	moveNamess := b.CommandableMoveNamess()
 	pokeNamess := b.SwitchablePokeNamess()
-	actionss := make(Actionss, SINGLE_BATTLE_MAX_SIMULTANEOUS_ACTION_NUM)
+	actionss := make(Actionss, MAX_SIMULTANEOUS_ACTION_NUM)
 	isPlayer1s := []bool{true, false}
 	for playerI := range actionss {
 		isPlayer1 := isPlayer1s[playerI]
@@ -224,6 +267,9 @@ func LegalActionss(b *Battle) Actionss {
 		for _, name := range pokeNames {
 			actions = append(actions, Action{SwitchPokeName:name, IsPlayer1:isPlayer1})
 		}
+		if len(actions) == 0 {
+			actions = append(actions, Action{})
+		}
 		actionss[playerI] = actions
 	}
 	return actionss
@@ -231,16 +277,38 @@ func LegalActionss(b *Battle) Actionss {
 
 func Push(r *rand.Rand) func(Battle, Actions) (Battle, error) {
 	return func(battle Battle, actions Actions) (Battle, error) {
+		// fmt.Println("p1", LegalActionss(&battle)[0])
+		// fmt.Println("p2", LegalActionss(&battle)[1])
+		// fmt.Println(
+		// 	bp.MOVE_NAME_TO_STRING[actions[0].CmdMoveName], bp.POKE_NAME_TO_STRING[actions[0].SwitchPokeName],
+		// 	bp.MOVE_NAME_TO_STRING[actions[1].CmdMoveName], bp.POKE_NAME_TO_STRING[actions[1].SwitchPokeName],
+		// )
+		// for _, pokemon := range battle.P1Fighters {
+		// 	fmt.Println("p1", pokemon.ToString())
+		// }
+		// fmt.Println("")
+		// for _, pokemon := range battle.P2Fighters {
+		// 	fmt.Println("p2", pokemon.ToString())
+		// }
+		// fmt.Println("")
+
+		if actions.IsAllEmpty() {
+			return Battle{}, fmt.Errorf("両プレイヤーのActionがEmptyになっているため、Pushできません。Emptyじゃないようにするには、Action.CmdMoveNameかAction.SwitchPokeNameのいずれかは、ゼロ値以外の値である必要があります。")
+		}
 		var err error
 		sorted := battle.SortActionsByOrder(&actions[0], &actions[1], r)
 		for i := range sorted {
 			action := sorted[i]
+			var a Action
+			if action == a {
+				continue
+			}
 			if action.IsPlayer1 {
 				battle, err = battle.Action(action, r)
 			} else {
-				battle = battle.SwapPlayers()
+				battle.SwapPlayers()
 				battle, err = battle.Action(action, r)
-				battle = battle.SwapPlayers()
+				battle.SwapPlayers()
 			}
 			if err != nil {
 				return Battle{}, err
@@ -260,14 +328,18 @@ func NewMCTS(r *rand.Rand) dpuct.MCTS[Battle, Actionss, Actions, Action] {
 	game.SetRandomActionPlayer(r)
 
 	leafNodeEvalsFunc := func(battle *Battle) dpuct.LeafNodeEvalYs {
-		b1 := battle.P1Fighters.IsAllFaint()
-		b2 := battle.P2Fighters.IsAllFaint()
+		battleV, err := game.Playout(*battle)
+		if err != nil {
+			panic(err)
+		}
+		b1 := battleV.P1Fighters.IsAllFaint()
+		b2 := battleV.P2Fighters.IsAllFaint()
 		if b1 && b2 {
 			return dpuct.LeafNodeEvalYs{0.5, 0.5}
 		} else if b1 {
-			return dpuct.LeafNodeEvalYs{1.0, 0.0}
-		} else {
 			return dpuct.LeafNodeEvalYs{0.0, 1.0}
+		} else {
+			return dpuct.LeafNodeEvalYs{1.0, 0.0}
 		}
 	}
 
@@ -277,4 +349,24 @@ func NewMCTS(r *rand.Rand) dpuct.MCTS[Battle, Actionss, Actions, Action] {
 	}
 	mcts.SetUniformActionPoliciesFunc()
 	return mcts
+}
+
+func NewParam() {
+	return make(tensor.D1, len(bp.ALL_MOVE_NAMES))
+}
+
+func NewHumanKnowledge(battle *Battle) []int {
+	p1 := battle.P1Fighters[0]
+	p2 := battle.P2Fighters[0]
+	feature := make([]int, len(ALL_MOVE_NAMES))
+	for i, moveName := range ALL_MOVE_NAMES {
+		_, ok := p1.Moveset[moveName]
+		if ok {
+			feature[i] = 1
+		}
+	}
+	//何のポケモンの？
+	//相手の情報
+	//自分の行動の確率
+	return feature
 }
