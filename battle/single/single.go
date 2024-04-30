@@ -16,6 +16,14 @@ const (
 
 type Fighters [FIGHTER_NUM]bp.Pokemon
 
+func (f *Fighters) Names() bp.PokeNames {
+	ret := make(bp.PokeNames, FIGHTER_NUM)
+	for i, pokemon := range f {
+		ret[i] = pokemon.Name
+	}
+	return ret
+}
+
 func (f *Fighters) Equal(other *Fighters) bool {
 	for i := range f {
 		pokemon1 := f[i]
@@ -349,24 +357,4 @@ func NewMCTS(r *rand.Rand) dpuct.MCTS[Battle, Actionss, Actions, Action] {
 	}
 	mcts.SetUniformActionPoliciesFunc()
 	return mcts
-}
-
-func NewParam() {
-	return make(tensor.D1, len(bp.ALL_MOVE_NAMES))
-}
-
-func NewHumanKnowledge(battle *Battle) []int {
-	p1 := battle.P1Fighters[0]
-	p2 := battle.P2Fighters[0]
-	feature := make([]int, len(ALL_MOVE_NAMES))
-	for i, moveName := range ALL_MOVE_NAMES {
-		_, ok := p1.Moveset[moveName]
-		if ok {
-			feature[i] = 1
-		}
-	}
-	//何のポケモンの？
-	//相手の情報
-	//自分の行動の確率
-	return feature
 }

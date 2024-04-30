@@ -29,6 +29,21 @@ var STRING_TO_MOVE_NAME = map[string]MoveName{
 var MOVE_NAME_TO_STRING = omw.InvertMap[map[MoveName]string](STRING_TO_MOVE_NAME)
 
 type MoveNames []MoveName
+
+func (ns MoveNames) Sort() MoveNames {
+	ret := make(MoveNames, len(ns))
+	for i := 0; i < omw.CountElement(ns, EMPTY_MOVE_NAME); i++ {
+		ret = append(ret, EMPTY_MOVE_NAME)
+	}
+
+	for _, name := range ALL_MOVE_NAMES {
+		if slices.Contains(ns, name) {
+			ret = append(ret, name)
+		}
+	}
+	return ret
+}
+
 type MoveNamess []MoveNames
 
 type MoveCategory int
