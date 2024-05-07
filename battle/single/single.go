@@ -7,7 +7,8 @@ import (
 	"github.com/sw965/omw"
 	"github.com/sw965/bippa/dmgtools"
 	"github.com/sw965/crow/game/simultaneous"
-	"github.com/sw965/crow/mcts/dpuct"
+	"github.com/sw965/crow/mcts/duct"
+	"golang.org/x/exp/slices"
 )
 
 const (
@@ -91,13 +92,17 @@ type Actionss []Actions
 type Battle struct {
 	P1Fighters Fighters
 	P2Fighters Fighters
+	Turn int
+	RandDamageBonuses dmgtools.RandBonuses
+	Actions Actions
 }
 
-func (b *Battle) SwapPlayers() {
+func (b Battle) SwapPlayers() Battle {
 	b.P1Fighters, b.P2Fighters = b.P2Fighters, b.P1Fighters
+	return b
 }
 
-func (b *Battle) CalcDamage(moveName bp.MoveName, randDmgBonus float64) int {
+func (b *Battle) CalcDamage(moveName bp.MoveName, r *rand.Rand) int {
 	attacker := b.P1Fighters[0]
 	defender := b.P2Fighters[0]
 
@@ -116,15 +121,20 @@ func (b *Battle) CalcDamage(moveName bp.MoveName, randDmgBonus float64) int {
 			SpDef:defender.SpDef,
 		},
 	}
+	randDmgBonus := omw.RandChoice(b.RandDamageBonuses, r)
 	return calculator.Execute(randDmgBonus)
 }
 
 func (b *Battle) p1CommandableMoveNames() bp.MoveNames {
+	if b.P1Fighters[0].IsFaint() {
+		return bp.MoveNames{}
+	}
+	
 	if b.P2Fighters[0].IsFaint() {
 		return bp.MoveNames{}
 	}
 
-	names := make(bp.MoveNames, 0)
+	names := make(bp.MoveNames, 0, bp.MAX_MOVESET_NUM)
 	for moveName, pp := range b.P1Fighters[0].Moveset {
 		if pp.Current > 0 {
 			names = append(names, moveName)
@@ -134,9 +144,8 @@ func (b *Battle) p1CommandableMoveNames() bp.MoveNames {
 }
 
 func (b *Battle) p2CommandableMoveNames() bp.MoveNames {
-	b.SwapPlayers()
-	names := b.p1CommandableMoveNames()
-	b.SwapPlayers()
+	bv := b.SwapPlayers()
+	names := bv.p1CommandableMoveNames()
 	return names
 }
 
@@ -154,8 +163,7 @@ func (b Battle) CommandMove(moveName bp.MoveName, r *rand.Rand) Battle {
 	//moveset[moveName].Current -= 1
 
 	b.P1Fighters[0].Moveset = moveset
-	randDmgBonus := omw.RandChoice(dmgtools.RANDOM_BONUS, r)
-	dmg := b.CalcDamage(moveName, randDmgBonus)
+	dmg := b.CalcDamage(moveName, r)
 	dmg = omw.Min(dmg, b.P2Fighters[0].CurrentHP)
 	b.P2Fighters[0].CurrentHP -= dmg
 	return b
@@ -176,9 +184,8 @@ func (b *Battle) p1SwitchablePokeNames() bp.PokeNames {
 }
 
 func (b *Battle) p2SwitchablePokeNames() bp.PokeNames {
-	b.SwapPlayers()
-	names := b.p1SwitchablePokeNames()
-	b.SwapPlayers()
+	bv := b.SwapPlayers()
+	names := bv.p1SwitchablePokeNames()
 	return names
 }
 
@@ -252,7 +259,7 @@ func (b *Battle) SortActionsByOrder(p1Action, p2Action *Action, r *rand.Rand) Ac
 }
 
 func Equal(b1, b2 *Battle) bool {
-	return b1.P1Fighters.Equal(&b2.P1Fighters) && b1.P2Fighters.Equal(&b2.P2Fighters) 
+	return b1.P1Fighters.Equal(&b2.P1Fighters) && b1.P2Fighters.Equal(&b2.P2Fighters) && b1.Turn == b2.Turn
 }
 
 func IsEnd(b *Battle) bool {
@@ -276,7 +283,7 @@ func LegalActionss(b *Battle) Actionss {
 			actions = append(actions, Action{SwitchPokeName:name, IsPlayer1:isPlayer1})
 		}
 		if len(actions) == 0 {
-			actions = append(actions, Action{})
+			actions = append(actions, Action{IsPlayer1:isPlayer1})
 		}
 		actionss[playerI] = actions
 	}
@@ -285,57 +292,52 @@ func LegalActionss(b *Battle) Actionss {
 
 func Push(r *rand.Rand) func(Battle, Actions) (Battle, error) {
 	return func(battle Battle, actions Actions) (Battle, error) {
-		// fmt.Println("p1", LegalActionss(&battle)[0])
-		// fmt.Println("p2", LegalActionss(&battle)[1])
-		// fmt.Println(
-		// 	bp.MOVE_NAME_TO_STRING[actions[0].CmdMoveName], bp.POKE_NAME_TO_STRING[actions[0].SwitchPokeName],
-		// 	bp.MOVE_NAME_TO_STRING[actions[1].CmdMoveName], bp.POKE_NAME_TO_STRING[actions[1].SwitchPokeName],
-		// )
-		// for _, pokemon := range battle.P1Fighters {
-		// 	fmt.Println("p1", pokemon.ToString())
-		// }
-		// fmt.Println("")
-		// for _, pokemon := range battle.P2Fighters {
-		// 	fmt.Println("p2", pokemon.ToString())
-		// }
-		// fmt.Println("")
-
 		if actions.IsAllEmpty() {
 			return Battle{}, fmt.Errorf("両プレイヤーのActionがEmptyになっているため、Pushできません。Emptyじゃないようにするには、Action.CmdMoveNameかAction.SwitchPokeNameのいずれかは、ゼロ値以外の値である必要があります。")
 		}
+
+		// if actions[0].IsPlayer1 == actions[1].IsPlayer1 {
+		// 	msg := fmt.Sprintf(
+		// 		"%sが同時に行動しようとしている。",
+		// 		map[bool]string{true:"プレイヤー1", false:"プレイヤー2"}[actions[0].IsPlayer1],
+		// 	)
+		// 	fmt.Println("n = ", len(actions), actions[0].IsPlayer1, actions[1].IsPlayer1)
+		// 	return Battle{}, fmt.Errorf(msg)
+		// }
 		var err error
 		sorted := battle.SortActionsByOrder(&actions[0], &actions[1], r)
 		for i := range sorted {
 			action := sorted[i]
-			var a Action
-			if action == a {
+			if action.CmdMoveName == bp.EMPTY_MOVE_NAME && action.SwitchPokeName == bp.EMPTY_POKE_NAME {
 				continue
 			}
 			if action.IsPlayer1 {
 				battle, err = battle.Action(action, r)
 			} else {
-				battle.SwapPlayers()
+				battle = battle.SwapPlayers()
 				battle, err = battle.Action(action, r)
-				battle.SwapPlayers()
+				battle = battle.SwapPlayers()
 			}
 			if err != nil {
 				return Battle{}, err
 			}
 		}
+		battle.Turn += 1
+		battle.Actions = slices.Clone(actions)
 		return battle, nil
 	}
 }
 
-func NewMCTS(r *rand.Rand) dpuct.MCTS[Battle, Actionss, Actions, Action] {
+func NewMCTS(r *rand.Rand) duct.MCTS[Battle, Actionss, Actions, Action] {
 	game := simultaneous.Game[Battle, Actionss, Actions, Action]{
 		Equal:Equal,
 		IsEnd:IsEnd,
 		LegalActionss:LegalActionss,
 		Push:Push(r),
 	}
-	game.SetRandomActionPlayer(r)
+	game.SetRandActionPlayer(r)
 
-	leafNodeEvalsFunc := func(battle *Battle) dpuct.LeafNodeEvalYs {
+	leafNodeEvalsFunc := func(battle *Battle) duct.LeafNodeEvalYs {
 		battleV, err := game.Playout(*battle)
 		if err != nil {
 			panic(err)
@@ -343,17 +345,18 @@ func NewMCTS(r *rand.Rand) dpuct.MCTS[Battle, Actionss, Actions, Action] {
 		b1 := battleV.P1Fighters.IsAllFaint()
 		b2 := battleV.P2Fighters.IsAllFaint()
 		if b1 && b2 {
-			return dpuct.LeafNodeEvalYs{0.5, 0.5}
+			return duct.LeafNodeEvalYs{0.5, 0.5}
 		} else if b1 {
-			return dpuct.LeafNodeEvalYs{0.0, 1.0}
+			return duct.LeafNodeEvalYs{0.0, 1.0}
 		} else {
-			return dpuct.LeafNodeEvalYs{1.0, 0.0}
+			return duct.LeafNodeEvalYs{1.0, 0.0}
 		}
 	}
 
-	mcts := dpuct.MCTS[Battle, Actionss, Actions, Action]{
+	mcts := duct.MCTS[Battle, Actionss, Actions, Action]{
 		Game:game,
 		LeafNodeEvalsFunc:leafNodeEvalsFunc,
+		NextNodesCap:32,
 	}
 	mcts.SetUniformActionPoliciesFunc()
 	return mcts

@@ -103,10 +103,12 @@ func NewMoveset(pokeName PokeName, moveNames MoveNames) (Moveset, error) {
 
 func (m Moveset) Equal(other Moveset) bool {
 	for moveName, pp := range m {
-		if otherPP, ok := other[moveName]; !ok {
-			if *pp != *otherPP {
-				return false
-			}
+		otherPP, ok := other[moveName]
+		if !ok {
+			return false
+		}
+		if *pp != *otherPP {
+			return false
 		}
 	}
 	return true

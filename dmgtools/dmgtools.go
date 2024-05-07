@@ -15,7 +15,10 @@ func RoundOverHalf(x float64) int {
 	return int(x)
 }
 
-var RANDOM_BONUS = []float64{
+type RandBonus float64
+type RandBonuses []RandBonus
+
+var RAND_BONUSES = RandBonuses{
 	0.85, 0.86, 0.87, 0.88, 0.89, 0.90,
 	0.91, 0.92, 0.93, 0.94, 0.95,
 	0.96, 0.97, 0.98, 0.99, 1.0,
@@ -42,7 +45,7 @@ type Calculator struct {
 }
 
 // https://latest.pokewiki.net/%E3%83%80%E3%83%A1%E3%83%BC%E3%82%B8%E8%A8%88%E7%AE%97%E5%BC%8F
-func (c *Calculator) Execute(randBonus float64) int {
+func (c *Calculator) Calculation(randBonus RandBonus) int {
 	attacker := c.Attacker
 	defender := c.Defender
 	attackerPokeData := bp.POKEDEX[attacker.PokeName]
@@ -76,6 +79,6 @@ func (c *Calculator) Execute(randBonus float64) int {
 	for _, defType := range defenderPokeData.Types {
 		dmg = int(float64(dmg) * bp.TYPEDEX[moveData.Type][defType])
 	}
-	dmg = int(float64(dmg) * randBonus)
+	dmg = int(float64(dmg) * float64(randBonus))
 	return omw.Max(dmg, 1)
 }
