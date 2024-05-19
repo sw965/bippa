@@ -4,9 +4,11 @@ import (
 	"fmt"
 	"math/rand"
 	bp "github.com/sw965/bippa"
-	"github.com/sw965/omw"
+	orand "github.com/sw965/omw/rand"
+	omath "github.com/sw965/omw/math"
 	"github.com/sw965/bippa/dmgtools"
 	"github.com/sw965/crow/game/simultaneous"
+	"github.com/sw965/crow/ucb"
 	"github.com/sw965/crow/mcts/duct"
 	"golang.org/x/exp/slices"
 )
@@ -121,8 +123,8 @@ func (b *Battle) CalcDamage(moveName bp.MoveName, r *rand.Rand) int {
 			SpDef:defender.SpDef,
 		},
 	}
-	randDmgBonus := omw.RandChoice(b.RandDamageBonuses, r)
-	return calculator.Execute(randDmgBonus)
+	randDmgBonus := orand.Choice(b.RandDamageBonuses, r)
+	return calculator.Calculation(randDmgBonus)
 }
 
 func (b *Battle) p1CommandableMoveNames() bp.MoveNames {
@@ -156,7 +158,10 @@ func (b *Battle) CommandableMoveNamess() bp.MoveNamess {
 }
 
 func (b Battle) CommandMove(moveName bp.MoveName, r *rand.Rand) Battle {
-	if b.P2Fighters[0].CurrentHP <= 0 {
+	if b.P1Fighters[0].IsFaint() {
+		return b
+	}
+	if b.P2Fighters[0].IsFaint() {
 		return b
 	}
 	moveset := b.P1Fighters[0].Moveset.Clone()
@@ -164,7 +169,7 @@ func (b Battle) CommandMove(moveName bp.MoveName, r *rand.Rand) Battle {
 
 	b.P1Fighters[0].Moveset = moveset
 	dmg := b.CalcDamage(moveName, r)
-	dmg = omw.Min(dmg, b.P2Fighters[0].CurrentHP)
+	dmg = omath.Min(dmg, b.P2Fighters[0].CurrentHP)
 	b.P2Fighters[0].CurrentHP -= dmg
 	return b
 }
@@ -246,7 +251,7 @@ func (b *Battle) IsActionFirst(p1Action, p2Action *Action, r *rand.Rand) bool {
 	} else if attacker.Speed < defender.Speed {
 		return false
 	} else {
-		return omw.RandBool(r)
+		return orand.Bool(r)
 	}
 }
 
@@ -295,15 +300,6 @@ func Push(r *rand.Rand) func(Battle, Actions) (Battle, error) {
 		if actions.IsAllEmpty() {
 			return Battle{}, fmt.Errorf("両プレイヤーのActionがEmptyになっているため、Pushできません。Emptyじゃないようにするには、Action.CmdMoveNameかAction.SwitchPokeNameのいずれかは、ゼロ値以外の値である必要があります。")
 		}
-
-		// if actions[0].IsPlayer1 == actions[1].IsPlayer1 {
-		// 	msg := fmt.Sprintf(
-		// 		"%sが同時に行動しようとしている。",
-		// 		map[bool]string{true:"プレイヤー1", false:"プレイヤー2"}[actions[0].IsPlayer1],
-		// 	)
-		// 	fmt.Println("n = ", len(actions), actions[0].IsPlayer1, actions[1].IsPlayer1)
-		// 	return Battle{}, fmt.Errorf(msg)
-		// }
 		var err error
 		sorted := battle.SortActionsByOrder(&actions[0], &actions[1], r)
 		for i := range sorted {
@@ -360,4 +356,58 @@ func NewMCTS(r *rand.Rand) duct.MCTS[Battle, Actionss, Actions, Action] {
 	}
 	mcts.SetUniformActionPoliciesFunc()
 	return mcts
+}
+
+func NewMCTSPlayerGame(battles []Battle, outputs []map[Action]float64, values, maxvs, avgvs []float64, simulation int, r *rand.Rand) simultaneous.Game[Battle, Actionss, Actions, Action] {
+	game := simultaneous.Game[Battle, Actionss, Actions, Action]{
+		Equal:Equal,
+		IsEnd:IsEnd,
+		LegalActionss:LegalActionss,
+		Push:Push(r),
+	}
+	game.SetRandActionPlayer(r)
+
+	leafNodeEvalsFunc := func(battle *Battle) duct.LeafNodeEvalYs {
+		battleV, err := game.Playout(*battle)
+		if err != nil {
+			panic(err)
+		}
+		b1 := battleV.P1Fighters.IsAllFaint()
+		b2 := battleV.P2Fighters.IsAllFaint()
+		if b1 && b2 {
+			return duct.LeafNodeEvalYs{0.5, 0.5}
+		} else if b1 {
+			return duct.LeafNodeEvalYs{0.0, 1.0}
+		} else {
+			return duct.LeafNodeEvalYs{1.0, 0.0}
+		}
+	}
+
+	mcts := duct.MCTS[Battle, Actionss, Actions, Action]{
+		Game:game,
+		LeafNodeEvalsFunc:leafNodeEvalsFunc,
+		NextNodesCap:32,
+	}
+	mcts.UCBFunc = ucb.NewAlphaGoFunc(5)
+	mcts.SetUniformActionPoliciesFunc()
+	cloneGame := mcts.Game.Clone()
+	idx := 0
+	cloneGame.Player = func(battle *Battle) (Actions, error) {
+		rootNode := mcts.NewNode(battle)
+		err := mcts.Run(simulation, rootNode, r)
+		if err != nil {
+			return Actions{}, err
+		}
+		trialPercents := rootNode.UCBManagers[0].TrialPercents()
+		battles[idx] = *battle
+		outputs[idx] = trialPercents
+		actions := rootNode.UCBManagers.JointActionByMaxTrial(r)
+		v := rootNode.UCBManagers[0][actions[0]].AverageValue()
+		values[idx] = v
+		maxvs[idx] = rootNode.UCBManagers[0].MaxAverageValue()
+		avgvs[idx] = rootNode.UCBManagers[0].AverageValue()
+		idx += 1
+		return actions, err
+	}
+	return cloneGame
 }

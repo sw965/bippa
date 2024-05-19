@@ -3,7 +3,8 @@ package bippa
 import (
 	"fmt"
 	"golang.org/x/exp/slices"
-	"github.com/sw965/omw"
+	osliecs "github.com/sw965/omw/slices"
+	omaps "github.com/sw965/omw/maps"
 )
 
 type MoveName int
@@ -26,13 +27,13 @@ var STRING_TO_MOVE_NAME = map[string]MoveName{
 	"みずでっぽう": WATER_GUN,
 }
 
-var MOVE_NAME_TO_STRING = omw.InvertMap[map[MoveName]string](STRING_TO_MOVE_NAME)
+var MOVE_NAME_TO_STRING = omaps.Invert[map[MoveName]string](STRING_TO_MOVE_NAME)
 
 type MoveNames []MoveName
 
 func (ns MoveNames) Sort() MoveNames {
 	ret := make(MoveNames, len(ns))
-	for i := 0; i < omw.CountElement(ns, EMPTY_MOVE_NAME); i++ {
+	for i := 0; i < osliecs.Count(ns, EMPTY_MOVE_NAME); i++ {
 		ret = append(ret, EMPTY_MOVE_NAME)
 	}
 
@@ -60,7 +61,7 @@ var STRING_TO_MOVE_CATEGORY = map[string]MoveCategory{
 	"変化":STATUS,
 }
 
-var MOVE_CATEGORY_TO_STRING = omw.InvertMap[map[MoveCategory]string](STRING_TO_MOVE_CATEGORY)
+var MOVE_CATEGORY_TO_STRING = omaps.Invert[map[MoveCategory]string](STRING_TO_MOVE_CATEGORY)
 
 type PowerPoint struct {
 	Max int

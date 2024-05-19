@@ -2,11 +2,12 @@ package bippa
 
 import (
 	"fmt"
-	"github.com/sw965/omw"
+	ojson "github.com/sw965/omw/json"
+	opath "github.com/sw965/omw/path"
 )
 
 var (
-	DATA_PATH = omw.SW965_PATH + "bippa/"
+	DATA_PATH = opath.SW965 + "bippa/"
 	ALL_POKE_NAMES_PATH = DATA_PATH + "all_poke_names.json"
 	POKE_DATA_PATH = DATA_PATH + "poke_data/"
 
@@ -17,7 +18,7 @@ var (
 )
 
 var ALL_POKE_NAMES = func() PokeNames {
-	buff, err := omw.LoadJSON[[]string](ALL_POKE_NAMES_PATH)
+	buff, err := ojson.Load[[]string](ALL_POKE_NAMES_PATH)
 	if err != nil {
 		panic(err)
 	}
@@ -51,8 +52,8 @@ type PokeData struct {
 }
 
 func LoadPokeData(pokeName PokeName) (PokeData, error) {
-	path := POKE_DATA_PATH + POKE_NAME_TO_STRING[pokeName] + omw.JSON_EXTENSION
-	buff, err := omw.LoadJSON[pokeDataJSONBuffer](path)
+	path := POKE_DATA_PATH + POKE_NAME_TO_STRING[pokeName] + ojson.EXTENSION
+	buff, err := ojson.Load[pokeDataJSONBuffer](path)
 	if err != nil {
 		return PokeData{}, err
 	}
@@ -95,7 +96,7 @@ var POKEDEX = func() Pokedex {
 }()
 
 var ALL_MOVE_NAMES = func() MoveNames {
-	buff, err := omw.LoadJSON[[]string](ALL_MOVE_NAMES_PATH)
+	buff, err := ojson.Load[[]string](ALL_MOVE_NAMES_PATH)
 	if err != nil {
 		panic(err)
 	}
@@ -123,8 +124,8 @@ type MoveData struct {
 }
 
 func LoadMoveData(moveName MoveName) (MoveData, error) {
-	path := MOVE_DATA_PATH + MOVE_NAME_TO_STRING[moveName] + omw.JSON_EXTENSION
-	buff, err := omw.LoadJSON[moveDataJSONBuffer](path)
+	path := MOVE_DATA_PATH + MOVE_NAME_TO_STRING[moveName] + ojson.EXTENSION
+	buff, err := ojson.Load[moveDataJSONBuffer](path)
 	if err != nil {
 		return MoveData{}, err
 	}
@@ -163,7 +164,7 @@ type DefTypeData map[Type]float64
 type Typedex map[Type]DefTypeData
 
 var TYPEDEX = func() Typedex {
-	buff, err := omw.LoadJSON[typedexJSONBuffer](TYPEDEX_PATH)
+	buff, err := ojson.Load[typedexJSONBuffer](TYPEDEX_PATH)
 	if err != nil {
 		panic(err)
 	}

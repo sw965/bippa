@@ -3,7 +3,7 @@ package dmgtools
 import (
 	"golang.org/x/exp/slices"
 	bp "github.com/sw965/bippa"
-	"github.com/sw965/omw"
+	omath "github.com/sw965/omw/math"
 )
 
 // 小数点以下が0.5より大きいならば、切り上げ
@@ -80,5 +80,5 @@ func (c *Calculator) Calculation(randBonus RandBonus) int {
 		dmg = int(float64(dmg) * bp.TYPEDEX[moveData.Type][defType])
 	}
 	dmg = int(float64(dmg) * float64(randBonus))
-	return omw.Max(dmg, 1)
+	return omath.Max(dmg, 1)
 }

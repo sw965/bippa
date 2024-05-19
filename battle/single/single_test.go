@@ -6,9 +6,8 @@ import (
 	"github.com/sw965/crow/ucb"
 	bp "github.com/sw965/bippa"
 	sb "github.com/sw965/bippa/battle/single"
+	orand "github.com/sw965/omw/rand"
 	"github.com/sw965/bippa/dmgtools"
-	"github.com/sw965/omw"
-	//"math"
 )
 
 func Test(t *testing.T) {
@@ -24,7 +23,7 @@ func Test(t *testing.T) {
 		bp.NewTemplateBulbasaur(),
 	}
 
-	r := omw.NewMt19937()
+	r := orand.NewMt19937()
 	battle := sb.Battle{P1Fighters:p1Fighters, P2Fighters:p2Fighters, RandDamageBonuses:dmgtools.RandBonuses{1.0}}
 	push := sb.Push(r)
 	battle, err := push(
@@ -104,7 +103,7 @@ func Test2(t *testing.T) {
 
 
 func TestMCTS(t *testing.T) {
-	r := omw.NewMt19937()
+	r := orand.NewMt19937()
 	mcts := sb.NewMCTS(r)
 	mcts.UCBFunc = ucb.NewAlphaGoFunc(5)
 	//mcts.UCBFunc = ucb.New1Func(math.Sqrt(25))
@@ -135,7 +134,7 @@ func TestMCTS(t *testing.T) {
 	}
 
 	rootNode := mcts.NewNode(&battle)
-	simulation := 160000
+	simulation := 1600
 
 	for i := 0; i < simulation; i++ {
 		err := mcts.Run(1, rootNode, r)
@@ -197,5 +196,60 @@ func TestMCTS(t *testing.T) {
 			bp.POKE_NAME_TO_STRING[jointAction[1].SwitchPokeName],
 			bp.POKE_NAME_TO_STRING[stateJointAction[1].SwitchPokeName],
 		)
+	}
+}
+
+func TestActionData(t *testing.T) {
+	r := orand.NewMt19937()
+	p1Fighters := sb.Fighters{
+		bp.NewTemplateBulbasaur(),
+		bp.NewTemplateCharmander(),
+		bp.NewTemplateSquirtle(),
+	}
+
+	p2Fighters := sb.Fighters{
+		bp.NewTemplateBulbasaur(),
+		bp.NewTemplateSquirtle(),
+		bp.NewTemplateCharmander(),
+	}
+
+	// p1Fighters[0].CurrentHP = 1
+	// p1Fighters[1].CurrentHP = 0
+	// p1Fighters[2].CurrentHP = 0
+
+	// p2Fighters[0].CurrentHP = 1
+	// p2Fighters[1].CurrentHP = 0
+	// p2Fighters[2].CurrentHP = 0
+
+	battle := sb.Battle{
+		P1Fighters:p1Fighters,
+		P2Fighters:p2Fighters,
+		Actions:sb.Actions{sb.Action{IsPlayer1:true}, sb.Action{IsPlayer1:false}},
+		RandDamageBonuses:dmgtools.RandBonuses{1.0},
+	}
+
+	n := 64
+	outputs := make([]map[sb.Action]float64, n) 
+	battles := make([]sb.Battle, n)
+	values := make([]float64, n)
+	maxvs := make([]float64, n)
+	avgvs := make([]float64, n)
+	game := sb.NewMCTSPlayerGame(battles, outputs, values, maxvs, avgvs, 51200, r)
+	_, err := game.Playout(battle)
+	if err != nil {
+		panic(err)
+	}
+	for i := range battles {
+		b := battles[i]
+		fmt.Println(
+			bp.POKE_NAME_TO_STRING[b.P1Fighters[0].Name],
+			b.P1Fighters[0].CurrentHP,
+			bp.POKE_NAME_TO_STRING[b.P2Fighters[0].Name],
+			b.P2Fighters[0].CurrentHP,
+		)
+		fmt.Println(outputs[i])
+		fmt.Println("v=", values[i])
+		fmt.Println("maxv=", maxvs[i])
+		fmt.Println("avgv=", avgvs[i])
 	}
 }

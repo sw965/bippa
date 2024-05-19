@@ -1,7 +1,7 @@
 package bippa
 
 import (
-	"github.com/sw965/omw"
+	omath "github.com/sw965/omw/math"
 )
 
 const (
@@ -41,7 +41,7 @@ func LegalTeamBuildActions(team Team) TeamBuildActions {
 	for i := range team {
 		pokemon := team[i]
 		learnset := POKEDEX[pokemon.Name].Learnset
-		n := omw.Min(MAX_MOVESET_NUM, len(learnset))
+		n := omath.Min(MAX_MOVESET_NUM, len(learnset))
 		if len(pokemon.Moveset) < n {
 			actions := make(TeamBuildActions, 0, len(learnset))
 			for _, moveName := range learnset {

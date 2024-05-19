@@ -1,8 +1,7 @@
 package bippa
 
 import (
-	"fmt"
-	"github.com/sw965/omw"
+	omaps "github.com/sw965/omw/maps"
 )
 
 type PokeName int
@@ -23,7 +22,7 @@ var STRING_TO_POKE_NAME = map[string]PokeName{
 	"ガブリアス":GARCHOMP,
 }
 
-var POKE_NAME_TO_STRING = omw.InvertMap[map[PokeName]string](STRING_TO_POKE_NAME)
+var POKE_NAME_TO_STRING = omaps.Invert[map[PokeName]string](STRING_TO_POKE_NAME)
 
 type PokeNames []PokeName
 type PokeNamess []PokeNames
@@ -173,24 +172,12 @@ func (p Pokemon) Clone() Pokemon {
 	return p
 }
 
-func (p *Pokemon) IsFaint() bool {
-	return p.CurrentHP <= 0
+func (p *Pokemon) HPPercentage() float64 {
+	return float64(p.CurrentHP) / float64(p.MaxHP)
 }
 
-func (p *Pokemon) ToString() string {
-	s := "name:" + POKE_NAME_TO_STRING[p.Name] + ", "
-	s += fmt.Sprintf("level:%d, ", p.Level)
-	s += fmt.Sprintf("maxHP:%d, ", p.MaxHP)
-	s += fmt.Sprintf("currentHP:%d, ", p.CurrentHP)
-	s += fmt.Sprintf("atk:%d, ", p.Atk)
-	s += fmt.Sprintf("def:%d, ", p.Def)
-	s += fmt.Sprintf("spAtk:%d, ", p.SpAtk)
-	s += fmt.Sprintf("spDef:%d, ", p.SpDef)
-	s += fmt.Sprintf("speed:%d, ", p.Speed)
-	for moveName, pp := range p.Moveset {
-		s += fmt.Sprintf("moveName:%s, pp.Max:%d, pp.Current:%d", MOVE_NAME_TO_STRING[moveName], pp.Max, pp.Current)
-	}
-	return s
+func (p *Pokemon) IsFaint() bool {
+	return p.CurrentHP <= 0
 }
 
 func NewTemplateBulbasaur() Pokemon {
