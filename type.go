@@ -1,5 +1,9 @@
 package bippa
 
+import (
+	ojson "github.com/sw965/omw/json"
+)
+
 type Type int
 
 const (
@@ -45,3 +49,15 @@ var STRING_TO_TYPE = map[string]Type{
 }
 
 type Types []Type
+
+var ALL_TYPES = func() Types {
+	buff, err := ojson.Load[[]string](ALL_TYPES_PATH)
+	if err != nil {
+		panic(err)
+	}
+	ret := make(Types, len(buff))
+	for i, s := range buff {
+		ret[i] = STRING_TO_TYPE[s]
+	}
+	return ret
+}()

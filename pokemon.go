@@ -61,6 +61,7 @@ type EV int
 
 const (
 	MIN_EV EV = 0
+	MAX_EV EV = 252
 )
 
 type EVStats struct {

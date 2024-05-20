@@ -3,14 +3,15 @@ package single
 import (
 	"fmt"
 	"math/rand"
+	"github.com/sw965/crow/ucb"
 	bp "github.com/sw965/bippa"
 	orand "github.com/sw965/omw/rand"
 	omath "github.com/sw965/omw/math"
 	"github.com/sw965/bippa/dmgtools"
 	"github.com/sw965/crow/game/simultaneous"
-	"github.com/sw965/crow/ucb"
 	"github.com/sw965/crow/mcts/duct"
 	"golang.org/x/exp/slices"
+	"github.com/sw965/crow/tensor"
 )
 
 const (
@@ -95,16 +96,16 @@ type Battle struct {
 	P1Fighters Fighters
 	P2Fighters Fighters
 	Turn int
-	RandDamageBonuses dmgtools.RandBonuses
-	Actions Actions
+	IsSelf bool
 }
 
 func (b Battle) SwapPlayers() Battle {
 	b.P1Fighters, b.P2Fighters = b.P2Fighters, b.P1Fighters
+	b.IsSelf = !b.IsSelf
 	return b
 }
 
-func (b *Battle) CalcDamage(moveName bp.MoveName, r *rand.Rand) int {
+func (b *Battle) CalcDamage(moveName bp.MoveName, randDmgBonuses dmgtools.RandBonuses, r *rand.Rand) int {
 	attacker := b.P1Fighters[0]
 	defender := b.P2Fighters[0]
 
@@ -123,7 +124,7 @@ func (b *Battle) CalcDamage(moveName bp.MoveName, r *rand.Rand) int {
 			SpDef:defender.SpDef,
 		},
 	}
-	randDmgBonus := orand.Choice(b.RandDamageBonuses, r)
+	randDmgBonus := orand.Choice(randDmgBonuses, r)
 	return calculator.Calculation(randDmgBonus)
 }
 
@@ -157,7 +158,7 @@ func (b *Battle) CommandableMoveNamess() bp.MoveNamess {
 	return bp.MoveNamess{p1, p2}
 }
 
-func (b Battle) CommandMove(moveName bp.MoveName, r *rand.Rand) Battle {
+func (b Battle) CommandMove(moveName bp.MoveName, randDmgBonuses dmgtools.RandBonuses, r *rand.Rand) Battle {
 	if b.P1Fighters[0].IsFaint() {
 		return b
 	}
@@ -168,7 +169,7 @@ func (b Battle) CommandMove(moveName bp.MoveName, r *rand.Rand) Battle {
 	//moveset[moveName].Current -= 1
 
 	b.P1Fighters[0].Moveset = moveset
-	dmg := b.CalcDamage(moveName, r)
+	dmg := b.CalcDamage(moveName, randDmgBonuses, r)
 	dmg = omath.Min(dmg, b.P2Fighters[0].CurrentHP)
 	b.P2Fighters[0].CurrentHP -= dmg
 	return b
@@ -218,9 +219,9 @@ func (b Battle) Switch(pokeName bp.PokeName) (Battle, error) {
 	return b, nil
 }
 
-func (b *Battle) Action(action Action, r *rand.Rand) (Battle, error) {
+func (b *Battle) Action(action Action, randDmgBonuses dmgtools.RandBonuses, r *rand.Rand) (Battle, error) {
 	if action.IsCommandMove() {
-		return b.CommandMove(action.CmdMoveName, r), nil
+		return b.CommandMove(action.CmdMoveName, randDmgBonuses, r), nil
 	} else {
 		return b.Switch(action.SwitchPokeName)
 	}
@@ -295,7 +296,7 @@ func LegalActionss(b *Battle) Actionss {
 	return actionss
 }
 
-func Push(r *rand.Rand) func(Battle, Actions) (Battle, error) {
+func Push(randDmgBonuses dmgtools.RandBonuses, r *rand.Rand) func(Battle, Actions) (Battle, error) {
 	return func(battle Battle, actions Actions) (Battle, error) {
 		if actions.IsAllEmpty() {
 			return Battle{}, fmt.Errorf("両プレイヤーのActionがEmptyになっているため、Pushできません。Emptyじゃないようにするには、Action.CmdMoveNameかAction.SwitchPokeNameのいずれかは、ゼロ値以外の値である必要があります。")
@@ -308,10 +309,10 @@ func Push(r *rand.Rand) func(Battle, Actions) (Battle, error) {
 				continue
 			}
 			if action.IsPlayer1 {
-				battle, err = battle.Action(action, r)
+				battle, err = battle.Action(action, randDmgBonuses, r)
 			} else {
 				battle = battle.SwapPlayers()
-				battle, err = battle.Action(action, r)
+				battle, err = battle.Action(action, randDmgBonuses, r)
 				battle = battle.SwapPlayers()
 			}
 			if err != nil {
@@ -319,17 +320,16 @@ func Push(r *rand.Rand) func(Battle, Actions) (Battle, error) {
 			}
 		}
 		battle.Turn += 1
-		battle.Actions = slices.Clone(actions)
 		return battle, nil
 	}
 }
 
-func NewMCTS(r *rand.Rand) duct.MCTS[Battle, Actionss, Actions, Action] {
+func NewMCTS(randDmgBonuses dmgtools.RandBonuses, r *rand.Rand) duct.MCTS[Battle, Actionss, Actions, Action] {
 	game := simultaneous.Game[Battle, Actionss, Actions, Action]{
 		Equal:Equal,
 		IsEnd:IsEnd,
 		LegalActionss:LegalActionss,
-		Push:Push(r),
+		Push:Push(randDmgBonuses, r),
 	}
 	game.SetRandActionPlayer(r)
 
@@ -350,6 +350,7 @@ func NewMCTS(r *rand.Rand) duct.MCTS[Battle, Actionss, Actions, Action] {
 	}
 
 	mcts := duct.MCTS[Battle, Actionss, Actions, Action]{
+		UCBFunc:ucb.NewAlphaGoFunc(5),
 		Game:game,
 		LeafNodeEvalsFunc:leafNodeEvalsFunc,
 		NextNodesCap:32,
@@ -358,56 +359,60 @@ func NewMCTS(r *rand.Rand) duct.MCTS[Battle, Actionss, Actions, Action] {
 	return mcts
 }
 
-func NewMCTSPlayerGame(battles []Battle, outputs []map[Action]float64, values, maxvs, avgvs []float64, simulation int, r *rand.Rand) simultaneous.Game[Battle, Actionss, Actions, Action] {
-	game := simultaneous.Game[Battle, Actionss, Actions, Action]{
-		Equal:Equal,
-		IsEnd:IsEnd,
-		LegalActionss:LegalActionss,
-		Push:Push(r),
-	}
-	game.SetRandActionPlayer(r)
-
-	leafNodeEvalsFunc := func(battle *Battle) duct.LeafNodeEvalYs {
-		battleV, err := game.Playout(*battle)
-		if err != nil {
-			panic(err)
-		}
-		b1 := battleV.P1Fighters.IsAllFaint()
-		b2 := battleV.P2Fighters.IsAllFaint()
-		if b1 && b2 {
-			return duct.LeafNodeEvalYs{0.5, 0.5}
-		} else if b1 {
-			return duct.LeafNodeEvalYs{0.0, 1.0}
+func (b *Battle) IndexFeature(baseIndex int) tensor.D1 {
+	makePowerIndexFeature := func(pokemon *bp.Pokemon, category bp.MoveCategory) tensor.D1 {
+		var stat int
+		if category == bp.PHYSICS {
+			stat = pokemon.Atk
 		} else {
-			return duct.LeafNodeEvalYs{1.0, 0.0}
+			stat = pokemon.SpAtk
 		}
+		ret := make(tensor.D1, len(bp.ALL_TYPES))
+		for i, t := range bp.ALL_TYPES {
+			max := 0.0
+			for moveName, pp := range pokemon.Moveset {
+				moveData := bp.MOVEDEX[moveName]
+				if pp.Current <= 0 || moveData.Type != t || moveData.Category != category {
+					continue
+				}
+				index := float64(moveData.Power) * float64(stat) * float64(moveData.Accuracy / 100.0)
+				if index > max {
+					max = index
+				}
+			}
+			ret[i] = max / float64(baseIndex)
+		}
+		return ret
 	}
 
-	mcts := duct.MCTS[Battle, Actionss, Actions, Action]{
-		Game:game,
-		LeafNodeEvalsFunc:leafNodeEvalsFunc,
-		NextNodesCap:32,
-	}
-	mcts.UCBFunc = ucb.NewAlphaGoFunc(5)
-	mcts.SetUniformActionPoliciesFunc()
-	cloneGame := mcts.Game.Clone()
-	idx := 0
-	cloneGame.Player = func(battle *Battle) (Actions, error) {
-		rootNode := mcts.NewNode(battle)
-		err := mcts.Run(simulation, rootNode, r)
-		if err != nil {
-			return Actions{}, err
+	makeDurabilityIndexFeature := func(pokemon *bp.Pokemon, category bp.MoveCategory) tensor.D1 {
+		var stat int
+		if category == bp.PHYSICS {
+			stat = pokemon.Def
+		} else {
+			stat = pokemon.SpDef
 		}
-		trialPercents := rootNode.UCBManagers[0].TrialPercents()
-		battles[idx] = *battle
-		outputs[idx] = trialPercents
-		actions := rootNode.UCBManagers.JointActionByMaxTrial(r)
-		v := rootNode.UCBManagers[0][actions[0]].AverageValue()
-		values[idx] = v
-		maxvs[idx] = rootNode.UCBManagers[0].MaxAverageValue()
-		avgvs[idx] = rootNode.UCBManagers[0].AverageValue()
-		idx += 1
-		return actions, err
+		pokeData := bp.POKEDEX[pokemon.Name]
+		ret := make(tensor.D1, len(bp.ALL_TYPES))
+		for i, t := range bp.ALL_TYPES {
+			if !slices.Contains(pokeData.Types, t) {
+				continue
+			}
+			ret[i] = float64(pokemon.CurrentHP) * float64(stat) / float64(baseIndex)
+		}
+		return ret
 	}
-	return cloneGame
+
+	ret := make(tensor.D1, 0, len(bp.ALL_TYPES) * 4 * FIGHTER_NUM * 2)
+	add := func(fighters Fighters) {
+		for _, pokemon := range fighters {
+			ret = append(ret, makePowerIndexFeature(&pokemon, bp.PHYSICS)...)
+			ret = append(ret, makePowerIndexFeature(&pokemon, bp.SPECIAL)...)
+			ret = append(ret, makeDurabilityIndexFeature(&pokemon, bp.PHYSICS)...)
+			ret = append(ret, makeDurabilityIndexFeature(&pokemon, bp.SPECIAL)...)
+		}
+	}
+	add(b.P1Fighters)
+	add(b.P2Fighters)
+	return ret
 }

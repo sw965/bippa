@@ -3,18 +3,6 @@ package bippa
 import (
 	"fmt"
 	ojson "github.com/sw965/omw/json"
-	opath "github.com/sw965/omw/path"
-)
-
-var (
-	DATA_PATH = opath.SW965 + "bippa/"
-	ALL_POKE_NAMES_PATH = DATA_PATH + "all_poke_names.json"
-	POKE_DATA_PATH = DATA_PATH + "poke_data/"
-
-	MOVE_DATA_PATH = DATA_PATH + "move_data/"
-	ALL_MOVE_NAMES_PATH = DATA_PATH + "all_move_names.json"
-
-	TYPEDEX_PATH = DATA_PATH + "typedex.json"
 )
 
 var ALL_POKE_NAMES = func() PokeNames {
