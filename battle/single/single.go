@@ -12,6 +12,7 @@ import (
 	"github.com/sw965/crow/mcts/duct"
 	"golang.org/x/exp/slices"
 	"github.com/sw965/crow/tensor"
+	"github.com/sw965/crow/model"
 )
 
 const (
@@ -63,6 +64,11 @@ type Action struct {
 	IsPlayer1 bool
 }
 
+func (a *Action) ToString() string {
+	p := map[bool]string{true:"player1", false:"player2"}[a.IsPlayer1]
+	return bp.MOVE_NAME_TO_STRING[a.CmdMoveName] + bp.POKE_NAME_TO_STRING[a.SwitchPokeName] + " " + p
+}
+
 func (a *Action) IsEmpty() bool {
 	return a.CmdMoveName == bp.EMPTY_MOVE_NAME && a.SwitchPokeName == bp.EMPTY_POKE_NAME
 }
@@ -84,6 +90,14 @@ func (as Actions) IsAllEmpty() bool {
 		}
 	}
 	return true
+}
+
+func (as Actions) ToStrings() []string {
+	ret := make([]string, len(as))
+	for i, a := range as {
+		ret[i] = a.ToString()
+	}
+	return ret
 }
 
 const (
@@ -118,7 +132,7 @@ func (b *Battle) CalcDamage(moveName bp.MoveName, randDmgBonuses dmgtools.RandBo
 			MoveName:moveName,
 		},
 		dmgtools.Defender{
-			PokeName:attacker.Name,
+			PokeName:defender.Name,
 			Level:defender.Level,
 			Def:defender.Def,
 			SpDef:defender.SpDef,
@@ -264,6 +278,20 @@ func (b *Battle) SortActionsByOrder(p1Action, p2Action *Action, r *rand.Rand) Ac
 	}
 }
 
+func (b *Battle) EndLeafNodeEvalYs() (duct.LeafNodeEvalYs, error) {
+	isP1AllFaint := b.P1Fighters.IsAllFaint()
+	isP2AllFaint := b.P2Fighters.IsAllFaint()
+	if isP1AllFaint && isP2AllFaint {
+		return duct.LeafNodeEvalYs{0.5, 0.5}, nil
+	} else if isP1AllFaint {
+		return duct.LeafNodeEvalYs{0.0, 1.0}, nil
+	} else if isP2AllFaint {
+		return duct.LeafNodeEvalYs{1.0, 0.0}, nil
+	} else {
+		return duct.LeafNodeEvalYs{}, fmt.Errorf("ゲームが終わっていない")
+	}
+}
+
 func Equal(b1, b2 *Battle) bool {
 	return b1.P1Fighters.Equal(&b2.P1Fighters) && b1.P2Fighters.Equal(&b2.P2Fighters) && b1.Turn == b2.Turn
 }
@@ -324,7 +352,42 @@ func Push(randDmgBonuses dmgtools.RandBonuses, r *rand.Rand) func(Battle, Action
 	}
 }
 
-func NewMCTS(randDmgBonuses dmgtools.RandBonuses, r *rand.Rand) duct.MCTS[Battle, Actionss, Actions, Action] {
+func NewGame(randDmgBonuses dmgtools.RandBonuses, r *rand.Rand) simultaneous.Game[Battle, Actionss, Actions, Action] {
+	return simultaneous.Game[Battle, Actionss, Actions, Action]{
+		Equal:Equal,
+		IsEnd:IsEnd,
+		LegalActionss:LegalActionss,
+		Push:Push(randDmgBonuses, r),
+	}
+}
+
+func NewMCTSRandPlayout(ucbFunc ucb.Func, randDmgBonuses dmgtools.RandBonuses, r *rand.Rand) duct.MCTS[Battle, Actionss, Actions, Action] {
+	game := NewGame(randDmgBonuses, r)
+	game.SetRandActionPlayer(r)
+
+	leafNodeEvalsFunc := func(battle *Battle) duct.LeafNodeEvalYs {
+		endBattle, err := game.Playout(*battle)
+		if err != nil {
+			panic(err)
+		}
+		ys, err := endBattle.EndLeafNodeEvalYs()
+		if err != nil {
+			panic(err)
+		}
+		return ys
+	}
+
+	mcts := duct.MCTS[Battle, Actionss, Actions, Action]{
+		UCBFunc:ucbFunc,
+		Game:game,
+		LeafNodeEvalsFunc:leafNodeEvalsFunc,
+		NextNodesCap:64,
+	}
+	mcts.SetUniformActionPoliciesFunc()
+	return mcts
+}
+
+func NewMCTSNNEval(ucbFunc ucb.Func, nn *model.SequentialInputOutput1D, randDmgBonuses dmgtools.RandBonuses, r *rand.Rand) duct.MCTS[Battle, Actionss, Actions, Action] {
 	game := simultaneous.Game[Battle, Actionss, Actions, Action]{
 		Equal:Equal,
 		IsEnd:IsEnd,
@@ -334,32 +397,36 @@ func NewMCTS(randDmgBonuses dmgtools.RandBonuses, r *rand.Rand) duct.MCTS[Battle
 	game.SetRandActionPlayer(r)
 
 	leafNodeEvalsFunc := func(battle *Battle) duct.LeafNodeEvalYs {
-		battleV, err := game.Playout(*battle)
-		if err != nil {
-			panic(err)
-		}
-		b1 := battleV.P1Fighters.IsAllFaint()
-		b2 := battleV.P2Fighters.IsAllFaint()
-		if b1 && b2 {
+		isP1AllFaint := battle.P1Fighters.IsAllFaint()
+		isP2AllFaint := battle.P2Fighters.IsAllFaint()
+		if isP1AllFaint && isP2AllFaint {
 			return duct.LeafNodeEvalYs{0.5, 0.5}
-		} else if b1 {
+		} else if isP1AllFaint {
 			return duct.LeafNodeEvalYs{0.0, 1.0}
-		} else {
+		} else if isP2AllFaint {
 			return duct.LeafNodeEvalYs{1.0, 0.0}
+		} else {
+			x := battle.ToIndexFeature(15000)
+			y, err := nn.Predict(x)
+			if err != nil {
+				panic(err)
+			}
+			v := duct.LeafNodeEvalY(y[0])
+			return duct.LeafNodeEvalYs{v, 1.0 - v}
 		}
 	}
 
 	mcts := duct.MCTS[Battle, Actionss, Actions, Action]{
-		UCBFunc:ucb.NewAlphaGoFunc(5),
+		UCBFunc:ucbFunc,
 		Game:game,
 		LeafNodeEvalsFunc:leafNodeEvalsFunc,
-		NextNodesCap:32,
+		NextNodesCap:64,
 	}
 	mcts.SetUniformActionPoliciesFunc()
 	return mcts
 }
 
-func (b *Battle) IndexFeature(baseIndex int) tensor.D1 {
+func (b *Battle) ToIndexFeature(baseIndex int) tensor.D1 {
 	makePowerIndexFeature := func(pokemon *bp.Pokemon, category bp.MoveCategory) tensor.D1 {
 		var stat int
 		if category == bp.PHYSICS {
