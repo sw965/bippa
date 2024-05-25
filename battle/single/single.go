@@ -11,8 +11,9 @@ import (
 	"github.com/sw965/crow/game/simultaneous"
 	"github.com/sw965/crow/mcts/duct"
 	"golang.org/x/exp/slices"
+	oslices "github.com/sw965/omw/slices"
 	"github.com/sw965/crow/tensor"
-	"github.com/sw965/crow/model"
+	//"github.com/sw965/crow/model"
 )
 
 const (
@@ -387,99 +388,77 @@ func NewMCTSRandPlayout(ucbFunc ucb.Func, randDmgBonuses dmgtools.RandBonuses, r
 	return mcts
 }
 
-func NewMCTSNNEval(ucbFunc ucb.Func, nn *model.SequentialInputOutput1D, randDmgBonuses dmgtools.RandBonuses, r *rand.Rand) duct.MCTS[Battle, Actionss, Actions, Action] {
-	game := simultaneous.Game[Battle, Actionss, Actions, Action]{
-		Equal:Equal,
-		IsEnd:IsEnd,
-		LegalActionss:LegalActionss,
-		Push:Push(randDmgBonuses, r),
-	}
-	game.SetRandActionPlayer(r)
+// func NewMCTSNNEval(ucbFunc ucb.Func, nn *model.SequentialInputOutput1D, randDmgBonuses dmgtools.RandBonuses, r *rand.Rand) duct.MCTS[Battle, Actionss, Actions, Action] {
+// 	game := simultaneous.Game[Battle, Actionss, Actions, Action]{
+// 		Equal:Equal,
+// 		IsEnd:IsEnd,
+// 		LegalActionss:LegalActionss,
+// 		Push:Push(randDmgBonuses, r),
+// 	}
+// 	game.SetRandActionPlayer(r)
 
-	leafNodeEvalsFunc := func(battle *Battle) duct.LeafNodeEvalYs {
-		isP1AllFaint := battle.P1Fighters.IsAllFaint()
-		isP2AllFaint := battle.P2Fighters.IsAllFaint()
-		if isP1AllFaint && isP2AllFaint {
-			return duct.LeafNodeEvalYs{0.5, 0.5}
-		} else if isP1AllFaint {
-			return duct.LeafNodeEvalYs{0.0, 1.0}
-		} else if isP2AllFaint {
-			return duct.LeafNodeEvalYs{1.0, 0.0}
-		} else {
-			x := battle.ToIndexFeature(15000)
-			y, err := nn.Predict(x)
-			if err != nil {
-				panic(err)
-			}
-			v := duct.LeafNodeEvalY(y[0])
-			return duct.LeafNodeEvalYs{v, 1.0 - v}
-		}
-	}
+// 	leafNodeEvalsFunc := func(battle *Battle) duct.LeafNodeEvalYs {
+// 		isP1AllFaint := battle.P1Fighters.IsAllFaint()
+// 		isP2AllFaint := battle.P2Fighters.IsAllFaint()
+// 		if isP1AllFaint && isP2AllFaint {
+// 			return duct.LeafNodeEvalYs{0.5, 0.5}
+// 		} else if isP1AllFaint {
+// 			return duct.LeafNodeEvalYs{0.0, 1.0}
+// 		} else if isP2AllFaint {
+// 			return duct.LeafNodeEvalYs{1.0, 0.0}
+// 		} else {
+// 			x := battle.ToEvalFeature()
+// 			y, err := nn.Predict(x)
+// 			if err != nil {
+// 				panic(err)
+// 			}
+// 			v := duct.LeafNodeEvalY(y[0])
+// 			return duct.LeafNodeEvalYs{v, 1.0 - v}
+// 		}
+// 	}
 
-	mcts := duct.MCTS[Battle, Actionss, Actions, Action]{
-		UCBFunc:ucbFunc,
-		Game:game,
-		LeafNodeEvalsFunc:leafNodeEvalsFunc,
-		NextNodesCap:64,
-	}
-	mcts.SetUniformActionPoliciesFunc()
-	return mcts
-}
+// 	mcts := duct.MCTS[Battle, Actionss, Actions, Action]{
+// 		UCBFunc:ucbFunc,
+// 		Game:game,
+// 		LeafNodeEvalsFunc:leafNodeEvalsFunc,
+// 		NextNodesCap:64,
+// 	}
+// 	mcts.SetUniformActionPoliciesFunc()
+// 	return mcts
+// }
 
-func (b *Battle) ToIndexFeature(baseIndex int) tensor.D1 {
-	makePowerIndexFeature := func(pokemon *bp.Pokemon, category bp.MoveCategory) tensor.D1 {
-		var stat int
-		if category == bp.PHYSICS {
-			stat = pokemon.Atk
-		} else {
-			stat = pokemon.SpAtk
-		}
-		ret := make(tensor.D1, len(bp.ALL_TYPES))
-		for i, t := range bp.ALL_TYPES {
-			max := 0.0
-			for moveName, pp := range pokemon.Moveset {
-				moveData := bp.MOVEDEX[moveName]
-				if pp.Current <= 0 || moveData.Type != t || moveData.Category != category {
-					continue
+func (b *Battle) ToEvalFeature(f func(*bp.Pokemon, *bp.Pokemon) tensor.D1, n int) tensor.D1 {
+	speedWin := 0
+	speedLoss := 1
+	speedDraw := 2
+	faint := 3
+	speedAndFaintAllFeatures := oslices.Sequence[[][]int, []int]([]int{speedWin, speedLoss, speedDraw, faint}, FIGHTER_NUM)
+	start := 0
+	ret := make(tensor.D1,  len(speedAndFaintAllFeatures) * FIGHTER_NUM * n * 2)
+	writeFeature := func(selfFighters, opponentFighters Fighters) {
+		for _, attacker := range selfFighters {
+			speedAndFaintFeature := make([]int, FIGHTER_NUM)
+			baseFeature := make(tensor.D1, 0, n * FIGHTER_NUM)
+			for j, defender := range opponentFighters {
+				if defender.IsFaint() {
+					speedAndFaintFeature[j] = faint
+				} else if attacker.Speed > defender.Speed {
+					speedAndFaintFeature[j] = speedWin
+				} else if attacker.Speed < defender.Speed {
+					speedAndFaintFeature[j] = speedLoss
+				} else {
+					speedAndFaintFeature[j] = speedDraw
 				}
-				index := float64(moveData.Power) * float64(stat) * float64(moveData.Accuracy / 100.0)
-				if index > max {
-					max = index
-				}
+				baseFeature = append(baseFeature, f(&attacker, &defender)...)
 			}
-			ret[i] = max / float64(baseIndex)
-		}
-		return ret
-	}
-
-	makeDurabilityIndexFeature := func(pokemon *bp.Pokemon, category bp.MoveCategory) tensor.D1 {
-		var stat int
-		if category == bp.PHYSICS {
-			stat = pokemon.Def
-		} else {
-			stat = pokemon.SpDef
-		}
-		pokeData := bp.POKEDEX[pokemon.Name]
-		ret := make(tensor.D1, len(bp.ALL_TYPES))
-		for i, t := range bp.ALL_TYPES {
-			if !slices.Contains(pokeData.Types, t) {
-				continue
+			s := start + slices.IndexFunc(speedAndFaintAllFeatures, oslices.Equal(speedAndFaintFeature))
+			for k, v := range baseFeature {
+				ret[s+k] = v
 			}
-			ret[i] = float64(pokemon.CurrentHP) * float64(stat) / float64(baseIndex)
-		}
-		return ret
-	}
-
-	ret := make(tensor.D1, 0, len(bp.ALL_TYPES) * 4 * FIGHTER_NUM * 2)
-	add := func(fighters Fighters) {
-		for _, pokemon := range fighters {
-			ret = append(ret, makePowerIndexFeature(&pokemon, bp.PHYSICS)...)
-			ret = append(ret, makePowerIndexFeature(&pokemon, bp.SPECIAL)...)
-			ret = append(ret, makeDurabilityIndexFeature(&pokemon, bp.PHYSICS)...)
-			ret = append(ret, makeDurabilityIndexFeature(&pokemon, bp.SPECIAL)...)
+			start += len(speedAndFaintAllFeatures) * FIGHTER_NUM * n
 		}
 	}
-	add(b.P1Fighters)
-	add(b.P2Fighters)
+	writeFeature(b.P1Fighters, b.P2Fighters)
+	writeFeature(b.P2Fighters, b.P1Fighters)
 	return ret
 }
