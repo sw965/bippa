@@ -15,7 +15,9 @@ const (
 	EMBER
 	TACKLE
 	VINE_WHIP
+	SURF
 	WATER_GUN
+	ICE_BEAM
 )
 
 var STRING_TO_MOVE_NAME = map[string]MoveName{
@@ -24,7 +26,9 @@ var STRING_TO_MOVE_NAME = map[string]MoveName{
 	"ひのこ":     EMBER,
 	"たいあたり": TACKLE,
 	"つるのムチ":VINE_WHIP,
+	"なみのり":SURF,
 	"みずでっぽう": WATER_GUN,
+	"れいとうビーム":ICE_BEAM,
 }
 
 var MOVE_NAME_TO_STRING = omaps.Invert[map[MoveName]string](STRING_TO_MOVE_NAME)

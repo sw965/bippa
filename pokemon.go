@@ -11,6 +11,7 @@ const (
 	BULBASAUR
 	CHARMANDER
 	SQUIRTLE
+	SUICUNE
 	GARCHOMP
 )
 
@@ -19,10 +20,15 @@ var STRING_TO_POKE_NAME = map[string]PokeName{
 	"フシギダネ":BULBASAUR,
 	"ヒトカゲ":CHARMANDER,
 	"ゼニガメ":SQUIRTLE,
+	"スイクン":SUICUNE,
 	"ガブリアス":GARCHOMP,
 }
 
 var POKE_NAME_TO_STRING = omaps.Invert[map[PokeName]string](STRING_TO_POKE_NAME)
+
+func (n PokeName) ToString() string {
+	return POKE_NAME_TO_STRING[n]
+}
 
 type PokeNames []PokeName
 type PokeNamess []PokeNames
@@ -199,6 +205,14 @@ func NewTemplateCharmander() Pokemon {
 
 func NewTemplateSquirtle() Pokemon {
 	pokemon, err := NewPokemon(SQUIRTLE, MoveNames{WATER_GUN})
+	if err != nil {
+		panic(err)
+	}
+	return pokemon
+}
+
+func NewTemplateSuicune() Pokemon {
+	pokemon, err := NewPokemon(SUICUNE, MoveNames{SURF, ICE_BEAM})
 	if err != nil {
 		panic(err)
 	}

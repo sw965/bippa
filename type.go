@@ -1,7 +1,9 @@
 package bippa
 
 import (
+	omaps "github.com/sw965/omw/maps"
 	ojson "github.com/sw965/omw/json"
+	"golang.org/x/exp/slices"
 )
 
 type Type int
@@ -48,6 +50,12 @@ var STRING_TO_TYPE = map[string]Type{
 	"フェアリー":FAIRY,
 }
 
+var TYPE_TO_STRING = omaps.Invert[map[Type]string](STRING_TO_TYPE)
+
+func (t Type) ToString() string {
+	return TYPE_TO_STRING[t]
+}
+
 type Types []Type
 
 var ALL_TYPES = func() Types {
@@ -61,3 +69,17 @@ var ALL_TYPES = func() Types {
 	}
 	return ret
 }()
+
+func (ts Types) ToStrings() []string {
+	ret := make([]string, len(ts))
+	for i, t := range ts {
+		ret[i] = t.ToString()
+	}
+	return ret
+}
+
+func (ts Types) Sort() Types {
+	ret := slices.Clone(ts)
+	slices.SortFunc(ret, func(t1, t2 Type) bool { return slices.Index(ALL_TYPES, t1) < slices.Index(ALL_TYPES, t2) } )
+	return ret
+}

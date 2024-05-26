@@ -10,10 +10,10 @@ import (
 	"github.com/sw965/bippa/dmgtools"
 	"github.com/sw965/crow/game/simultaneous"
 	"github.com/sw965/crow/mcts/duct"
-	"golang.org/x/exp/slices"
+	//"golang.org/x/exp/slices"
 	oslices "github.com/sw965/omw/slices"
 	"github.com/sw965/crow/tensor"
-	//"github.com/sw965/crow/model"
+	"github.com/sw965/crow/model"
 )
 
 const (
@@ -388,77 +388,87 @@ func NewMCTSRandPlayout(ucbFunc ucb.Func, randDmgBonuses dmgtools.RandBonuses, r
 	return mcts
 }
 
-// func NewMCTSNNEval(ucbFunc ucb.Func, nn *model.SequentialInputOutput1D, randDmgBonuses dmgtools.RandBonuses, r *rand.Rand) duct.MCTS[Battle, Actionss, Actions, Action] {
-// 	game := simultaneous.Game[Battle, Actionss, Actions, Action]{
-// 		Equal:Equal,
-// 		IsEnd:IsEnd,
-// 		LegalActionss:LegalActionss,
-// 		Push:Push(randDmgBonuses, r),
-// 	}
-// 	game.SetRandActionPlayer(r)
+func NewMCTSNNEval(ucbFunc ucb.Func, nn *model.SequentialInputOutput1D, randDmgBonuses dmgtools.RandBonuses, f func(*Battle) tensor.D1, r *rand.Rand) duct.MCTS[Battle, Actionss, Actions, Action] {
+	game := simultaneous.Game[Battle, Actionss, Actions, Action]{
+		Equal:Equal,
+		IsEnd:IsEnd,
+		LegalActionss:LegalActionss,
+		Push:Push(randDmgBonuses, r),
+	}
+	game.SetRandActionPlayer(r)
 
-// 	leafNodeEvalsFunc := func(battle *Battle) duct.LeafNodeEvalYs {
-// 		isP1AllFaint := battle.P1Fighters.IsAllFaint()
-// 		isP2AllFaint := battle.P2Fighters.IsAllFaint()
-// 		if isP1AllFaint && isP2AllFaint {
-// 			return duct.LeafNodeEvalYs{0.5, 0.5}
-// 		} else if isP1AllFaint {
-// 			return duct.LeafNodeEvalYs{0.0, 1.0}
-// 		} else if isP2AllFaint {
-// 			return duct.LeafNodeEvalYs{1.0, 0.0}
-// 		} else {
-// 			x := battle.ToEvalFeature()
-// 			y, err := nn.Predict(x)
-// 			if err != nil {
-// 				panic(err)
-// 			}
-// 			v := duct.LeafNodeEvalY(y[0])
-// 			return duct.LeafNodeEvalYs{v, 1.0 - v}
-// 		}
-// 	}
-
-// 	mcts := duct.MCTS[Battle, Actionss, Actions, Action]{
-// 		UCBFunc:ucbFunc,
-// 		Game:game,
-// 		LeafNodeEvalsFunc:leafNodeEvalsFunc,
-// 		NextNodesCap:64,
-// 	}
-// 	mcts.SetUniformActionPoliciesFunc()
-// 	return mcts
-// }
-
-func (b *Battle) ToEvalFeature(f func(*bp.Pokemon, *bp.Pokemon) tensor.D1, n int) tensor.D1 {
-	speedWin := 0
-	speedLoss := 1
-	speedDraw := 2
-	faint := 3
-	speedAndFaintAllFeatures := oslices.Sequence[[][]int, []int]([]int{speedWin, speedLoss, speedDraw, faint}, FIGHTER_NUM)
-	start := 0
-	ret := make(tensor.D1,  len(speedAndFaintAllFeatures) * FIGHTER_NUM * n * 2)
-	writeFeature := func(selfFighters, opponentFighters Fighters) {
-		for _, attacker := range selfFighters {
-			speedAndFaintFeature := make([]int, FIGHTER_NUM)
-			baseFeature := make(tensor.D1, 0, n * FIGHTER_NUM)
-			for j, defender := range opponentFighters {
-				if defender.IsFaint() {
-					speedAndFaintFeature[j] = faint
-				} else if attacker.Speed > defender.Speed {
-					speedAndFaintFeature[j] = speedWin
-				} else if attacker.Speed < defender.Speed {
-					speedAndFaintFeature[j] = speedLoss
-				} else {
-					speedAndFaintFeature[j] = speedDraw
-				}
-				baseFeature = append(baseFeature, f(&attacker, &defender)...)
+	leafNodeEvalsFunc := func(battle *Battle) duct.LeafNodeEvalYs {
+		isP1AllFaint := battle.P1Fighters.IsAllFaint()
+		isP2AllFaint := battle.P2Fighters.IsAllFaint()
+		if isP1AllFaint && isP2AllFaint {
+			return duct.LeafNodeEvalYs{0.5, 0.5}
+		} else if isP1AllFaint {
+			return duct.LeafNodeEvalYs{0.0, 1.0}
+		} else if isP2AllFaint {
+			return duct.LeafNodeEvalYs{1.0, 0.0}
+		} else {
+			x := f(battle)
+			y, err := nn.Predict(x)
+			if err != nil {
+				panic(err)
 			}
-			s := start + slices.IndexFunc(speedAndFaintAllFeatures, oslices.Equal(speedAndFaintFeature))
-			for k, v := range baseFeature {
-				ret[s+k] = v
-			}
-			start += len(speedAndFaintAllFeatures) * FIGHTER_NUM * n
+			v := duct.LeafNodeEvalY(y[0])
+			return duct.LeafNodeEvalYs{v, 1.0 - v}
 		}
 	}
-	writeFeature(b.P1Fighters, b.P2Fighters)
-	writeFeature(b.P2Fighters, b.P1Fighters)
-	return ret
+
+	mcts := duct.MCTS[Battle, Actionss, Actions, Action]{
+		UCBFunc:ucbFunc,
+		Game:game,
+		LeafNodeEvalsFunc:leafNodeEvalsFunc,
+		NextNodesCap:64,
+	}
+	mcts.SetUniformActionPoliciesFunc()
+	return mcts
+}
+
+func MakeEvalFeatureFunc(f func(*bp.Pokemon, *bp.Pokemon) tensor.D1, n int) func(*Battle) tensor.D1 {
+	return func(battle *Battle) tensor.D1 {
+		ret := make(tensor.D1, 0, 1000)
+		speedWinIdx := 0
+		speedLossIdx := 1
+		p1FaintIdx := 2
+		p2FaintIdx := 3
+	
+		for _, p1Pokemon := range battle.P1Fighters {
+			for _, p2Pokemon := range battle.P2Fighters {
+				splited := make(tensor.D2, p2FaintIdx+1)
+				splited[speedWinIdx] = tensor.NewD1Zeros(n*2)
+				splited[speedLossIdx] = tensor.NewD1Zeros(n*2)
+				splited[p1FaintIdx] = tensor.NewD1Zeros(1)
+				splited[p2FaintIdx] = tensor.NewD1Zeros(1)
+	
+				both := oslices.Concat(f(&p1Pokemon, &p2Pokemon), f(&p2Pokemon, &p1Pokemon))
+				isP1Faint := p1Pokemon.IsFaint()
+				isP2Faint := p2Pokemon.IsFaint()
+				isNotFaint := !isP1Faint && !isP2Faint
+	
+				if isNotFaint && p1Pokemon.Speed >= p2Pokemon.Speed {
+					splited[speedWinIdx] = both
+				}
+	
+				if isNotFaint && p1Pokemon.Speed <= p2Pokemon.Speed {
+					splited[speedLossIdx] = both
+				}
+	
+				if isP1Faint {
+					splited[p1FaintIdx] = tensor.D1{1}
+				}
+	
+				if isP2Faint {
+					splited[p2FaintIdx] = tensor.D1{1}
+				}
+				for _, v := range splited {
+					ret = append(ret, v...)
+				}
+			}
+	
+		}
+		return ret
+	}
 }

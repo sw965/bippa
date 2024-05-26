@@ -70,3 +70,42 @@ func PushTeam(team Team, action *TeamBuildAction) (Team, error) {
 	return team, nil
 }
 
+func TeamEvalFeature(team Team) {
+	make := func(pokemon *Pokemon) tensor.D1 {
+		moveFeature := make(tensor.D1, len(ALL_MOVE_NAMES))
+		for i, moveName := range ALL_MOVE_NAMES {
+			if _, ok := pokemon.Moveset[moveName]; ok {
+				moveData := MOVEDEX[moveName]
+				var statFeature float64
+				if moveData.Category == PHYSICS {
+					statFeature = float64(pokemon.Atk) / 150.0
+				} else if moveData.Category == SPECIAL {
+					statFeature = float64(pokemon.Def) / 150.0
+				} else {
+					statFeature = 1.0
+				}
+				moveFeature[i] = statFeature
+			}
+		}
+
+		allTypes := make(Types, len(ALL_TYPES))
+		for i, t := range ALL_TYPES {
+			allTypes[i] = Types{t}
+		}
+		allTypess := oslices.Concat(allTypes, omath.Combination(ALL_TYPES))
+		defFeature := make(tensor.D1, len(allTypess))
+		spDefFeature := make(tensor.D1, len(allTypess))
+		for i, ts := range allTypess {
+			if slices.Equal(pokemon.Types, ts) {
+				defFeature[i] = float64(pokemon.Def) / 100.0
+				spDefFeature[i] = float64(pokemon.SpDef) / 100.0
+			}
+		}
+		return oslices.Concat(moveFeature, defFeature, spDefFeature)
+	}
+	ret := make(tensor.D1, 0, 6400)
+	for _, pokemon := range team {
+		ret = append(ret, make(&pokemon)...)
+	}
+	return ret
+}
