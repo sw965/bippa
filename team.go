@@ -1,7 +1,15 @@
 package bippa
 
 import (
+	"fmt"
 	omath "github.com/sw965/omw/math"
+	"github.com/sw965/crow/tensor"
+	oslices "github.com/sw965/omw/slices"
+	"golang.org/x/exp/slices"
+	//"math/rand"
+	//"github.com/sw965/crow/game/sequential"
+	//"github.com/sw965/crow/mcts/uct"
+	//"github.com/sw965/crow/ucb"
 )
 
 const (
@@ -19,12 +27,29 @@ type TeamBuildActions []TeamBuildAction
 
 type Team []Pokemon
 
+func (team Team) PokeNames() PokeNames {
+	ret := make(PokeNames, len(team))
+	for i, pokemon := range team {
+		ret[i] = pokemon.Name
+	}
+	return ret
+}
+
 func (team Team) Clone() Team {
 	clone := make(Team, len(team))
 	for i := range clone {
 		clone[i] = team[i].Clone()
 	}
 	return clone
+}
+
+func (team Team) Find(name PokeName) (Pokemon, error) {
+	for _, pokemon := range team {
+		if pokemon.Name == name {
+			return pokemon, nil
+		}
+	}
+	return Pokemon{}, fmt.Errorf("見つからなかった")
 }
 
 func LegalTeamBuildActions(team Team) TeamBuildActions {
@@ -55,24 +80,41 @@ func LegalTeamBuildActions(team Team) TeamBuildActions {
 	return TeamBuildActions{}
 }
 
-func PushTeam(team Team, action *TeamBuildAction) (Team, error) {
-	team = team.Clone()
+// func EqualTeam(team1, team2 Team) bool {
+// 	team1 = team1.Sort()
+// 	team2 = team2.Sort()
+// 	for _, pokemon := range team1 {
+// 		if !pokemon.Equal(team2[i]) {
+// 			return false
+// 		}
+// 	}
+// 	return true
+// }
 
-	if action.PokeName != EMPTY_POKE_NAME {
-		pokemon := Pokemon{Name:action.PokeName, Level:DEFAULT_LEVEL, Moveset:Moveset{}}
-		team = append(team, pokemon)
-	}
+// func PushTeam(team Team, action *TeamBuildAction) (Team, error) {
+// 	team = team.Clone()
 
-	if action.MoveName != EMPTY_MOVE_NAME {
-		basePP := MOVEDEX[action.MoveName].BasePP
-		team[action.Index].Moveset[action.MoveName] = &PowerPoint{Max:basePP, Current:basePP}
-	}
-	return team, nil
-}
+// 	if action.PokeName != EMPTY_POKE_NAME {
+// 		pokemon := Pokemon{Name:action.PokeName, Level:DEFAULT_LEVEL, Moveset:Moveset{}}
+// 		team = append(team, pokemon)
+// 	}
 
-func TeamEvalFeature(team Team) {
-	make := func(pokemon *Pokemon) tensor.D1 {
+// 	if action.MoveName != EMPTY_MOVE_NAME {
+// 		basePP := MOVEDEX[action.MoveName].BasePP
+// 		team[action.Index].Moveset[action.MoveName] = &PowerPoint{Max:basePP, Current:basePP}
+// 	}
+// 	return team, nil
+// }
+
+func TeamEvalFeature(team Team) tensor.D1 {
+	makeFeature := func(pokemon *Pokemon) tensor.D1 {
 		moveFeature := make(tensor.D1, len(ALL_MOVE_NAMES))
+		defFeature := make(tensor.D1, len(ALL_TYPESS))
+		spDefFeature := make(tensor.D1, len(ALL_TYPESS))
+		if pokemon.Name == EMPTY_POKE_NAME {
+			return oslices.Concat(moveFeature, defFeature, spDefFeature)
+		}
+
 		for i, moveName := range ALL_MOVE_NAMES {
 			if _, ok := pokemon.Moveset[moveName]; ok {
 				moveData := MOVEDEX[moveName]
@@ -88,24 +130,37 @@ func TeamEvalFeature(team Team) {
 			}
 		}
 
-		allTypes := make(Types, len(ALL_TYPES))
-		for i, t := range ALL_TYPES {
-			allTypes[i] = Types{t}
-		}
-		allTypess := oslices.Concat(allTypes, omath.Combination(ALL_TYPES))
-		defFeature := make(tensor.D1, len(allTypess))
-		spDefFeature := make(tensor.D1, len(allTypess))
-		for i, ts := range allTypess {
-			if slices.Equal(pokemon.Types, ts) {
+		for i, ts := range ALL_TYPESS {
+			pokeTypes := POKEDEX[pokemon.Name].Types
+			if slices.Equal(pokeTypes, ts) {
 				defFeature[i] = float64(pokemon.Def) / 100.0
 				spDefFeature[i] = float64(pokemon.SpDef) / 100.0
 			}
 		}
 		return oslices.Concat(moveFeature, defFeature, spDefFeature)
 	}
+
 	ret := make(tensor.D1, 0, 6400)
 	for _, pokemon := range team {
-		ret = append(ret, make(&pokemon)...)
+		ret = append(ret, makeFeature(&pokemon)...)
 	}
 	return ret
 }
+
+// func NewMCTSTeam(r *rand.Rand) uct.MCTS[Team, TeamBuildActions, TeamBuildAction] {
+// 	game := sequential.Game[Team, TeamBuildActions, TeamBuildAction]{
+// 		LegalActions:LegalTeamBuildActions,
+// 		Push:PushTeam,
+// 		Equal:EqualTeam,
+// 		IsEnd:IsEndTeam,
+// 	}
+// 	game.SetRandActionPlayer(r)
+
+// 	mcts := uct.MCTS[Team, TeamBuildActions, TeamBuildAction]{
+// 		Game:game,
+// 		UCBFunc:ucb.NewAlphaGoFunc(5),
+// 		NextNodesCap:252,
+// 	}
+// 	mcts.SetUniformActionPolicy()
+// 	return mcts
+// }

@@ -26,11 +26,20 @@ var STRING_TO_POKE_NAME = map[string]PokeName{
 
 var POKE_NAME_TO_STRING = omaps.Invert[map[PokeName]string](STRING_TO_POKE_NAME)
 
-func (n PokeName) ToString() string {
-	return POKE_NAME_TO_STRING[n]
+func (name PokeName) ToString() string {
+	return POKE_NAME_TO_STRING[name]
 }
 
 type PokeNames []PokeName
+
+func (names PokeNames) ToStrings() []string {
+	ret := make([]string, len(names))
+	for i, name := range names {
+		ret[i] = name.ToString()
+	}
+	return ret
+}
+
 type PokeNamess []PokeNames
 
 type Level int

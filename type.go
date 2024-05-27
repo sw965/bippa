@@ -4,6 +4,8 @@ import (
 	omaps "github.com/sw965/omw/maps"
 	ojson "github.com/sw965/omw/json"
 	"golang.org/x/exp/slices"
+	oslices "github.com/sw965/omw/slices"
+	"github.com/sw965/omw/fn"
 )
 
 type Type int
@@ -83,3 +85,12 @@ func (ts Types) Sort() Types {
 	slices.SortFunc(ret, func(t1, t2 Type) bool { return slices.Index(ALL_TYPES, t1) < slices.Index(ALL_TYPES, t2) } )
 	return ret
 }
+
+type Typess []Types
+
+var ALL_TYPESS = func() Typess {
+	return oslices.Concat(
+		fn.Map[Typess](ALL_TYPES, func(t Type) Types { return Types{t} }),
+		oslices.Combination[Typess, Types](ALL_TYPES, 2),
+	)
+}()

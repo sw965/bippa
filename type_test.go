@@ -1,7 +1,6 @@
 package bippa_test
 
 import (
-	"fmt"
 	"testing"
 	"golang.org/x/exp/slices"
 	bp "github.com/sw965/bippa"

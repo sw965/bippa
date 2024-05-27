@@ -33,16 +33,28 @@ var STRING_TO_MOVE_NAME = map[string]MoveName{
 
 var MOVE_NAME_TO_STRING = omaps.Invert[map[MoveName]string](STRING_TO_MOVE_NAME)
 
+func (name MoveName) ToString() string {
+	return MOVE_NAME_TO_STRING[name]
+}
+
 type MoveNames []MoveName
 
-func (ns MoveNames) Sort() MoveNames {
-	ret := make(MoveNames, len(ns))
-	for i := 0; i < osliecs.Count(ns, EMPTY_MOVE_NAME); i++ {
+func (names MoveNames) ToStrings() []string {
+	ret := make([]string, len(names))
+	for i, name := range names {
+		ret[i] = name.ToString()
+	}
+	return ret
+}
+
+func (names MoveNames) Sort() MoveNames {
+	ret := make(MoveNames, len(names))
+	for i := 0; i < osliecs.Count(names, EMPTY_MOVE_NAME); i++ {
 		ret = append(ret, EMPTY_MOVE_NAME)
 	}
 
 	for _, name := range ALL_MOVE_NAMES {
-		if slices.Contains(ns, name) {
+		if slices.Contains(names, name) {
 			ret = append(ret, name)
 		}
 	}
