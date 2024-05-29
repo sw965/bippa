@@ -3,7 +3,7 @@ package dmgtools
 import (
 	"golang.org/x/exp/slices"
 	bp "github.com/sw965/bippa"
-	omath "github.com/sw965/omw/math"
+	omwmath "github.com/sw965/omw/math"
 )
 
 // 小数点以下が0.5より大きいならば、切り上げ
@@ -29,7 +29,6 @@ type Attacker struct {
 	Level bp.Level
 	Atk int
 	SpAtk int
-	MoveName bp.MoveName
 }
 
 type Defender struct {
@@ -45,12 +44,12 @@ type Calculator struct {
 }
 
 // https://latest.pokewiki.net/%E3%83%80%E3%83%A1%E3%83%BC%E3%82%B8%E8%A8%88%E7%AE%97%E5%BC%8F
-func (c *Calculator) Calculation(randBonus RandBonus) int {
+func (c *Calculator) Calculation(moveName bp.MoveName, randBonus RandBonus) int {
 	attacker := c.Attacker
 	defender := c.Defender
 	attackerPokeData := bp.POKEDEX[attacker.PokeName]
 	defenderPokeData := bp.POKEDEX[defender.PokeName]
-	moveData := bp.MOVEDEX[attacker.MoveName]
+	moveData := bp.MOVEDEX[moveName]
 
 	var atkVal int
 	var defVal int
@@ -68,17 +67,17 @@ func (c *Calculator) Calculation(randBonus RandBonus) int {
 	dmg = dmg * power * atkVal / defVal
 	dmg = (dmg/50) + 2
 
-	var typeMatchBonus float64 
+	var stab float64 
 	if slices.Contains(attackerPokeData.Types, moveData.Type) {
-		typeMatchBonus = 6144.0/4096.0
+		stab = 6144.0/4096.0
 	} else {
-		typeMatchBonus = 1.0
+		stab = 1.0
 	}
 
-	dmg = RoundOverHalf(float64(dmg) * typeMatchBonus)
+	dmg = RoundOverHalf(float64(dmg) * stab)
 	for _, defType := range defenderPokeData.Types {
 		dmg = int(float64(dmg) * bp.TYPEDEX[moveData.Type][defType])
 	}
 	dmg = int(float64(dmg) * float64(randBonus))
-	return omath.Max(dmg, 1)
+	return omwmath.Max(dmg, 1)
 }

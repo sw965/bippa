@@ -2,33 +2,29 @@ package bippa
 
 import (
 	"fmt"
-	omath "github.com/sw965/omw/math"
+	omwmath "github.com/sw965/omw/math"
 	"github.com/sw965/crow/tensor"
-	oslices "github.com/sw965/omw/slices"
+	omwslices "github.com/sw965/omw/slices"
 	"golang.org/x/exp/slices"
+	bp "github.com/sw965/bippa"
 	//"math/rand"
 	//"github.com/sw965/crow/game/sequential"
 	//"github.com/sw965/crow/mcts/uct"
 	//"github.com/sw965/crow/ucb"
 )
 
-const (
-	SINGLE_BATTLE_MIN_TEAM_NUM = 3
-	MAX_TEAM_NUM = 6
-)
-
-type TeamBuildAction struct {
-	PokeName PokeName
-	MoveName MoveName
+type Action struct {
+	PokeName bp.PokeName
+	MoveName bp.MoveName
 	Index int
 }
 
-type TeamBuildActions []TeamBuildAction
+type Actions []Action
 
-type Team []Pokemon
+type Team []bp.Pokemon
 
-func (team Team) PokeNames() PokeNames {
-	ret := make(PokeNames, len(team))
+func (team Team) PokeNames() bp.PokeNames {
+	ret := make(bp.PokeNames, len(team))
 	for i, pokemon := range team {
 		ret[i] = pokemon.Name
 	}
@@ -43,21 +39,12 @@ func (team Team) Clone() Team {
 	return clone
 }
 
-func (team Team) Find(name PokeName) (Pokemon, error) {
-	for _, pokemon := range team {
-		if pokemon.Name == name {
-			return pokemon, nil
-		}
-	}
-	return Pokemon{}, fmt.Errorf("見つからなかった")
-}
-
-func LegalTeamBuildActions(team Team) TeamBuildActions {
+func LegalActions(team Team) Actions {
 	//ポケモンを選ぶ行動
 	if len(team) < MAX_TEAM_NUM {
-		actions := make(TeamBuildActions, 0, len(ALL_POKE_NAMES))
+		actions := make(Actions, 0, len(ALL_POKE_NAMES))
 		for _, name := range ALL_POKE_NAMES {
-			actions = append(actions, TeamBuildAction{PokeName:name})
+			actions = append(actions, Action{PokeName:name})
 		}
 		return actions
 	}
@@ -80,31 +67,31 @@ func LegalTeamBuildActions(team Team) TeamBuildActions {
 	return TeamBuildActions{}
 }
 
-// func EqualTeam(team1, team2 Team) bool {
-// 	team1 = team1.Sort()
-// 	team2 = team2.Sort()
-// 	for _, pokemon := range team1 {
-// 		if !pokemon.Equal(team2[i]) {
-// 			return false
-// 		}
-// 	}
-// 	return true
-// }
+func Equal(team1, team2 Team) bool {
+	team1 = team1.Sort()
+	team2 = team2.Sort()
+	for _, pokemon := range team1 {
+		if !pokemon.Equal(team2[i]) {
+			return false
+		}
+	}
+	return true
+}
 
-// func PushTeam(team Team, action *TeamBuildAction) (Team, error) {
-// 	team = team.Clone()
+func Push(team Team, action *Action) (Team, error) {
+	team = team.Clone()
 
-// 	if action.PokeName != EMPTY_POKE_NAME {
-// 		pokemon := Pokemon{Name:action.PokeName, Level:DEFAULT_LEVEL, Moveset:Moveset{}}
-// 		team = append(team, pokemon)
-// 	}
+	if action.PokeName != EMPTY_POKE_NAME {
+		pokemon := Pokemon{Name:action.PokeName, Level:DEFAULT_LEVEL, Moveset:Moveset{}}
+		team = append(team, pokemon)
+	}
 
-// 	if action.MoveName != EMPTY_MOVE_NAME {
-// 		basePP := MOVEDEX[action.MoveName].BasePP
-// 		team[action.Index].Moveset[action.MoveName] = &PowerPoint{Max:basePP, Current:basePP}
-// 	}
-// 	return team, nil
-// }
+	if action.MoveName != EMPTY_MOVE_NAME {
+		basePP := MOVEDEX[action.MoveName].BasePP
+		team[action.Index].Moveset[action.MoveName] = &PowerPoint{Max:basePP, Current:basePP}
+	}
+	return team, nil
+}
 
 func TeamEvalFeature(team Team) tensor.D1 {
 	makeFeature := func(pokemon *Pokemon) tensor.D1 {
@@ -146,21 +133,3 @@ func TeamEvalFeature(team Team) tensor.D1 {
 	}
 	return ret
 }
-
-// func NewMCTSTeam(r *rand.Rand) uct.MCTS[Team, TeamBuildActions, TeamBuildAction] {
-// 	game := sequential.Game[Team, TeamBuildActions, TeamBuildAction]{
-// 		LegalActions:LegalTeamBuildActions,
-// 		Push:PushTeam,
-// 		Equal:EqualTeam,
-// 		IsEnd:IsEndTeam,
-// 	}
-// 	game.SetRandActionPlayer(r)
-
-// 	mcts := uct.MCTS[Team, TeamBuildActions, TeamBuildAction]{
-// 		Game:game,
-// 		UCBFunc:ucb.NewAlphaGoFunc(5),
-// 		NextNodesCap:252,
-// 	}
-// 	mcts.SetUniformActionPolicy()
-// 	return mcts
-// }

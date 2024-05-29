@@ -1,10 +1,10 @@
 package bippa
 
 import (
-	omaps "github.com/sw965/omw/maps"
-	ojson "github.com/sw965/omw/json"
+	omwmaps "github.com/sw965/omw/maps"
+	omwjson "github.com/sw965/omw/json"
 	"golang.org/x/exp/slices"
-	oslices "github.com/sw965/omw/slices"
+	omwslices "github.com/sw965/omw/slices"
 	"github.com/sw965/omw/fn"
 )
 
@@ -52,7 +52,7 @@ var STRING_TO_TYPE = map[string]Type{
 	"フェアリー":FAIRY,
 }
 
-var TYPE_TO_STRING = omaps.Invert[map[Type]string](STRING_TO_TYPE)
+var TYPE_TO_STRING = omwmaps.Invert[map[Type]string](STRING_TO_TYPE)
 
 func (t Type) ToString() string {
 	return TYPE_TO_STRING[t]
@@ -61,7 +61,7 @@ func (t Type) ToString() string {
 type Types []Type
 
 var ALL_TYPES = func() Types {
-	buff, err := ojson.Load[[]string](ALL_TYPES_PATH)
+	buff, err := omwjson.Load[[]string](ALL_TYPES_PATH)
 	if err != nil {
 		panic(err)
 	}
@@ -89,8 +89,8 @@ func (ts Types) Sort() Types {
 type Typess []Types
 
 var ALL_TYPESS = func() Typess {
-	return oslices.Concat(
+	return omwslices.Concat(
 		fn.Map[Typess](ALL_TYPES, func(t Type) Types { return Types{t} }),
-		oslices.Combination[Typess, Types](ALL_TYPES, 2),
+		omwslices.Combination[Typess, Types](ALL_TYPES, 2),
 	)
 }()

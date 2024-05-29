@@ -1,7 +1,7 @@
 package bippa
 
 import (
-	omaps "github.com/sw965/omw/maps"
+	omwmaps "github.com/sw965/omw/maps"
 )
 
 type PokeName int
@@ -24,7 +24,7 @@ var STRING_TO_POKE_NAME = map[string]PokeName{
 	"ガブリアス":GARCHOMP,
 }
 
-var POKE_NAME_TO_STRING = omaps.Invert[map[PokeName]string](STRING_TO_POKE_NAME)
+var POKE_NAME_TO_STRING = omwmaps.Invert[map[PokeName]string](STRING_TO_POKE_NAME)
 
 func (name PokeName) ToString() string {
 	return POKE_NAME_TO_STRING[name]

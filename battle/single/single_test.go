@@ -4,28 +4,28 @@ import (
 	"testing"
 	"fmt"
 	bp "github.com/sw965/bippa"
-	sb "github.com/sw965/bippa/battle/single"
-	"github.com/sw965/bippa/dmgtools"
-	orand "github.com/sw965/omw/rand"
+	"github.com/sw965/bippa/battle/single"
+	"github.com/sw965/bippa/battle/dmgtools"
+	omwrand "github.com/sw965/omw/math/rand"
 )
 
 func Test(t *testing.T) {
-	r := orand.NewMt19937()
-	p1Fighters := sb.Fighters{
+	r := omwrand.NewMt19937()
+	p1Fighters := single.Fighters{
 		bp.NewTemplateBulbasaur(),
 		bp.NewTemplateCharmander(),
 		bp.NewTemplateSquirtle(),
 	}
 
-	p2Fighters := sb.Fighters{
+	p2Fighters := single.Fighters{
 		bp.NewTemplateSquirtle(),
 		bp.NewTemplateCharmander(),
 		bp.NewTemplateBulbasaur(),
 	}
-	battle := sb.Battle{P1Fighters:p1Fighters, P2Fighters:p2Fighters}
+	battle := single.Battle{P1Fighters:p1Fighters, P2Fighters:p2Fighters}
 	fmt.Println(battle.P1Fighters[1].CurrentHP)
-	push := sb.Push(dmgtools.RandBonuses{1.0}, r)
-	nextBattle, err := push(battle, sb.Actions{ sb.Action{SwitchPokeName:bp.CHARMANDER, IsPlayer1:true}, sb.Action{CmdMoveName:bp.WATER_GUN, IsPlayer1:false} })
+	push := single.Push(dmgtools.RandBonuses{1.0}, r)
+	nextBattle, err := push(battle, single.Actions{ single.Action{SwitchPokeName:bp.CHARMANDER, IsPlayer1:true}, single.Action{CmdMoveName:bp.WATER_GUN, IsPlayer1:false} })
 	if err != nil {
 		panic(err)
 	}

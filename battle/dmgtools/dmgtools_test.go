@@ -4,7 +4,7 @@ import (
 	"testing"
 	"fmt"
 	"golang.org/x/exp/maps"
-	"github.com/sw965/bippa/dmgtools"
+	"github.com/sw965/bippa/battle/dmgtools"
 	bp "github.com/sw965/bippa"
 
 )
@@ -27,7 +27,6 @@ func TestCalculator(t *testing.T) {
 		Level:attacker.Level,
 		Atk:attacker.Atk,
 		SpAtk:attacker.SpAtk,
-		MoveName:maps.Keys(attacker.Moveset)[0],
 	}
 
 	defenderInfo := dmgtools.Defender{
@@ -37,7 +36,7 @@ func TestCalculator(t *testing.T) {
 		SpDef:defender.SpDef,
 	}
 
-	calc := dmgtools.Calculator{Attacker:attackerInfo, Defender:defenderInfo}
-	result := calc.Execute(1.0)
+	calculator := dmgtools.Calculator{Attacker:attackerInfo, Defender:defenderInfo}
+	result := calculator.Calculation(maps.Keys(attacker.Moveset)[0], 1.0)
 	fmt.Println(result)
 }

@@ -3,17 +3,13 @@ package single
 import (
 	"fmt"
 	"math/rand"
-	"github.com/sw965/crow/ucb"
 	bp "github.com/sw965/bippa"
-	orand "github.com/sw965/omw/rand"
-	omath "github.com/sw965/omw/math"
-	"github.com/sw965/bippa/dmgtools"
-	"github.com/sw965/crow/game/simultaneous"
-	"github.com/sw965/crow/mcts/duct"
+	omwrand "github.com/sw965/omw/math/rand"
+	omwmath "github.com/sw965/omw/math"
+	"github.com/sw965/bippa/battle/dmgtools"
 	//"golang.org/x/exp/slices"
-	oslices "github.com/sw965/omw/slices"
+	omwslices "github.com/sw965/omw/slices"
 	"github.com/sw965/crow/tensor"
-	"github.com/sw965/crow/model"
 )
 
 const (
@@ -130,7 +126,6 @@ func (b *Battle) CalcDamage(moveName bp.MoveName, randDmgBonuses dmgtools.RandBo
 			Level:attacker.Level,
 			Atk:attacker.Atk,
 			SpAtk:attacker.SpAtk,
-			MoveName:moveName,
 		},
 		dmgtools.Defender{
 			PokeName:defender.Name,
@@ -139,8 +134,8 @@ func (b *Battle) CalcDamage(moveName bp.MoveName, randDmgBonuses dmgtools.RandBo
 			SpDef:defender.SpDef,
 		},
 	}
-	randDmgBonus := orand.Choice(randDmgBonuses, r)
-	return calculator.Calculation(randDmgBonus)
+	randDmgBonus := omwrand.Choice(randDmgBonuses, r)
+	return calculator.Calculation(moveName, randDmgBonus)
 }
 
 func (b *Battle) p1CommandableMoveNames() bp.MoveNames {
@@ -185,7 +180,7 @@ func (b Battle) CommandMove(moveName bp.MoveName, randDmgBonuses dmgtools.RandBo
 
 	b.P1Fighters[0].Moveset = moveset
 	dmg := b.CalcDamage(moveName, randDmgBonuses, r)
-	dmg = omath.Min(dmg, b.P2Fighters[0].CurrentHP)
+	dmg = omwmath.Min(dmg, b.P2Fighters[0].CurrentHP)
 	b.P2Fighters[0].CurrentHP -= dmg
 	return b
 }
@@ -267,7 +262,7 @@ func (b *Battle) IsActionFirst(p1Action, p2Action *Action, r *rand.Rand) bool {
 	} else if attacker.Speed < defender.Speed {
 		return false
 	} else {
-		return orand.Bool(r)
+		return omwrand.Bool(r)
 	}
 }
 
@@ -276,20 +271,6 @@ func (b *Battle) SortActionsByOrder(p1Action, p2Action *Action, r *rand.Rand) Ac
 		return Actions{*p1Action, *p2Action}
 	} else {
 		return Actions{*p2Action, *p1Action}
-	}
-}
-
-func (b *Battle) EndLeafNodeEvalYs() (duct.LeafNodeEvalYs, error) {
-	isP1AllFaint := b.P1Fighters.IsAllFaint()
-	isP2AllFaint := b.P2Fighters.IsAllFaint()
-	if isP1AllFaint && isP2AllFaint {
-		return duct.LeafNodeEvalYs{0.5, 0.5}, nil
-	} else if isP1AllFaint {
-		return duct.LeafNodeEvalYs{0.0, 1.0}, nil
-	} else if isP2AllFaint {
-		return duct.LeafNodeEvalYs{1.0, 0.0}, nil
-	} else {
-		return duct.LeafNodeEvalYs{}, fmt.Errorf("ゲームが終わっていない")
 	}
 }
 
@@ -325,7 +306,7 @@ func LegalActionss(b *Battle) Actionss {
 	return actionss
 }
 
-func Push(randDmgBonuses dmgtools.RandBonuses, r *rand.Rand) func(Battle, Actions) (Battle, error) {
+func PushClosure(randDmgBonuses dmgtools.RandBonuses, r *rand.Rand) func(Battle, Actions) (Battle, error) {
 	return func(battle Battle, actions Actions) (Battle, error) {
 		if actions.IsAllEmpty() {
 			return Battle{}, fmt.Errorf("両プレイヤーのActionがEmptyになっているため、Pushできません。Emptyじゃないようにするには、Action.CmdMoveNameかAction.SwitchPokeNameのいずれかは、ゼロ値以外の値である必要があります。")
@@ -353,82 +334,9 @@ func Push(randDmgBonuses dmgtools.RandBonuses, r *rand.Rand) func(Battle, Action
 	}
 }
 
-func NewGame(randDmgBonuses dmgtools.RandBonuses, r *rand.Rand) simultaneous.Game[Battle, Actionss, Actions, Action] {
-	return simultaneous.Game[Battle, Actionss, Actions, Action]{
-		Equal:Equal,
-		IsEnd:IsEnd,
-		LegalActionss:LegalActionss,
-		Push:Push(randDmgBonuses, r),
-	}
-}
-
-func NewMCTSRandPlayout(ucbFunc ucb.Func, randDmgBonuses dmgtools.RandBonuses, r *rand.Rand) duct.MCTS[Battle, Actionss, Actions, Action] {
-	game := NewGame(randDmgBonuses, r)
-	game.SetRandActionPlayer(r)
-
-	leafNodeEvalsFunc := func(battle *Battle) duct.LeafNodeEvalYs {
-		endBattle, err := game.Playout(*battle)
-		if err != nil {
-			panic(err)
-		}
-		ys, err := endBattle.EndLeafNodeEvalYs()
-		if err != nil {
-			panic(err)
-		}
-		return ys
-	}
-
-	mcts := duct.MCTS[Battle, Actionss, Actions, Action]{
-		UCBFunc:ucbFunc,
-		Game:game,
-		LeafNodeEvalsFunc:leafNodeEvalsFunc,
-		NextNodesCap:64,
-	}
-	mcts.SetUniformActionPoliciesFunc()
-	return mcts
-}
-
-func NewMCTSNNEval(ucbFunc ucb.Func, nn *model.SequentialInputOutput1D, randDmgBonuses dmgtools.RandBonuses, f func(*Battle) tensor.D1, r *rand.Rand) duct.MCTS[Battle, Actionss, Actions, Action] {
-	game := simultaneous.Game[Battle, Actionss, Actions, Action]{
-		Equal:Equal,
-		IsEnd:IsEnd,
-		LegalActionss:LegalActionss,
-		Push:Push(randDmgBonuses, r),
-	}
-	game.SetRandActionPlayer(r)
-
-	leafNodeEvalsFunc := func(battle *Battle) duct.LeafNodeEvalYs {
-		isP1AllFaint := battle.P1Fighters.IsAllFaint()
-		isP2AllFaint := battle.P2Fighters.IsAllFaint()
-		if isP1AllFaint && isP2AllFaint {
-			return duct.LeafNodeEvalYs{0.5, 0.5}
-		} else if isP1AllFaint {
-			return duct.LeafNodeEvalYs{0.0, 1.0}
-		} else if isP2AllFaint {
-			return duct.LeafNodeEvalYs{1.0, 0.0}
-		} else {
-			x := f(battle)
-			y, err := nn.Predict(x)
-			if err != nil {
-				panic(err)
-			}
-			v := duct.LeafNodeEvalY(y[0])
-			return duct.LeafNodeEvalYs{v, 1.0 - v}
-		}
-	}
-
-	mcts := duct.MCTS[Battle, Actionss, Actions, Action]{
-		UCBFunc:ucbFunc,
-		Game:game,
-		LeafNodeEvalsFunc:leafNodeEvalsFunc,
-		NextNodesCap:64,
-	}
-	mcts.SetUniformActionPoliciesFunc()
-	return mcts
-}
-
-func MakeEvalFeatureFunc(f func(*bp.Pokemon, *bp.Pokemon) tensor.D1, n int) func(*Battle) tensor.D1 {
+func FeatureClosure(f func(*bp.Pokemon, *bp.Pokemon) tensor.D1) func(*Battle) tensor.D1 {
 	return func(battle *Battle) tensor.D1 {
+		n := len(f(&battle.P1Fighters[0], &battle.P2Fighters[0]))
 		ret := make(tensor.D1, 0, 1000)
 		speedWinIdx := 0
 		speedLossIdx := 1
@@ -443,7 +351,7 @@ func MakeEvalFeatureFunc(f func(*bp.Pokemon, *bp.Pokemon) tensor.D1, n int) func
 				splited[p1FaintIdx] = tensor.NewD1Zeros(1)
 				splited[p2FaintIdx] = tensor.NewD1Zeros(1)
 	
-				both := oslices.Concat(f(&p1Pokemon, &p2Pokemon), f(&p2Pokemon, &p1Pokemon))
+				both := omwslices.Concat(f(&p1Pokemon, &p2Pokemon), f(&p2Pokemon, &p1Pokemon))
 				isP1Faint := p1Pokemon.IsFaint()
 				isP2Faint := p2Pokemon.IsFaint()
 				isNotFaint := !isP1Faint && !isP2Faint
