@@ -4,6 +4,7 @@ import (
 	"golang.org/x/exp/slices"
 	bp "github.com/sw965/bippa"
 	omwmath "github.com/sw965/omw/math"
+	"github.com/sw965/omw/fn"
 )
 
 // 小数点以下が0.5より大きいならば、切り上げ
@@ -15,6 +16,14 @@ func RoundOverHalf(x float64) int {
 	return int(x)
 }
 
+func Effectiveness(atkType bp.Type, defTypes bp.Types) float64 {
+	ret := 1.0
+	for _, defType := range defTypes {
+		ret *= bp.TYPEDEX[atkType][defType]
+	}
+	return ret
+}
+
 type RandBonus float64
 type RandBonuses []RandBonus
 
@@ -23,6 +32,8 @@ var RAND_BONUSES = RandBonuses{
 	0.91, 0.92, 0.93, 0.94, 0.95,
 	0.96, 0.97, 0.98, 0.99, 1.0,
 }
+
+var MEAN_RAND_BONUS = omwmath.Mean(RAND_BONUSES...)
 
 type Attacker struct {
 	PokeName bp.PokeName
@@ -75,9 +86,20 @@ func (c *Calculator) Calculation(moveName bp.MoveName, randBonus RandBonus) int 
 	}
 
 	dmg = RoundOverHalf(float64(dmg) * stab)
-	for _, defType := range defenderPokeData.Types {
-		dmg = int(float64(dmg) * bp.TYPEDEX[moveData.Type][defType])
-	}
+	dmg = int(float64(dmg) * Effectiveness(moveData.Type, defenderPokeData.Types))
 	dmg = int(float64(dmg) * float64(randBonus))
 	return omwmath.Max(dmg, 1)
+}
+
+func (c *Calculator) Calculations(moveName bp.MoveName) []int {
+	dmgs := make([]int, len(RAND_BONUSES))
+	for i, r := range RAND_BONUSES {
+		dmgs[i] = c.Calculation(moveName, r)
+	}
+	return dmgs
+}
+
+func (c *Calculator) Expected(moveName bp.MoveName) float64 {
+	dmgs := fn.Map[[]float64](c.Calculations(moveName), fn.IntToFloat64[int, float64])
+	return omwmath.Mean(dmgs...)
 }

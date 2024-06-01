@@ -1,16 +1,9 @@
-package bippa
+package team
 
 import (
-	"fmt"
 	omwmath "github.com/sw965/omw/math"
-	"github.com/sw965/crow/tensor"
 	omwslices "github.com/sw965/omw/slices"
-	"golang.org/x/exp/slices"
 	bp "github.com/sw965/bippa"
-	//"math/rand"
-	//"github.com/sw965/crow/game/sequential"
-	//"github.com/sw965/crow/mcts/uct"
-	//"github.com/sw965/crow/ucb"
 )
 
 type Action struct {
@@ -20,6 +13,10 @@ type Action struct {
 }
 
 type Actions []Action
+
+const (
+	MAX = 3
+)
 
 type Team []bp.Pokemon
 
@@ -39,39 +36,59 @@ func (team Team) Clone() Team {
 	return clone
 }
 
-func LegalActions(team Team) Actions {
+func (team Team) Sort() Team {
+	emptyCount := 0
+	for _, pokemon := range team {
+		if pokemon.Name == bp.EMPTY_POKE_NAME {
+			emptyCount += 1
+		}
+	}
+
+	ret := make(Team, 0, MAX - emptyCount)
+	for _, pokeName := range bp.ALL_POKE_NAMES {
+		for _, pokemon := range team {
+			if pokemon.Name == pokeName {
+				ret = append(ret, pokemon)
+			}
+		}
+	}
+	empty := make(Team, emptyCount)
+	return omwslices.Concat(ret, empty)
+}
+
+func LegalActions(team *Team) Actions {
+	teamV := *team
 	//ポケモンを選ぶ行動
-	if len(team) < MAX_TEAM_NUM {
-		actions := make(Actions, 0, len(ALL_POKE_NAMES))
-		for _, name := range ALL_POKE_NAMES {
+	if len(teamV) < MAX {
+		actions := make(Actions, 0, len(bp.ALL_POKE_NAMES))
+		for _, name := range bp.ALL_POKE_NAMES {
 			actions = append(actions, Action{PokeName:name})
 		}
 		return actions
 	}
 
 	//技を選ぶ行動
-	for i := range team {
-		pokemon := team[i]
-		learnset := POKEDEX[pokemon.Name].Learnset
-		n := omath.Min(MAX_MOVESET_NUM, len(learnset))
+	for i, pokemon := range teamV {
+		learnset := bp.POKEDEX[pokemon.Name].Learnset
+		n := omwmath.Min(bp.MAX_MOVESET_NUM, len(learnset))
 		if len(pokemon.Moveset) < n {
-			actions := make(TeamBuildActions, 0, len(learnset))
+			actions := make(Actions, 0, len(learnset))
 			for _, moveName := range learnset {
 				if _, ok := pokemon.Moveset[moveName]; !ok {
-					actions = append(actions, TeamBuildAction{MoveName:moveName, Index:i})
+					actions = append(actions, Action{MoveName:moveName, Index:i})
 				}
 				return actions
 			}
 		}
 	}
-	return TeamBuildActions{}
+	return Actions{}
 }
 
 func Equal(team1, team2 Team) bool {
 	team1 = team1.Sort()
 	team2 = team2.Sort()
-	for _, pokemon := range team1 {
-		if !pokemon.Equal(team2[i]) {
+	for i, pokemon := range team1 {
+		if !pokemon.Equal(&team2[i]) {
 			return false
 		}
 	}
@@ -81,55 +98,23 @@ func Equal(team1, team2 Team) bool {
 func Push(team Team, action *Action) (Team, error) {
 	team = team.Clone()
 
-	if action.PokeName != EMPTY_POKE_NAME {
-		pokemon := Pokemon{Name:action.PokeName, Level:DEFAULT_LEVEL, Moveset:Moveset{}}
+	if action.PokeName != bp.EMPTY_POKE_NAME {
+		pokemon := bp.Pokemon{Name:action.PokeName, Level:bp.DEFAULT_LEVEL, Moveset:bp.Moveset{}}
 		team = append(team, pokemon)
 	}
 
-	if action.MoveName != EMPTY_MOVE_NAME {
-		basePP := MOVEDEX[action.MoveName].BasePP
-		team[action.Index].Moveset[action.MoveName] = &PowerPoint{Max:basePP, Current:basePP}
+	if action.MoveName != bp.EMPTY_MOVE_NAME {
+		basePP := bp.MOVEDEX[action.MoveName].BasePP
+		team[action.Index].Moveset[action.MoveName] = &bp.PowerPoint{Max:basePP, Current:basePP}
 	}
 	return team, nil
 }
 
-func TeamEvalFeature(team Team) tensor.D1 {
-	makeFeature := func(pokemon *Pokemon) tensor.D1 {
-		moveFeature := make(tensor.D1, len(ALL_MOVE_NAMES))
-		defFeature := make(tensor.D1, len(ALL_TYPESS))
-		spDefFeature := make(tensor.D1, len(ALL_TYPESS))
-		if pokemon.Name == EMPTY_POKE_NAME {
-			return oslices.Concat(moveFeature, defFeature, spDefFeature)
-		}
-
-		for i, moveName := range ALL_MOVE_NAMES {
-			if _, ok := pokemon.Moveset[moveName]; ok {
-				moveData := MOVEDEX[moveName]
-				var statFeature float64
-				if moveData.Category == PHYSICS {
-					statFeature = float64(pokemon.Atk) / 150.0
-				} else if moveData.Category == SPECIAL {
-					statFeature = float64(pokemon.Def) / 150.0
-				} else {
-					statFeature = 1.0
-				}
-				moveFeature[i] = statFeature
-			}
-		}
-
-		for i, ts := range ALL_TYPESS {
-			pokeTypes := POKEDEX[pokemon.Name].Types
-			if slices.Equal(pokeTypes, ts) {
-				defFeature[i] = float64(pokemon.Def) / 100.0
-				spDefFeature[i] = float64(pokemon.SpDef) / 100.0
-			}
-		}
-		return oslices.Concat(moveFeature, defFeature, spDefFeature)
+func NewGame() sequential.Game {
+	return sequential.Game{
+		LegalActions:LegalActions,
+		Equal:Equal,
+		Push:Push,
+		IsEnd:IsEnd,
 	}
-
-	ret := make(tensor.D1, 0, 6400)
-	for _, pokemon := range team {
-		ret = append(ret, makeFeature(&pokemon)...)
-	}
-	return ret
 }

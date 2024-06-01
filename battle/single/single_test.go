@@ -24,7 +24,7 @@ func Test(t *testing.T) {
 	}
 	battle := single.Battle{P1Fighters:p1Fighters, P2Fighters:p2Fighters}
 	fmt.Println(battle.P1Fighters[1].CurrentHP)
-	push := single.Push(dmgtools.RandBonuses{1.0}, r)
+	push := single.PushClosure(dmgtools.RandBonuses{1.0}, r)
 	nextBattle, err := push(battle, single.Actions{ single.Action{SwitchPokeName:bp.CHARMANDER, IsPlayer1:true}, single.Action{CmdMoveName:bp.WATER_GUN, IsPlayer1:false} })
 	if err != nil {
 		panic(err)

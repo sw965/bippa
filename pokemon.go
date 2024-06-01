@@ -48,64 +48,37 @@ const (
 	DEFAULT_LEVEL Level = 50
 )
 
-type NatureBonus float64
-
-const (
-	GOOD_NATURE_BONUS = 1.1
-	NEUTRAL_NATURE_BONUS = 1.0
-	BAD_NATURE_BONUS = 0.9
-)
-
-type IV int
-
-const (
-	MIN_IV IV = 0
-	MAX_IV IV = 31
-)
-
-type IVStats struct {
-	HP IV
-	Atk IV
-	Def IV
-	SpAtk IV
-	SpDef IV
-	Speed IV
+type StatCalculator struct {
+	Base int
+	IV IV
+	EV EV
 }
 
-type EV int
-
-const (
-	MIN_EV EV = 0
-	MAX_EV EV = 252
-)
-
-type EVStats struct {
-	HP EV
-	Atk EV
-	Def EV
-	SpAtk EV
-	SpDef EV
-	Speed EV
+func (c *StatCalculator) HP() int {
+	lvi := int(DEFAULT_LEVEL)
+	ivi := int(c.IV)
+	evi := int(c.EV)
+	return ((c.Base*2 + ivi + evi/4) * lvi / 100) + lvi + 10
 }
 
-func CalcHP(base int, lv Level, iv IV, ev EV) int {
-	ivi := int(iv)
-	evi := int(ev)
-	lvi := int(lv)
-	return ((base*2 + ivi + evi/4) * lvi / 100) + lvi + 10
-}
-
-func CalcOtherStat(base int, lv Level, iv IV, ev EV, bonus NatureBonus) int {
-	ivi := int(iv)
-	evi := int(ev)
-	lvi := int(lv)
-	baseStat := float64((base*2 + ivi + evi/4) * lvi / 100 + 5)
-	return int(baseStat * float64(bonus))
+func (c *StatCalculator) HPOther(bonus NatureBonus) int {
+	lvi := int(DEFAULT_LEVEL)
+	ivi := int(c.IV)
+	evi := int(c.EV)
+	stat := float64((c.Base*2 + ivi + evi/4) * lvi / 100 + 5)
+	return int(stat * float64(bonus))
 }
 
 type Pokemon struct {
 	Name PokeName
+
 	Level Level
+	Nature Nature
+	Moveset Moveset
+
+	IVStat IVStat
+	EVStat EVStat
+
 	MaxHP int
 	CurrentHP int
 	Atk int
@@ -113,17 +86,25 @@ type Pokemon struct {
 	SpAtk int
 	SpDef int
 	Speed int
-	Moveset Moveset
 }
 
-func NewPokemon(name PokeName, movesetNames MoveNames) (Pokemon, error) {
+func NewPokemon(name PokeName, nature Nature, movesetNames MoveNames, ivStat *IVStat, evStat *EVStat) (Pokemon, error) {
 	pokeData := POKEDEX[name]
-	hp := CalcHP(pokeData.BaseHP, DEFAULT_LEVEL, MAX_IV, MIN_EV)
-	atk := CalcOtherStat(pokeData.BaseAtk, DEFAULT_LEVEL, MAX_IV, MIN_EV, NEUTRAL_NATURE_BONUS)
-	def := CalcOtherStat(pokeData.BaseDef, DEFAULT_LEVEL, MAX_IV, MIN_EV, NEUTRAL_NATURE_BONUS)
-	spAtk := CalcOtherStat(pokeData.BaseSpAtk, DEFAULT_LEVEL, MAX_IV, MIN_EV, NEUTRAL_NATURE_BONUS)
-	spDef := CalcOtherStat(pokeData.BaseSpDef, DEFAULT_LEVEL, MAX_IV, MIN_EV, NEUTRAL_NATURE_BONUS)
-	speed := CalcOtherStat(pokeData.BaseSpeed, DEFAULT_LEVEL, MAX_IV, MIN_EV, NEUTRAL_NATURE_BONUS)
+	natureData := NATUREDEX[nature]
+
+	hpCalc := StatCalculator{Base:pokeData.BaseHP, IV:ivStat.HP, EV:evStat.HP}
+	atkCalc := StatCalculator{Base:pokeData.BaseAtk, IV:ivStat.Atk, EV:evStat.Atk}
+	defCalc := StatCalculator{Base:pokeData.BaseDef, IV:ivStat.Def, EV:evStat.Def}
+	spAtkCalc := StatCalculator{Base:pokeData.BaseSpAtk, IV:ivStat.SpAtk, EV:evStat.SpAtk}
+	spDefCalc := StatCalculator{Base:pokeData.BaseSpDef, IV:ivStat.SpDef, EV:evStat.SpDef}
+	speedCalc := StatCalculator{Base:pokeData.BaseSpeed, IV:ivStat.Speed, EV:evStat.Speed}
+
+	hp := hpCalc.HP()
+	atk := atkCalc.HPOther(natureData.AtkBonus)
+	def := defCalc.HPOther(natureData.DefBonus)
+	spAtk := spAtkCalc.HPOther(natureData.SpAtkBonus)
+	spDef := spDefCalc.HPOther(natureData.SpDefBonus)
+	speed := speedCalc.HPOther(natureData.SpeedBonus)
 
 	moveset, err := NewMoveset(name, movesetNames)
 	if err != nil {
@@ -133,6 +114,9 @@ func NewPokemon(name PokeName, movesetNames MoveNames) (Pokemon, error) {
 	return Pokemon{
 		Name:name,
 		Level:DEFAULT_LEVEL,
+		Nature:nature,
+		IVStat:*ivStat,
+		EVStat:*evStat,
 		MaxHP:hp,
 		CurrentHP:hp,
 		Atk:atk,
@@ -197,7 +181,7 @@ func (p *Pokemon) IsFaint() bool {
 }
 
 func NewTemplateBulbasaur() Pokemon {
-	pokemon, err := NewPokemon(BULBASAUR, MoveNames{TACKLE, VINE_WHIP})
+	pokemon, err := NewPokemon(BULBASAUR, ADAMANT, MoveNames{TACKLE, VINE_WHIP}, &MAX_IV_STAT, &HA252_S4)
 	if err != nil {
 		panic(err)
 	}
@@ -205,7 +189,7 @@ func NewTemplateBulbasaur() Pokemon {
 }
 
 func NewTemplateCharmander() Pokemon {
-	pokemon, err := NewPokemon(CHARMANDER, MoveNames{EMBER})
+	pokemon, err := NewPokemon(CHARMANDER, MODEST, MoveNames{EMBER}, &MAX_IV_STAT, &HC252_S4)
 	if err != nil {
 		panic(err)
 	}
@@ -213,7 +197,7 @@ func NewTemplateCharmander() Pokemon {
 }
 
 func NewTemplateSquirtle() Pokemon {
-	pokemon, err := NewPokemon(SQUIRTLE, MoveNames{WATER_GUN})
+	pokemon, err := NewPokemon(SQUIRTLE, MODEST, MoveNames{WATER_GUN}, &MAX_IV_STAT, &HC252_S4)
 	if err != nil {
 		panic(err)
 	}
@@ -221,7 +205,7 @@ func NewTemplateSquirtle() Pokemon {
 }
 
 func NewTemplateSuicune() Pokemon {
-	pokemon, err := NewPokemon(SUICUNE, MoveNames{SURF, ICE_BEAM})
+	pokemon, err := NewPokemon(SUICUNE, BOLD, MoveNames{SURF, ICE_BEAM}, &MAX_IV_STAT, &HB252_S4)
 	if err != nil {
 		panic(err)
 	}
@@ -229,7 +213,7 @@ func NewTemplateSuicune() Pokemon {
 }
 
 func NewTemplateGarchomp() Pokemon {
-	pokemon, err := NewPokemon(GARCHOMP, MoveNames{STONE_EDGE})
+	pokemon, err := NewPokemon(GARCHOMP, JOLLY, MoveNames{STONE_EDGE}, &MAX_IV_STAT, &AS252_B4)
 	if err != nil {
 		panic(err)
 	}

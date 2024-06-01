@@ -12,6 +12,9 @@ var (
 	MOVE_DATA_PATH = DATA_PATH + "move_data/"
 	ALL_MOVE_NAMES_PATH = DATA_PATH + "all_move_names.json"
 
-	ALL_TYPES_PATH = DATA_PATH + "all_type.json"
+	ALL_TYPES_PATH = DATA_PATH + "all_types.json"
 	TYPEDEX_PATH = DATA_PATH + "typedex.json"
+
+	ALL_NATURE_PATH = DATA_PATH + "all_natures.json"
+	NATUREDEX_PATH = DATA_PATH + "naturedex.json"
 )

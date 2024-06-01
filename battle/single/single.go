@@ -334,22 +334,21 @@ func PushClosure(randDmgBonuses dmgtools.RandBonuses, r *rand.Rand) func(Battle,
 	}
 }
 
-func FeatureClosure(f func(*bp.Pokemon, *bp.Pokemon) tensor.D1) func(*Battle) tensor.D1 {
+func SpeedAndFaintClosure(f func(*bp.Pokemon, *bp.Pokemon) tensor.D1, n int) func(*Battle) tensor.D1 {
+	SPEED_WIN_IDX := 0
+	SPEED_LOSS_IDX := 1
+	P1_FAINT_IDX := 2
+	P2_FAINT_IDX := 3
+
 	return func(battle *Battle) tensor.D1 {
-		n := len(f(&battle.P1Fighters[0], &battle.P2Fighters[0]))
 		ret := make(tensor.D1, 0, 1000)
-		speedWinIdx := 0
-		speedLossIdx := 1
-		p1FaintIdx := 2
-		p2FaintIdx := 3
-	
 		for _, p1Pokemon := range battle.P1Fighters {
 			for _, p2Pokemon := range battle.P2Fighters {
-				splited := make(tensor.D2, p2FaintIdx+1)
-				splited[speedWinIdx] = tensor.NewD1Zeros(n*2)
-				splited[speedLossIdx] = tensor.NewD1Zeros(n*2)
-				splited[p1FaintIdx] = tensor.NewD1Zeros(1)
-				splited[p2FaintIdx] = tensor.NewD1Zeros(1)
+				splited := make(tensor.D2, P2_FAINT_IDX+1)
+				splited[SPEED_WIN_IDX] = tensor.NewD1Zeros(n*2)
+				splited[SPEED_LOSS_IDX] = tensor.NewD1Zeros(n*2)
+				splited[P1_FAINT_IDX] = tensor.NewD1Zeros(1)
+				splited[P2_FAINT_IDX] = tensor.NewD1Zeros(1)
 	
 				both := omwslices.Concat(f(&p1Pokemon, &p2Pokemon), f(&p2Pokemon, &p1Pokemon))
 				isP1Faint := p1Pokemon.IsFaint()
@@ -357,19 +356,19 @@ func FeatureClosure(f func(*bp.Pokemon, *bp.Pokemon) tensor.D1) func(*Battle) te
 				isNotFaint := !isP1Faint && !isP2Faint
 	
 				if isNotFaint && p1Pokemon.Speed >= p2Pokemon.Speed {
-					splited[speedWinIdx] = both
+					splited[SPEED_WIN_IDX] = both
 				}
 	
 				if isNotFaint && p1Pokemon.Speed <= p2Pokemon.Speed {
-					splited[speedLossIdx] = both
+					splited[SPEED_LOSS_IDX] = both
 				}
 	
 				if isP1Faint {
-					splited[p1FaintIdx] = tensor.D1{1}
+					splited[P1_FAINT_IDX] = tensor.D1{1}
 				}
 	
 				if isP2Faint {
-					splited[p2FaintIdx] = tensor.D1{1}
+					splited[P2_FAINT_IDX] = tensor.D1{1}
 				}
 				for _, v := range splited {
 					ret = append(ret, v...)

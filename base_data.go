@@ -2,11 +2,11 @@ package bippa
 
 import (
 	"fmt"
-	ojson "github.com/sw965/omw/json"
+	omwjson "github.com/sw965/omw/json"
 )
 
 var ALL_POKE_NAMES = func() PokeNames {
-	buff, err := ojson.Load[[]string](ALL_POKE_NAMES_PATH)
+	buff, err := omwjson.Load[[]string](ALL_POKE_NAMES_PATH)
 	if err != nil {
 		panic(err)
 	}
@@ -40,8 +40,8 @@ type PokeData struct {
 }
 
 func LoadPokeData(pokeName PokeName) (PokeData, error) {
-	path := POKE_DATA_PATH + POKE_NAME_TO_STRING[pokeName] + ojson.EXTENSION
-	buff, err := ojson.Load[pokeDataJSONBuffer](path)
+	path := POKE_DATA_PATH + POKE_NAME_TO_STRING[pokeName] + omwjson.EXTENSION
+	buff, err := omwjson.Load[pokeDataJSONBuffer](path)
 	if err != nil {
 		return PokeData{}, err
 	}
@@ -84,7 +84,7 @@ var POKEDEX = func() Pokedex {
 }()
 
 var ALL_MOVE_NAMES = func() MoveNames {
-	buff, err := ojson.Load[[]string](ALL_MOVE_NAMES_PATH)
+	buff, err := omwjson.Load[[]string](ALL_MOVE_NAMES_PATH)
 	if err != nil {
 		panic(err)
 	}
@@ -112,8 +112,8 @@ type MoveData struct {
 }
 
 func LoadMoveData(moveName MoveName) (MoveData, error) {
-	path := MOVE_DATA_PATH + MOVE_NAME_TO_STRING[moveName] + ojson.EXTENSION
-	buff, err := ojson.Load[moveDataJSONBuffer](path)
+	path := MOVE_DATA_PATH + MOVE_NAME_TO_STRING[moveName] + omwjson.EXTENSION
+	buff, err := omwjson.Load[moveDataJSONBuffer](path)
 	if err != nil {
 		return MoveData{}, err
 	}
@@ -152,18 +152,42 @@ type DefTypeData map[Type]float64
 type Typedex map[Type]DefTypeData
 
 var TYPEDEX = func() Typedex {
-	buff, err := ojson.Load[typedexJSONBuffer](TYPEDEX_PATH)
+	buff, err := omwjson.Load[typedexJSONBuffer](TYPEDEX_PATH)
 	if err != nil {
 		panic(err)
 	}
 	typedex := Typedex{}
-	for strAtkT, defData := range buff {
-		atkType := STRING_TO_TYPE[strAtkT]
+	for atkTStr, defData := range buff {
+		atkType := STRING_TO_TYPE[atkTStr]
 		typedex[atkType] = DefTypeData{}
-		for strDefT, effect := range defData {
-			defType := STRING_TO_TYPE[strDefT]
+		for defTStr, effect := range defData {
+			defType := STRING_TO_TYPE[defTStr]
 			typedex[atkType][defType] = effect
 		}
 	}
 	return typedex
+}()
+
+type NatureData struct {
+	AtkBonus NatureBonus
+	DefBonus NatureBonus
+	SpAtkBonus NatureBonus
+	SpDefBonus NatureBonus
+	SpeedBonus NatureBonus
+}
+
+type naturedexJSONBuffer map[string]NatureData
+type Naturedex map[Nature]NatureData
+
+var NATUREDEX = func() Naturedex {
+	buff, err := omwjson.Load[naturedexJSONBuffer](NATUREDEX_PATH)
+	if err != nil {
+		panic(err)
+	}
+	ret := Naturedex{}
+	for natureStr, data := range buff {
+		nature := STRING_TO_NATURE[natureStr]
+		ret[nature] = data
+	}
+	return ret
 }()
