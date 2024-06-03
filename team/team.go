@@ -9,6 +9,10 @@ import (
 type Action struct {
 	PokeName bp.PokeName
 	MoveName bp.MoveName
+	PointUP
+	Nature bp.Nature
+	IVStat bp.IVStat
+	EVStat bp.EVStat
 	Index int
 }
 
@@ -80,15 +84,37 @@ func LegalActions(team *Team) Actions {
 				return actions
 			}
 		}
+
+		if pokemon.Nature == EMPTY_NATURE {
+			ret := make(Actions, len(.ALL_NATURES))
+			for i, nature := range bp.ALL_NATURES {
+				ret[i] = Action{Nature:nature, Index:i}
+			}
+			return ret
+		}
+
+		if pokemon.IVStat.HP == EMPTY_IV {
+			ret := make(Actions, 0, )
+			for _, iv := range ALL_IVS {
+				ivStat := NewEmptyIVStat()
+				ivStat.HP = iv
+				ret[i] = Action{IVStat:ivStat}
+			}
+			return ret
+		}
 	}
+
 	return Actions{}
 }
 
-func Equal(team1, team2 Team) bool {
-	team1 = team1.Sort()
-	team2 = team2.Sort()
-	for i, pokemon := range team1 {
-		if !pokemon.Equal(&team2[i]) {
+func Equal(team1, team2 *Team) bool {
+	team1V := *team1
+	team1V = team1V.Sort()
+	team2V := *team2
+	team2V = team2V.Sort()
+
+	for i, pokemon := range team1V {
+		if !pokemon.Equal(&team2V[i]) {
 			return false
 		}
 	}
@@ -107,14 +133,34 @@ func Push(team Team, action *Action) (Team, error) {
 		basePP := bp.MOVEDEX[action.MoveName].BasePP
 		team[action.Index].Moveset[action.MoveName] = &bp.PowerPoint{Max:basePP, Current:basePP}
 	}
+
 	return team, nil
 }
 
-func NewGame() sequential.Game {
-	return sequential.Game{
-		LegalActions:LegalActions,
-		Equal:Equal,
-		Push:Push,
-		IsEnd:IsEnd,
+func IsEnd(team *Team) bool {
+	teamV := *team
+	if len(teamV) < MAX {
+		return false
 	}
+
+	for _, pokemon := range teamV {
+		if pokemon.Nature == bp.EMPTY_NATURE {
+			return false
+		}
+
+		pokeData := bp.POKEDEX[pokemon.Name]
+		n := omwmath.Min(len(pokeData.Learnset), bp.MAX_MOVESET_NUM)
+		if len(pokemon.Moveset) < n {
+			return false
+		}
+
+		if pokemon.IVStat.IsAnyEmpty() {
+			return false
+		}
+
+		if pokemon.EVStat.IsAnyEmpty() {
+			return false
+		}
+	}
+	return true
 }

@@ -7,7 +7,8 @@ import (
 type Nature int
 
 const (
-    LONELY Nature = iota // さみしがり
+    EMPTY_NATURE Nature = iota
+    LONELY               // さみしがり
     ADAMANT              // いじっぱり
     NAUGHTY              // やんちゃ
     BRAVE                // ゆうかん
@@ -40,6 +41,7 @@ const (
 )
 
 var STRING_TO_NATURE = map[string]Nature{
+    ""         : EMPTY_NATURE,
     "さみしがり": LONELY,
     "いじっぱり": ADAMANT,
     "やんちゃ":   NAUGHTY,

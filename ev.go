@@ -3,6 +3,7 @@ package bippa
 type EV int
 
 const (
+    EMPTY_EV EV = -1
 	MIN_EV EV = 0
 	MAX_EV EV = 252
 )
@@ -92,3 +93,30 @@ var (
     DS252_B4 = EVStat{SpDef: MAX_EV, Speed: MAX_EV, Def: 4}
     DS252_C4 = EVStat{SpDef: MAX_EV, Speed: MAX_EV, SpAtk: 4}
 )
+
+func (ev *EVStat) IsAnyEmpty() bool {
+	if ev.HP == EMPTY_EV {
+		return true
+	}
+
+	if ev.Atk == EMPTY_EV {
+		return true
+	}
+
+	if ev.Def == EMPTY_EV {
+		return true
+	}
+
+	if ev.SpAtk == EMPTY_EV {
+		return true
+	}
+
+	if ev.SpDef == EMPTY_EV {
+		return true
+	}
+
+	if ev.Speed == EMPTY_EV {
+		return true
+	}
+	return false
+}

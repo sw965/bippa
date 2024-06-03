@@ -33,7 +33,7 @@ func EndLeafNodeEvalsFunc(battle *single.Battle) (duct.LeafNodeEvalYs, error) {
 	}
 }
 
-func NewSequentialInputOutput1DModelLeafNodeEvalsFunc(io1dModel model.SequentialInputOutput1D, f func(*single.Battle) tensor.D1) duct.LeafNodeEvalsFunc[single.Battle] {
+func NewInputOutput1DModelLeafNodeEvalsFunc(io1dModel model.SequentialInputOutput1D, f func(*single.Battle) tensor.D1) duct.LeafNodeEvalsFunc[single.Battle] {
 	return func(battle *single.Battle) (duct.LeafNodeEvalYs, error) {
 		if ys, err := EndLeafNodeEvalsFunc(battle); err == nil {
 			return ys, err

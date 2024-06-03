@@ -79,6 +79,12 @@ var STRING_TO_MOVE_CATEGORY = map[string]MoveCategory{
 
 var MOVE_CATEGORY_TO_STRING = omaps.Invert[map[MoveCategory]string](STRING_TO_MOVE_CATEGORY)
 
+type PointUp int
+
+type PointUps []PointUp
+
+var ALL_POINT_UPS = PointUps{0, 1, 2, 3}
+
 type PowerPoint struct {
 	Max int
 	Current int
