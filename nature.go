@@ -76,6 +76,8 @@ var STRING_TO_NATURE = map[string]Nature{
 
 var NATURE_TO_STRING = omwmaps.Invert[map[Nature]string](STRING_TO_NATURE)
 
+type Natures []Nature
+
 type NatureBonus float64
 
 const (

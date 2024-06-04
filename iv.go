@@ -8,6 +8,16 @@ const (
 	MAX_IV IV = 31
 )
 
+type IVs []IV
+
+var ALL_IVS = func() IVs {
+	ret := make(IVs, int(MAX_IV + 1))
+	for i := range ret {
+		ret[i] = IV(i)
+	}
+	return ret
+}()
+
 type IVStat struct {
 	HP IV
 	Atk IV

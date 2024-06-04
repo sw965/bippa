@@ -9,7 +9,6 @@ import (
 type Action struct {
 	PokeName bp.PokeName
 	MoveName bp.MoveName
-	PointUP
 	Nature bp.Nature
 	IVStat bp.IVStat
 	EVStat bp.EVStat
@@ -41,13 +40,7 @@ func (team Team) Clone() Team {
 }
 
 func (team Team) Sort() Team {
-	emptyCount := 0
-	for _, pokemon := range team {
-		if pokemon.Name == bp.EMPTY_POKE_NAME {
-			emptyCount += 1
-		}
-	}
-
+	emptyCount := omwslices.Count(team.PokeNames(), bp.EMPTY_POKE_NAME)
 	ret := make(Team, 0, MAX - emptyCount)
 	for _, pokeName := range bp.ALL_POKE_NAMES {
 		for _, pokemon := range team {
@@ -61,50 +54,110 @@ func (team Team) Sort() Team {
 }
 
 func LegalActions(team *Team) Actions {
+	ret := make(Actions, 0, 1600)
+
+	for _, name := range bp.ALL_POKE_NAMES {
+		ret = append(ret, Action{PokeName:name})
+	}
+
 	teamV := *team
-	//ポケモンを選ぶ行動
-	if len(teamV) < MAX {
-		actions := make(Actions, 0, len(bp.ALL_POKE_NAMES))
-		for _, name := range bp.ALL_POKE_NAMES {
-			actions = append(actions, Action{PokeName:name})
+	getMoveNameAction := func(idx int) Actions {
+		pokemon := teamV[idx]
+		if len(pokemon.Moveset) == MAX_MOVESET_NUM {
+			return Actions{}
 		}
-		return actions
-	}
 
-	//技を選ぶ行動
-	for i, pokemon := range teamV {
 		learnset := bp.POKEDEX[pokemon.Name].Learnset
-		n := omwmath.Min(bp.MAX_MOVESET_NUM, len(learnset))
-		if len(pokemon.Moveset) < n {
-			actions := make(Actions, 0, len(learnset))
-			for _, moveName := range learnset {
-				if _, ok := pokemon.Moveset[moveName]; !ok {
-					actions = append(actions, Action{MoveName:moveName, Index:i})
-				}
-				return actions
-			}
-		}
 
-		if pokemon.Nature == EMPTY_NATURE {
-			ret := make(Actions, len(.ALL_NATURES))
-			for i, nature := range bp.ALL_NATURES {
-				ret[i] = Action{Nature:nature, Index:i}
+		moveNames = omwslices.Filter[bp.MoveNames](
+			moveNames,
+			func(moveName bp.MoveName) bool {
+				_, ok := pokemon.Moveset[moveName]
+				return !ok
 			}
-			return ret
-		}
+		)
 
-		if pokemon.IVStat.HP == EMPTY_IV {
-			ret := make(Actions, 0, )
-			for _, iv := range ALL_IVS {
-				ivStat := NewEmptyIVStat()
-				ivStat.HP = iv
-				ret[i] = Action{IVStat:ivStat}
-			}
-			return ret
+		for _, pokemon := range pokeData.Learnset {
+
 		}
 	}
 
-	return Actions{}
+	f := func(i int) {
+		pokemon := teamV[i]
+		pokeData := bp.POKEDEX[pokemon.Name]
+		for _, moveName := range pokeData.Learnset {
+			ret = append(ret, Action{MoveName:moveName})
+		}
+
+		for _, nature := range bp.ALL_NATURES {
+			ret = append(ret, Action{Nature:nature})
+		}
+
+		for _, iv := range bp.ALL_IVS {
+			stat := bp.IVStat{HP:iv}
+			ret = append(ret, Action{IVStat:stat})
+		}
+
+		for _, iv := range bp.ALL_IVS {
+			stat := bp.IVStat{Atk:iv}
+			ret = append(ret, Action{IVStat:stat})
+		}
+
+		for _, iv := range bp.ALL_IVS {
+			stat := bp.IVStat{Def:iv}
+			ret = append(ret, Action{IVStat:stat})
+		}
+
+		for _, iv := range bp.ALL_IVS {
+			stat := bp.IVStat{SpAtk:iv}
+			ret = append(ret, Action{IVStat:stat})
+		}
+
+		for _, iv := range bp.ALL_IVS {
+			stat := bp.IVStat{SpDef:iv}
+			ret = append(ret, Action{IVStat:stat})
+		}
+
+		for _, iv := range bp.ALL_IVS {
+			stat := bp.IVStat{Speed:iv}
+			ret = append(ret, Action{IVStat:stat})
+		}
+
+		for _, ev := range bp.EFFECTIVE_EVS {
+			stat := bp.EVStat{HP:ev}
+			ret = append(ret, Action{EVStat:stat})
+		}
+
+		for _, ev := range bp.EFFECTIVE_EVS {
+			stat := bp.EVStat{Atk:ev}
+			ret = append(ret, Action{EVStat:stat})
+		}
+
+		for _, ev := range bp.EFFECTIVE_EVS {
+			stat := bp.EVStat{Def:ev}
+			ret = append(ret, Action{EVStat:stat})
+		}
+
+		for _, ev := range bp.EFFECTIVE_EVS {
+			stat := bp.EVStat{SpAtk:ev}
+			ret = append(ret, Action{EVStat:stat})
+		}
+
+		for _, ev := range bp.EFFECTIVE_EVS {
+			stat := bp.EVStat{SpDef:ev}
+			ret = append(ret, Action{EVStat:stat})
+		}
+
+		for _, ev := range bp.EFFECTIVE_EVS {
+			stat := bp.EVStat{Speed:ev}
+			ret = append(ret, Action{EVStat:stat})
+		}
+	}
+
+	for i := range teamV {
+		f(i)
+	}
+	return ret
 }
 
 func Equal(team1, team2 *Team) bool {

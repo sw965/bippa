@@ -191,3 +191,15 @@ var NATUREDEX = func() Naturedex {
 	}
 	return ret
 }()
+
+var ALL_NATURES = func() Natures {
+	buff, err := omwjson.Load[[]string](ALL_NATURES_PATH)
+	if err != nil {
+		panic(err)
+	}
+	ret := make(Natures, len(buff))
+	for i, natureStr := range buff {
+		ret[i] = STRING_TO_NATURE[natureStr]
+	}
+	return ret
+}()

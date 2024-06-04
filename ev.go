@@ -1,5 +1,9 @@
 package bippa
 
+import (
+    "github.com/sw965/omw/fn"
+)
+
 type EV int
 
 const (
@@ -7,6 +11,22 @@ const (
 	MIN_EV EV = 0
 	MAX_EV EV = 252
 )
+
+func IsEffectiveEV(ev EV) bool {
+    return ev%4 == 0
+}
+
+type EVs []EV
+
+var ALL_EVS = func() EVs {
+    evs := make(EVs, MAX_EV+1)
+    for i := 0; i < int(MAX_EV); i++ {
+        evs[i] = EV(i)
+    }
+    return evs
+}()
+
+var EFFECTIVE_EVS = fn.Filter[EVs](ALL_EVS, IsEffectiveEV)
 
 type EVStat struct {
 	HP EV
