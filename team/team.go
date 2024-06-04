@@ -69,17 +69,24 @@ func LegalActions(team *Team) Actions {
 
 		learnset := bp.POKEDEX[pokemon.Name].Learnset
 
+		if len(pokemon.Moveset) == len(learnset) {
+			return Actions{}
+		}
+
 		moveNames = omwslices.Filter[bp.MoveNames](
-			moveNames,
+			learnset,
 			func(moveName bp.MoveName) bool {
 				_, ok := pokemon.Moveset[moveName]
 				return !ok
 			}
 		)
 
-		for _, pokemon := range pokeData.Learnset {
-
+		ret := make(Actions, 0, len(moveNames)+1)
+		for _, moveName := range moveNames {
+			ret = append(ret, Action{MoveName:moveName})
 		}
+		ret = append(ret, Action{MoveName:EMPTY_MOVE_NAME})
+		return ret
 	}
 
 	f := func(i int) {
