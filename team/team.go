@@ -4,6 +4,8 @@ import (
 	omwmath "github.com/sw965/omw/math"
 	omwslices "github.com/sw965/omw/slices"
 	bp "github.com/sw965/bippa"
+	"github.com/sw965/omw/fn"
+	"golang.org/x/exp/slices"
 )
 
 type Action struct {
@@ -54,117 +56,220 @@ func (team Team) Sort() Team {
 }
 
 func LegalActions(team *Team) Actions {
-	ret := make(Actions, 0, 1600)
-
-	for _, name := range bp.ALL_POKE_NAMES {
-		ret = append(ret, Action{PokeName:name})
+	teamV := *team
+	if len(teamV) < MAX {
+		ret := make(Actions, 0, len(bp.ALL_POKE_NAMES))
+		currentPokeNames := team.PokeNames()
+		for _, name := range bp.ALL_POKE_NAMES {
+			if slices.Contains(currentPokeNames, name) {
+				ret = append(ret, Action{PokeName:name})
+			}
+		}
+		return ret
 	}
 
-	teamV := *team
-	getMoveNameAction := func(idx int) Actions {
-		pokemon := teamV[idx]
-		if len(pokemon.Moveset) == MAX_MOVESET_NUM {
+	getMoveNameActions := func(pokemon *bp.Pokemon) Actions {
+		if len(pokemon.Moveset) == bp.MAX_MOVESET_NUM {
 			return Actions{}
 		}
 
 		learnset := bp.POKEDEX[pokemon.Name].Learnset
-
-		if len(pokemon.Moveset) == len(learnset) {
-			return Actions{}
-		}
-
-		moveNames = omwslices.Filter[bp.MoveNames](
+		moveNames := fn.Filter[bp.MoveNames](
 			learnset,
 			func(moveName bp.MoveName) bool {
 				_, ok := pokemon.Moveset[moveName]
 				return !ok
-			}
+			},
 		)
 
 		ret := make(Actions, 0, len(moveNames)+1)
 		for _, moveName := range moveNames {
 			ret = append(ret, Action{MoveName:moveName})
 		}
-		ret = append(ret, Action{MoveName:EMPTY_MOVE_NAME})
 		return ret
 	}
 
-	f := func(i int) {
-		pokemon := teamV[i]
-		pokeData := bp.POKEDEX[pokemon.Name]
-		for _, moveName := range pokeData.Learnset {
-			ret = append(ret, Action{MoveName:moveName})
+	getNatureActions := func(pokemon *bp.Pokemon) Actions {
+		if pokemon.Nature != bp.EMPTY_NATURE {
+			return Actions{}
 		}
-
-		for _, nature := range bp.ALL_NATURES {
-			ret = append(ret, Action{Nature:nature})
+		ret := make(Actions, len(bp.ALL_NATURES))
+		for i, nature := range bp.ALL_NATURES {
+			ret[i] = Action{Nature:nature}
 		}
-
-		for _, iv := range bp.ALL_IVS {
-			stat := bp.IVStat{HP:iv}
-			ret = append(ret, Action{IVStat:stat})
-		}
-
-		for _, iv := range bp.ALL_IVS {
-			stat := bp.IVStat{Atk:iv}
-			ret = append(ret, Action{IVStat:stat})
-		}
-
-		for _, iv := range bp.ALL_IVS {
-			stat := bp.IVStat{Def:iv}
-			ret = append(ret, Action{IVStat:stat})
-		}
-
-		for _, iv := range bp.ALL_IVS {
-			stat := bp.IVStat{SpAtk:iv}
-			ret = append(ret, Action{IVStat:stat})
-		}
-
-		for _, iv := range bp.ALL_IVS {
-			stat := bp.IVStat{SpDef:iv}
-			ret = append(ret, Action{IVStat:stat})
-		}
-
-		for _, iv := range bp.ALL_IVS {
-			stat := bp.IVStat{Speed:iv}
-			ret = append(ret, Action{IVStat:stat})
-		}
-
-		for _, ev := range bp.EFFECTIVE_EVS {
-			stat := bp.EVStat{HP:ev}
-			ret = append(ret, Action{EVStat:stat})
-		}
-
-		for _, ev := range bp.EFFECTIVE_EVS {
-			stat := bp.EVStat{Atk:ev}
-			ret = append(ret, Action{EVStat:stat})
-		}
-
-		for _, ev := range bp.EFFECTIVE_EVS {
-			stat := bp.EVStat{Def:ev}
-			ret = append(ret, Action{EVStat:stat})
-		}
-
-		for _, ev := range bp.EFFECTIVE_EVS {
-			stat := bp.EVStat{SpAtk:ev}
-			ret = append(ret, Action{EVStat:stat})
-		}
-
-		for _, ev := range bp.EFFECTIVE_EVS {
-			stat := bp.EVStat{SpDef:ev}
-			ret = append(ret, Action{EVStat:stat})
-		}
-
-		for _, ev := range bp.EFFECTIVE_EVS {
-			stat := bp.EVStat{Speed:ev}
-			ret = append(ret, Action{EVStat:stat})
-		}
+		return ret
 	}
 
-	for i := range teamV {
-		f(i)
+	getHPIV := func(pokemon *bp.Pokemon) bp.IV {
+		return pokemon.IVStat.HP
 	}
-	return ret
+
+	setHPIV := func(ivStat *bp.IVStat, iv bp.IV) {
+		ivStat.HP = iv
+	}
+
+	getAtkIV := func(pokemon *bp.Pokemon) bp.IV {
+		return pokemon.IVStat.Atk
+	}
+
+	setAtkIV := func(ivStat *bp.IVStat, iv bp.IV) {
+		ivStat.Atk = iv
+	}
+
+	getDefIV := func(pokemon *bp.Pokemon) bp.IV {
+		return pokemon.IVStat.Def
+	}
+
+	setDefIV := func(ivStat *bp.IVStat, iv bp.IV) {
+		ivStat.Def = iv
+	}
+
+	getSpAtkIV := func(pokemon *bp.Pokemon) bp.IV {
+		return pokemon.IVStat.SpAtk
+	}
+
+	setSpAtkIV := func(ivStat *bp.IVStat, iv bp.IV) {
+		ivStat.SpAtk = iv
+	}
+
+	getSpDefIV := func(pokemon *bp.Pokemon) bp.IV {
+		return pokemon.IVStat.SpDef
+	}
+
+	setSpDefIV := func(ivStat *bp.IVStat, iv bp.IV) {
+		ivStat.SpDef = iv
+	}
+
+	getSpeedIV := func(pokemon *bp.Pokemon) bp.IV {
+		return pokemon.IVStat.Speed
+	}
+
+	setSpeedIV := func(ivStat *bp.IVStat, iv bp.IV) {
+		ivStat.Speed = iv
+	}
+
+	getIVActions := func(pokemon *bp.Pokemon, get func(*bp.Pokemon) bp.IV, set func(*bp.IVStat, bp.IV)) Actions {
+		if get(pokemon) != bp.EMPTY_IV {
+			return Actions{}
+		}
+
+		ret := make(Actions, len(bp.ALL_IVS))
+		for i, iv := range bp.ALL_IVS {
+			ivStat := bp.IVStat{}
+			set(&ivStat, iv)
+			ret[i] = Action{IVStat:ivStat}
+		}
+		return ret
+	}
+
+	getHPEV := func(pokemon *bp.Pokemon) bp.EV {
+		return pokemon.EVStat.HP
+	}
+
+	setHPEV := func(evStat *bp.EVStat, ev bp.EV) {
+		evStat.HP = ev
+	}
+
+	getAtkEV := func(pokemon *bp.Pokemon) bp.EV {
+		return pokemon.EVStat.Atk
+	}
+
+	setAtkEV := func(evStat *bp.EVStat, ev bp.EV) {
+		evStat.Atk = ev
+	}
+
+	getDefEV := func(pokemon *bp.Pokemon) bp.EV {
+		return pokemon.EVStat.Def
+	}
+
+	setDefEV := func(evStat *bp.EVStat, ev bp.EV) {
+		evStat.Def = ev
+	}
+
+	getSpAtkEV := func(pokemon *bp.Pokemon) bp.EV {
+		return pokemon.EVStat.SpAtk
+	}
+
+	setSpAtkEV := func(evStat *bp.EVStat, ev bp.EV) {
+		evStat.SpAtk = ev
+	}
+
+	getSpDefEV := func(pokemon *bp.Pokemon) bp.EV {
+		return pokemon.EVStat.SpDef
+	}
+
+	setSpDefEV := func(evStat *bp.EVStat, ev bp.EV) {
+		evStat.SpDef = ev
+	}
+
+	getSpeedEV := func(pokemon *bp.Pokemon) bp.EV {
+		return pokemon.EVStat.Speed
+	}
+
+	setSpeedEV := func(evStat *bp.EVStat, ev bp.EV) {
+		evStat.Speed = ev
+	}
+
+	getEVActions := func(pokemon *bp.Pokemon, get func(*bp.Pokemon) bp.EV, set func(*bp.EVStat, bp.EV)) Actions {
+		if get(pokemon) != bp.EMPTY_EV {
+			return Actions{}
+		}
+
+		ret := make(Actions, 0, len(bp.EFFECTIVE_EVS))
+		sum := pokemon.EVStat.Sum()
+		for _, ev := range bp.EFFECTIVE_EVS {
+			if (sum + ev) > bp.MAX_SUM_EV {
+				break
+			}
+			evStat := bp.EVStat{}
+			set(&evStat, ev)
+			ret = append(ret, Action{EVStat:evStat})
+		}
+		return ret
+	}
+
+	getIVFuncs := []func(*bp.Pokemon) bp.IV{
+		getHPIV, getAtkIV, getDefIV, getSpAtkIV, getSpDefIV, getSpeedIV,
+	}
+
+	setIVFuncs := []func(*bp.IVStat, bp.IV){
+		setHPIV, setAtkIV, setDefIV, setSpAtkIV, setSpDefIV, setSpeedIV,
+	}
+
+	getEVFuncs := []func(*bp.Pokemon) bp.EV{
+		getHPEV, getAtkEV, getDefEV, getSpAtkEV, getSpDefEV, getSpeedEV,
+	}
+
+	setEVFuncs := []func(*bp.EVStat, bp.EV){
+		setHPEV, setAtkEV, setDefEV, setSpAtkEV, setSpDefEV, setSpeedEV,
+	}
+
+	for _, pokemon := range teamV {
+		actions := getMoveNameActions(&pokemon)
+		if len(actions) != 0 {
+			return actions
+		}
+
+		actions = getNatureActions(&pokemon)
+		if len(actions) != 0 {
+			return actions
+		}
+
+		for i, f := range getIVFuncs {
+			actions = getIVActions(&pokemon, f, setIVFuncs[i])
+			if len(actions) != 0 {
+				return actions
+			}
+		}
+
+		for i, f := range getEVFuncs {
+			actions = getEVActions(&pokemon, f, setEVFuncs[i])
+			if len(actions) != 0 {
+				return actions
+			}
+		}
+	}
+	return Actions{}
 }
 
 func Equal(team1, team2 *Team) bool {

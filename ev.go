@@ -10,6 +10,7 @@ const (
     EMPTY_EV EV = -1
 	MIN_EV EV = 0
 	MAX_EV EV = 252
+    MAX_SUM_EV = 510
 )
 
 func IsEffectiveEV(ev EV) bool {
@@ -113,6 +114,10 @@ var (
     DS252_B4 = EVStat{SpDef: MAX_EV, Speed: MAX_EV, Def: 4}
     DS252_C4 = EVStat{SpDef: MAX_EV, Speed: MAX_EV, SpAtk: 4}
 )
+
+func (ev *EVStat) Sum() EV {
+    return ev.HP + ev.Atk + ev.Def + ev.SpAtk + ev.SpDef + ev.Speed
+}
 
 func (ev *EVStat) IsAnyEmpty() bool {
 	if ev.HP == EMPTY_EV {
