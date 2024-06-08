@@ -2,6 +2,7 @@ package bippa
 
 import (
     "github.com/sw965/omw/fn"
+    omwmath "github.com/sw965/omw/math"
 )
 
 type EV int
@@ -39,6 +40,8 @@ type EVStat struct {
 }
 
 var (
+    EMPTY_EV_STAT = EVStat{HP:EMPTY_EV, Atk:EMPTY_EV, Def:EMPTY_EV, SpAtk:EMPTY_EV, SpDef:EMPTY_EV, Speed:EMPTY_EV}
+
     HA252_B4 = EVStat{HP: MAX_EV, Atk: MAX_EV, Def: 4}
     HA252_C4 = EVStat{HP: MAX_EV, Atk: MAX_EV, SpAtk: 4}
     HA252_D4 = EVStat{HP: MAX_EV, Atk: MAX_EV, SpDef: 4}
@@ -116,32 +119,38 @@ var (
 )
 
 func (ev *EVStat) Sum() EV {
-    return ev.HP + ev.Atk + ev.Def + ev.SpAtk + ev.SpDef + ev.Speed
+    hp := omwmath.Max(ev.HP, 0)
+    atk := omwmath.Max(ev.Atk, 0)
+    def := omwmath.Max(ev.Def, 0)
+    spAtk := omwmath.Max(ev.SpAtk, 0)
+    spDef := omwmath.Max(ev.SpDef, 0)
+    speed := omwmath.Max(ev.Speed, 0)
+    return hp + atk + def + spAtk + spDef + speed
 }
 
 func (ev *EVStat) IsAnyEmpty() bool {
-	if ev.HP == EMPTY_EV {
-		return true
-	}
+    if ev.HP == EMPTY_EV {
+        return true
+    }
 
-	if ev.Atk == EMPTY_EV {
-		return true
-	}
+    if ev.Atk == EMPTY_EV {
+        return true
+    }
 
-	if ev.Def == EMPTY_EV {
-		return true
-	}
+    if ev.Def == EMPTY_EV {
+        return true
+    }
 
-	if ev.SpAtk == EMPTY_EV {
-		return true
-	}
+    if ev.SpAtk == EMPTY_EV {
+        return true
+    }
 
-	if ev.SpDef == EMPTY_EV {
-		return true
-	}
+    if ev.SpDef == EMPTY_EV {
+        return true
+    }
 
-	if ev.Speed == EMPTY_EV {
-		return true
-	}
-	return false
+    if ev.Speed == EMPTY_EV {
+        return true
+    }
+    return false
 }

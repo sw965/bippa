@@ -1,6 +1,7 @@
 package team
 
 import (
+	"fmt"
 	omwmath "github.com/sw965/omw/math"
 	omwslices "github.com/sw965/omw/slices"
 	bp "github.com/sw965/bippa"
@@ -8,13 +9,37 @@ import (
 	"golang.org/x/exp/slices"
 )
 
+type ActionType int
+
+const (
+	EMPTY_ACTION_TYPE ActionType = iota
+	POKEMON_ACTION_TYPE
+	MOVE_ACTION_TYPE
+	NATURE_ACTION_TYPE
+
+	HP_IV_ACTION_TYPE
+	ATK_IV_ACTION_TYPE
+	DEF_IV_ACTION_TYPE
+	SP_ATK_IV_ACTION_TYPE
+	SP_DEF_IV_ACTION_TYPE
+	SPEED_IV_ACTION_TYPE
+
+	HP_EV_ACTION_TYPE
+	ATK_EV_ACTION_TYPE
+	DEF_EV_ACTION_TYPE
+	SP_ATK_EV_ACTION_TYPE
+	SP_DEF_EV_ACTION_TYPE
+	SPEED_EV_ACTION_TYPE
+)
+
 type Action struct {
 	PokeName bp.PokeName
 	MoveName bp.MoveName
 	Nature bp.Nature
-	IVStat bp.IVStat
-	EVStat bp.EVStat
+	IV bp.IV
+	EV bp.EV
 	Index int
+	Type ActionType
 }
 
 type Actions []Action
@@ -58,18 +83,21 @@ func (team Team) Sort() Team {
 func LegalActions(team *Team) Actions {
 	teamV := *team
 	if len(teamV) < MAX {
-		ret := make(Actions, 0, len(bp.ALL_POKE_NAMES))
-		currentPokeNames := team.PokeNames()
+		ret := make(Actions, 0, len(bp.ALL_POKE_NAMES)+1)
+		pokeNames := team.PokeNames()
 		for _, name := range bp.ALL_POKE_NAMES {
-			if slices.Contains(currentPokeNames, name) {
-				ret = append(ret, Action{PokeName:name})
+			if !slices.Contains(pokeNames, name) {
+				ret = append(ret, Action{PokeName:name, Type:POKEMON_ACTION_TYPE})
 			}
+		}
+		if len(teamV) >= 3 {
+			ret = append(ret, Action{PokeName:bp.EMPTY_POKE_NAME, Type:POKEMON_ACTION_TYPE})
 		}
 		return ret
 	}
 
 	getMoveNameActions := func(pokemon *bp.Pokemon) Actions {
-		if len(pokemon.Moveset) == bp.MAX_MOVESET_NUM {
+		if pokemon.UnassignedLearnMoveCount == 0 {
 			return Actions{}
 		}
 
@@ -84,7 +112,10 @@ func LegalActions(team *Team) Actions {
 
 		ret := make(Actions, 0, len(moveNames)+1)
 		for _, moveName := range moveNames {
-			ret = append(ret, Action{MoveName:moveName})
+			ret = append(ret, Action{MoveName:moveName, Type:MOVE_ACTION_TYPE})
+		}
+		if len(pokemon.Moveset) >= 1 {
+			ret = append(ret, Action{MoveName:bp.EMPTY_MOVE_NAME, Type:MOVE_ACTION_TYPE})
 		}
 		return ret
 	}
@@ -95,123 +126,53 @@ func LegalActions(team *Team) Actions {
 		}
 		ret := make(Actions, len(bp.ALL_NATURES))
 		for i, nature := range bp.ALL_NATURES {
-			ret[i] = Action{Nature:nature}
+			ret[i] = Action{Nature:nature, Type:NATURE_ACTION_TYPE}
 		}
 		return ret
 	}
 
-	getHPIV := func(pokemon *bp.Pokemon) bp.IV {
-		return pokemon.IVStat.HP
-	}
-
-	setHPIV := func(ivStat *bp.IVStat, iv bp.IV) {
-		ivStat.HP = iv
-	}
-
-	getAtkIV := func(pokemon *bp.Pokemon) bp.IV {
-		return pokemon.IVStat.Atk
-	}
-
-	setAtkIV := func(ivStat *bp.IVStat, iv bp.IV) {
-		ivStat.Atk = iv
-	}
-
-	getDefIV := func(pokemon *bp.Pokemon) bp.IV {
-		return pokemon.IVStat.Def
-	}
-
-	setDefIV := func(ivStat *bp.IVStat, iv bp.IV) {
-		ivStat.Def = iv
-	}
-
-	getSpAtkIV := func(pokemon *bp.Pokemon) bp.IV {
-		return pokemon.IVStat.SpAtk
-	}
-
-	setSpAtkIV := func(ivStat *bp.IVStat, iv bp.IV) {
-		ivStat.SpAtk = iv
-	}
-
-	getSpDefIV := func(pokemon *bp.Pokemon) bp.IV {
-		return pokemon.IVStat.SpDef
-	}
-
-	setSpDefIV := func(ivStat *bp.IVStat, iv bp.IV) {
-		ivStat.SpDef = iv
-	}
-
-	getSpeedIV := func(pokemon *bp.Pokemon) bp.IV {
-		return pokemon.IVStat.Speed
-	}
-
-	setSpeedIV := func(ivStat *bp.IVStat, iv bp.IV) {
-		ivStat.Speed = iv
-	}
-
-	getIVActions := func(pokemon *bp.Pokemon, get func(*bp.Pokemon) bp.IV, set func(*bp.IVStat, bp.IV)) Actions {
-		if get(pokemon) != bp.EMPTY_IV {
+	getIVActions := func(pokemon *bp.Pokemon) Actions {
+		ivStat := pokemon.IVStat
+		var actionType ActionType
+		if ivStat.HP == bp.EMPTY_IV {
+			actionType = HP_IV_ACTION_TYPE
+		} else if ivStat.Atk == bp.EMPTY_IV {
+			actionType = ATK_IV_ACTION_TYPE
+		} else if ivStat.Def == bp.EMPTY_IV {
+			actionType = DEF_IV_ACTION_TYPE
+		} else if ivStat.SpAtk == bp.EMPTY_IV {
+			actionType = SP_ATK_IV_ACTION_TYPE
+		} else if ivStat.SpDef == bp.EMPTY_IV {
+			actionType = SP_DEF_IV_ACTION_TYPE
+		} else if ivStat.Speed == bp.EMPTY_IV {
+			actionType = SPEED_IV_ACTION_TYPE
+		} else {
 			return Actions{}
 		}
 
 		ret := make(Actions, len(bp.ALL_IVS))
 		for i, iv := range bp.ALL_IVS {
-			ivStat := bp.IVStat{}
-			set(&ivStat, iv)
-			ret[i] = Action{IVStat:ivStat}
+			ret[i] = Action{IV:iv, Type:actionType}
 		}
 		return ret
 	}
 
-	getHPEV := func(pokemon *bp.Pokemon) bp.EV {
-		return pokemon.EVStat.HP
-	}
-
-	setHPEV := func(evStat *bp.EVStat, ev bp.EV) {
-		evStat.HP = ev
-	}
-
-	getAtkEV := func(pokemon *bp.Pokemon) bp.EV {
-		return pokemon.EVStat.Atk
-	}
-
-	setAtkEV := func(evStat *bp.EVStat, ev bp.EV) {
-		evStat.Atk = ev
-	}
-
-	getDefEV := func(pokemon *bp.Pokemon) bp.EV {
-		return pokemon.EVStat.Def
-	}
-
-	setDefEV := func(evStat *bp.EVStat, ev bp.EV) {
-		evStat.Def = ev
-	}
-
-	getSpAtkEV := func(pokemon *bp.Pokemon) bp.EV {
-		return pokemon.EVStat.SpAtk
-	}
-
-	setSpAtkEV := func(evStat *bp.EVStat, ev bp.EV) {
-		evStat.SpAtk = ev
-	}
-
-	getSpDefEV := func(pokemon *bp.Pokemon) bp.EV {
-		return pokemon.EVStat.SpDef
-	}
-
-	setSpDefEV := func(evStat *bp.EVStat, ev bp.EV) {
-		evStat.SpDef = ev
-	}
-
-	getSpeedEV := func(pokemon *bp.Pokemon) bp.EV {
-		return pokemon.EVStat.Speed
-	}
-
-	setSpeedEV := func(evStat *bp.EVStat, ev bp.EV) {
-		evStat.Speed = ev
-	}
-
-	getEVActions := func(pokemon *bp.Pokemon, get func(*bp.Pokemon) bp.EV, set func(*bp.EVStat, bp.EV)) Actions {
-		if get(pokemon) != bp.EMPTY_EV {
+	getEVActions := func(pokemon *bp.Pokemon) Actions {
+		evStat := pokemon.EVStat
+		var actionType ActionType
+		if evStat.HP == bp.EMPTY_EV {
+			actionType = HP_EV_ACTION_TYPE
+		} else if evStat.Atk == bp.EMPTY_EV {
+			actionType = ATK_EV_ACTION_TYPE
+		} else if evStat.Def == bp.EMPTY_EV {
+			actionType = DEF_EV_ACTION_TYPE
+		} else if evStat.SpAtk == bp.EMPTY_EV {
+			actionType = SP_ATK_EV_ACTION_TYPE
+		} else if evStat.SpDef == bp.EMPTY_EV {
+			actionType = SP_DEF_EV_ACTION_TYPE
+		} else if evStat.Speed == bp.EMPTY_EV {
+			actionType = SPEED_EV_ACTION_TYPE
+		} else {
 			return Actions{}
 		}
 
@@ -221,30 +182,16 @@ func LegalActions(team *Team) Actions {
 			if (sum + ev) > bp.MAX_SUM_EV {
 				break
 			}
-			evStat := bp.EVStat{}
-			set(&evStat, ev)
-			ret = append(ret, Action{EVStat:evStat})
+			ret = append(ret, Action{EV:ev, Type:actionType})
 		}
 		return ret
 	}
 
-	getIVFuncs := []func(*bp.Pokemon) bp.IV{
-		getHPIV, getAtkIV, getDefIV, getSpAtkIV, getSpDefIV, getSpeedIV,
-	}
-
-	setIVFuncs := []func(*bp.IVStat, bp.IV){
-		setHPIV, setAtkIV, setDefIV, setSpAtkIV, setSpDefIV, setSpeedIV,
-	}
-
-	getEVFuncs := []func(*bp.Pokemon) bp.EV{
-		getHPEV, getAtkEV, getDefEV, getSpAtkEV, getSpDefEV, getSpeedEV,
-	}
-
-	setEVFuncs := []func(*bp.EVStat, bp.EV){
-		setHPEV, setAtkEV, setDefEV, setSpAtkEV, setSpDefEV, setSpeedEV,
-	}
-
 	for _, pokemon := range teamV {
+		if pokemon.Name == bp.EMPTY_POKE_NAME {
+			continue
+		}
+
 		actions := getMoveNameActions(&pokemon)
 		if len(actions) != 0 {
 			return actions
@@ -255,18 +202,14 @@ func LegalActions(team *Team) Actions {
 			return actions
 		}
 
-		for i, f := range getIVFuncs {
-			actions = getIVActions(&pokemon, f, setIVFuncs[i])
-			if len(actions) != 0 {
-				return actions
-			}
+		actions = getIVActions(&pokemon)
+		if len(actions) != 0 {
+			return actions
 		}
 
-		for i, f := range getEVFuncs {
-			actions = getEVActions(&pokemon, f, setEVFuncs[i])
-			if len(actions) != 0 {
-				return actions
-			}
+		actions = getEVActions(&pokemon)
+		if len(actions) != 0 {
+			return actions
 		}
 	}
 	return Actions{}
@@ -288,17 +231,63 @@ func Equal(team1, team2 *Team) bool {
 
 func Push(team Team, action *Action) (Team, error) {
 	team = team.Clone()
+	idx := action.Index
 
-	if action.PokeName != bp.EMPTY_POKE_NAME {
-		pokemon := bp.Pokemon{Name:action.PokeName, Level:bp.DEFAULT_LEVEL, Moveset:bp.Moveset{}}
-		team = append(team, pokemon)
+	switch action.Type {
+		case POKEMON_ACTION_TYPE:
+			if action.PokeName == bp.EMPTY_POKE_NAME {
+				team = append(team, bp.Pokemon{})
+			} else {
+				pokeData := bp.POKEDEX[action.PokeName]
+				c := omwmath.Min(len(pokeData.Learnset), bp.MAX_MOVESET)
+				pokemon := bp.Pokemon{
+					Name:action.PokeName,
+					Level:bp.DEFAULT_LEVEL,
+					Moveset:bp.Moveset{},
+					UnassignedLearnMoveCount:c,
+					IVStat:bp.EMPTY_IV_STAT,
+					EVStat:bp.EMPTY_EV_STAT,
+				}
+				team = append(team, pokemon)
+			}
+		case MOVE_ACTION_TYPE:
+			team[idx].UnassignedLearnMoveCount -= 1
+			if action.MoveName == bp.EMPTY_MOVE_NAME {
+				team[idx].Moveset[action.MoveName] = &bp.PowerPoint{}
+			} else {
+				moveData := bp.MOVEDEX[action.MoveName]
+				pp := bp.NewPowerPoint(moveData.BasePP, bp.MAX_POINT_UP)
+				team[idx].Moveset[action.MoveName] = &pp
+			}
+		case NATURE_ACTION_TYPE:
+			team[idx].Nature = action.Nature
+		case HP_IV_ACTION_TYPE:
+			team[idx].IVStat.HP = action.IV
+		case ATK_IV_ACTION_TYPE:
+			team[idx].IVStat.Atk = action.IV
+		case DEF_IV_ACTION_TYPE:
+			team[idx].IVStat.Def = action.IV
+		case SP_ATK_IV_ACTION_TYPE:
+			team[idx].IVStat.SpAtk = action.IV
+		case SP_DEF_IV_ACTION_TYPE:
+			team[idx].IVStat.SpDef = action.IV
+		case SPEED_IV_ACTION_TYPE:
+			team[idx].IVStat.Speed = action.IV
+		case HP_EV_ACTION_TYPE:
+			team[idx].EVStat.HP = action.EV
+		case ATK_EV_ACTION_TYPE:
+			team[idx].EVStat.Atk = action.EV
+		case DEF_EV_ACTION_TYPE:
+			team[idx].EVStat.Def = action.EV
+		case SP_ATK_EV_ACTION_TYPE:
+			team[idx].EVStat.SpAtk = action.EV
+		case SP_DEF_EV_ACTION_TYPE:
+			team[idx].EVStat.SpDef = action.EV
+		case SPEED_EV_ACTION_TYPE:
+			team[idx].EVStat.Speed = action.EV
+		default:
+			return Team{}, fmt.Errorf("不適切なActionType")
 	}
-
-	if action.MoveName != bp.EMPTY_MOVE_NAME {
-		basePP := bp.MOVEDEX[action.MoveName].BasePP
-		team[action.Index].Moveset[action.MoveName] = &bp.PowerPoint{Max:basePP, Current:basePP}
-	}
-
 	return team, nil
 }
 
@@ -313,9 +302,7 @@ func IsEnd(team *Team) bool {
 			return false
 		}
 
-		pokeData := bp.POKEDEX[pokemon.Name]
-		n := omwmath.Min(len(pokeData.Learnset), bp.MAX_MOVESET_NUM)
-		if len(pokemon.Moveset) < n {
+		if pokemon.UnassignedLearnMoveCount != 0 {
 			return false
 		}
 

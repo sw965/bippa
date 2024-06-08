@@ -8,8 +8,8 @@ import (
 func New() sequential.Game[team.Team, team.Actions, team.Action] {
 	return sequential.Game[team.Team, team.Actions, team.Action]{
 		LegalActions:team.LegalActions,
-		Equal:team.Equal,
 		Push:team.Push,
+		Equal:team.Equal,
 		IsEnd:team.IsEnd,
 	}
 }

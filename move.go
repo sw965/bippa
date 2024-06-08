@@ -81,9 +81,9 @@ var MOVE_CATEGORY_TO_STRING = omaps.Invert[map[MoveCategory]string](STRING_TO_MO
 
 type PointUp int
 
-type PointUps []PointUp
-
-var ALL_POINT_UPS = PointUps{0, 1, 2, 3}
+const (
+	MAX_POINT_UP = 3
+)
 
 type PowerPoint struct {
 	Max int
@@ -91,20 +91,26 @@ type PowerPoint struct {
 }
 
 const (
-	MIN_MOVESET_NUM = 1
-	MAX_MOVESET_NUM = 4
+	MIN_MOVESET = 1
+	MAX_MOVESET = 4
 )
+
+func NewPowerPoint(base int, up PointUp) PowerPoint {
+    increment := int(float64(base) / 5.0)
+    max := base + (increment * int(up))
+	return PowerPoint{Max:max, Current:max}
+}
 
 type Moveset map[MoveName]*PowerPoint
 
 func NewMoveset(pokeName PokeName, moveNames MoveNames) (Moveset, error) {
 	if len(moveNames) == 0 {
-		msg := fmt.Sprintf("覚えさせる技が指定されていません。ポケモンには、少なくとも%dつ以上の技を覚えさせる必要があります。", MIN_MOVESET_NUM)
+		msg := fmt.Sprintf("覚えさせる技が指定されていません。ポケモンには、少なくとも%dつ以上の技を覚えさせる必要があります。", MIN_MOVESET)
 		return Moveset{}, fmt.Errorf(msg)
 	}
 
-	if len(moveNames) > MAX_MOVESET_NUM {
-		msg := fmt.Sprintf("覚えさせる技の数が、限度を超えています。技は最大で%dつまで覚えさせることが出来ます。", MAX_MOVESET_NUM)
+	if len(moveNames) > MAX_MOVESET {
+		msg := fmt.Sprintf("覚えさせる技の数が、限度を超えています。技は最大で%dつまで覚えさせることが出来ます。", MAX_MOVESET)
 		return Moveset{}, fmt.Errorf(msg)
 	}
 

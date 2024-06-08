@@ -27,8 +27,10 @@ type IVStat struct {
 	Speed IV
 }
 
+var EMPTY_IV_STAT = IVStat{HP:EMPTY_IV, Atk:EMPTY_IV, Def:EMPTY_IV, SpAtk:EMPTY_IV, SpDef:EMPTY_IV, Speed:EMPTY_IV}
 var MIN_IV_STAT = IVStat{}
 var MAX_IV_STAT = IVStat{HP:MAX_IV, Atk:MAX_IV, Def:MAX_IV, SpAtk:MAX_IV, SpDef:MAX_IV, Speed:MAX_IV}
+
 
 func (iv *IVStat) IsAnyEmpty() bool {
 	if iv.HP == EMPTY_IV {

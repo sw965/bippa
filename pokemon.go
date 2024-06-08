@@ -75,6 +75,7 @@ type Pokemon struct {
 	Level Level
 	Nature Nature
 	Moveset Moveset
+	UnassignedLearnMoveCount int
 
 	IVStat IVStat
 	EVStat EVStat

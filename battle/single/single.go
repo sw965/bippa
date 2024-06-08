@@ -7,9 +7,6 @@ import (
 	omwrand "github.com/sw965/omw/math/rand"
 	omwmath "github.com/sw965/omw/math"
 	"github.com/sw965/bippa/battle/dmgtools"
-	//"golang.org/x/exp/slices"
-	omwslices "github.com/sw965/omw/slices"
-	"github.com/sw965/crow/tensor"
 )
 
 const (
@@ -147,7 +144,7 @@ func (b *Battle) p1CommandableMoveNames() bp.MoveNames {
 		return bp.MoveNames{}
 	}
 
-	names := make(bp.MoveNames, 0, bp.MAX_MOVESET_NUM)
+	names := make(bp.MoveNames, 0, bp.MAX_MOVESET)
 	for moveName, pp := range b.P1Fighters[0].Moveset {
 		if pp.Current > 0 {
 			names = append(names, moveName)
@@ -331,51 +328,5 @@ func PushClosure(randDmgBonuses dmgtools.RandBonuses, r *rand.Rand) func(Battle,
 		}
 		battle.Turn += 1
 		return battle, nil
-	}
-}
-
-func SpeedAndFaintClosure(f func(*bp.Pokemon, *bp.Pokemon) tensor.D1, n int) func(*Battle) tensor.D1 {
-	SPEED_WIN_IDX := 0
-	SPEED_LOSS_IDX := 1
-	P1_FAINT_IDX := 2
-	P2_FAINT_IDX := 3
-
-	return func(battle *Battle) tensor.D1 {
-		ret := make(tensor.D1, 0, 1000)
-		for _, p1Pokemon := range battle.P1Fighters {
-			for _, p2Pokemon := range battle.P2Fighters {
-				splited := make(tensor.D2, P2_FAINT_IDX+1)
-				splited[SPEED_WIN_IDX] = tensor.NewD1Zeros(n*2)
-				splited[SPEED_LOSS_IDX] = tensor.NewD1Zeros(n*2)
-				splited[P1_FAINT_IDX] = tensor.NewD1Zeros(1)
-				splited[P2_FAINT_IDX] = tensor.NewD1Zeros(1)
-	
-				both := omwslices.Concat(f(&p1Pokemon, &p2Pokemon), f(&p2Pokemon, &p1Pokemon))
-				isP1Faint := p1Pokemon.IsFaint()
-				isP2Faint := p2Pokemon.IsFaint()
-				isNotFaint := !isP1Faint && !isP2Faint
-	
-				if isNotFaint && p1Pokemon.Speed >= p2Pokemon.Speed {
-					splited[SPEED_WIN_IDX] = both
-				}
-	
-				if isNotFaint && p1Pokemon.Speed <= p2Pokemon.Speed {
-					splited[SPEED_LOSS_IDX] = both
-				}
-	
-				if isP1Faint {
-					splited[P1_FAINT_IDX] = tensor.D1{1}
-				}
-	
-				if isP2Faint {
-					splited[P2_FAINT_IDX] = tensor.D1{1}
-				}
-				for _, v := range splited {
-					ret = append(ret, v...)
-				}
-			}
-	
-		}
-		return ret
 	}
 }

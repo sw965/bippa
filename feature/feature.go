@@ -67,7 +67,7 @@ func ExpectedDamageRatioToCurrentHP(p1Pokemon, p2Pokemon *bp.Pokemon) tensor.D1 
 		},
 	}
 
-	ret := make([]float64, 0, bp.MAX_MOVESET_NUM)
+	ret := make([]float64, 0, bp.MAX_MOVESET)
 	for moveName, _ := range p1Pokemon.Moveset {
 		dmg := dmgCalc.Expected(moveName)
 		accuracy := bp.MOVEDEX[moveName].Accuracy
@@ -94,7 +94,7 @@ func DPSRatioToCurrentHP(p1Pokemon, p2Pokemon *bp.Pokemon) tensor.D1 {
 		},
 	}
 
-	ret := make([]float64, 0, bp.MAX_MOVESET_NUM)
+	ret := make([]float64, 0, bp.MAX_MOVESET)
 	for moveName, _ := range p1Pokemon.Moveset {
 		accuracy := bp.MOVEDEX[moveName].Accuracy
 		dmg := omwmath.Max(dmgCalc.Expected(moveName) , float64(p2Pokemon.CurrentHP))
@@ -109,7 +109,7 @@ func SingleBattleNum(n int) int {
 	return (single.FIGHTER_NUM * single.FIGHTER_NUM) * (n*n*4 + 2)
 }
 
-func SingleBattle(f func(*bp.Pokemon, *bp.Pokemon) tensor.D1, n int) func(*single.Battle) tensor.D1 {
+func SingleBattleClosure(n int, fs ...func(*bp.Pokemon, *bp.Pokemon) tensor.D1) func(*single.Battle) tensor.D1 {
 	SPEED_WIN_IDX := 0
 	SPEED_LOSS_IDX := 1
 	P1_FAINT_IDX := 2
@@ -126,7 +126,11 @@ func SingleBattle(f func(*bp.Pokemon, *bp.Pokemon) tensor.D1, n int) func(*singl
 				splited[P1_FAINT_IDX] = tensor.NewD1Zeros(1)
 				splited[P2_FAINT_IDX] = tensor.NewD1Zeros(1)
 	
-				both := omwslices.Concat(f(&p1Pokemon, &p2Pokemon), f(&p2Pokemon, &p1Pokemon))
+				both := make(tensor.D1 , 0, n*n*4+2)
+				for _, f := range fs {
+					both = append(both, omwslices.Concat(f(&p1Pokemon, &p2Pokemon), f(&p2Pokemon, &p1Pokemon))...)
+				}
+
 				isP1Faint := p1Pokemon.IsFaint()
 				isP2Faint := p2Pokemon.IsFaint()
 				isNotFaint := !isP1Faint && !isP2Faint
@@ -155,3 +159,5 @@ func SingleBattle(f func(*bp.Pokemon, *bp.Pokemon) tensor.D1, n int) func(*singl
 		return ret
 	}
 }
+
+var SingleBattleStandard = SingleBattleClosure(2, ExpectedDamageRatioToCurrentHP, ExpectedDamageRatioToCurrentHP)
