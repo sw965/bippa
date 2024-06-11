@@ -40,11 +40,18 @@ func DefenseIndex(pokemon *bp.Pokemon) tensor.D1 {
 	return omwslices.Concat(defIndexFeature, spDefIndexFeature)
 }
 
-func Team(f func(*bp.Pokemon) tensor.D1, n int) func(team.Team) tensor.D1 {
+
+type TeamFunc func(team.Team) tensor.D1
+
+func NewTeamFunc(capacity int, fs ...func(*bp.Pokemon) tensor.D1) TeamFunc {
 	return func(party team.Team) tensor.D1 {
-		ret := make(tensor.D1, 0, n*team.MAX)
+		ret := make(tensor.D1, 0, capacity)
 		for _, pokemon := range party {
-			ret = append(ret, f(&pokemon)...)
+			feature := make(tensor.D1, 0, n)
+			for _, f := range fs {
+				feature = append(feature, f(&pokemon)...)
+			}
+			ret = append(ret, feature...)
 		}
 		return ret
 	}
@@ -105,19 +112,16 @@ func DPSRatioToCurrentHP(p1Pokemon, p2Pokemon *bp.Pokemon) tensor.D1 {
 	return tensor.D1{omwmath.Max(ret...)}
 }
 
-func SingleBattleNum(n int) int {
-	return (single.FIGHTER_NUM * single.FIGHTER_NUM) * (n*n*4 + 2)
-}
+type SingleBattleFunc func(*single.Battle) tensor.D1
 
-func SingleBattleClosure(n int, fs ...func(*bp.Pokemon, *bp.Pokemon) tensor.D1) func(*single.Battle) tensor.D1 {
+func NewSingleBattle(capacity int, fs ...func(*bp.Pokemon, *bp.Pokemon) tensor.D1) SingleBattleFunc {
 	SPEED_WIN_IDX := 0
 	SPEED_LOSS_IDX := 1
 	P1_FAINT_IDX := 2
 	P2_FAINT_IDX := 3
-	N := SingleBattleNum(n)
 
 	return func(battle *single.Battle) tensor.D1 {
-		ret := make(tensor.D1, 0, N)
+		ret := make(tensor.D1, 0, capacity)
 		for _, p1Pokemon := range battle.P1Fighters {
 			for _, p2Pokemon := range battle.P2Fighters {
 				splited := make(tensor.D2, P2_FAINT_IDX+1)
@@ -159,5 +163,3 @@ func SingleBattleClosure(n int, fs ...func(*bp.Pokemon, *bp.Pokemon) tensor.D1) 
 		return ret
 	}
 }
-
-var SingleBattleStandard = SingleBattleClosure(2, ExpectedDamageRatioToCurrentHP, ExpectedDamageRatioToCurrentHP)

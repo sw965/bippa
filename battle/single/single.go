@@ -303,7 +303,7 @@ func LegalActionss(b *Battle) Actionss {
 	return actionss
 }
 
-func PushClosure(randDmgBonuses dmgtools.RandBonuses, r *rand.Rand) func(Battle, Actions) (Battle, error) {
+func NewPushFunc(randDmgBonuses dmgtools.RandBonuses, r *rand.Rand) func(Battle, Actions) (Battle, error) {
 	return func(battle Battle, actions Actions) (Battle, error) {
 		if actions.IsAllEmpty() {
 			return Battle{}, fmt.Errorf("両プレイヤーのActionがEmptyになっているため、Pushできません。Emptyじゃないようにするには、Action.CmdMoveNameかAction.SwitchPokeNameのいずれかは、ゼロ値以外の値である必要があります。")

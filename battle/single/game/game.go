@@ -12,7 +12,7 @@ func New(randDmgBonuses dmgtools.RandBonuses, r *rand.Rand) simultaneous.Game[si
 		Equal:single.Equal,
 		IsEnd:single.IsEnd,
 		LegalActionss:single.LegalActionss,
-		Push:single.PushClosure(randDmgBonuses, r),
+		Push:single.NewPushFunc(randDmgBonuses, r),
 	}
 	ret.SetRandActionPlayer(r)
 	return ret
