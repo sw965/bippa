@@ -271,6 +271,20 @@ func (b *Battle) SortActionsByOrder(p1Action, p2Action *Action, r *rand.Rand) Ac
 	}
 }
 
+func (b *Battle) GameResult() float64 {
+	isP1AllFaint := b.P1Fighters.IsAllFaint()
+	isP2AllFaint := b.P2Fighters.IsAllFaint()
+	if isP1AllFaint && isP2AllFaint {
+		return 0.5
+	} else if isP1AllFaint {
+		return 0.0
+	} else if isP2AllFaint {
+		return 1.0
+	} else {
+		return -1.0
+	}
+}
+
 func Equal(b1, b2 *Battle) bool {
 	return b1.P1Fighters.Equal(&b2.P1Fighters) && b1.P2Fighters.Equal(&b2.P2Fighters) && b1.Turn == b2.Turn
 }

@@ -14,39 +14,56 @@ import (
 	"github.com/sw965/crow/tensor"
 )
 
+type RawTeacher struct {
+	Battle single.Battle
+	Q float64
+	GameResult float64
+}
+
+type RawTeachers []*RawTeacher
+
+func (ts RawTeachers) TrainXY(f feature.SingleBattleFunc, qRatio float64) tensor.D2 {
+	x := make(tensor.D1, 0, len(ts))
+	y := make(tensor.D2, 0, len(ts))
+	for i, t := range ts {
+		x[i] = f(&t.Battle)
+		y[i] = (qRatio * t.Q) + ((1.0 - qRatio) * t.GameResult) 
+	}
+	return x, y
+}
+
 type CaitlinModel[single.Battle, single.Actionss, single.Actions] struct {
 	Game simultaneous.Game
 	MCTS duct.MCTS[single.Battle, single.Actionss, single.Actions]
 	FeatureFunc feature.SingleBattleFunc
 	Affine model1d.Sequential
-	GameEachTrainX tensor.D3
-	GameEachTrainY tensor.D3
+	NewInitBattleFunc func() Battle 
+	RawTeachers RawTeachers
+	RandDmgBonuses dmgtools.RandBonuses
+	Rand *rand.Rand
+	rawTeacherStart int
 }
 
 func (lady *Caitlin) SetMCTS() {
 	leafNodeEvalsFunc := func(battle *single.Battle) (duct.LeafNodeEvalYs, error) {
-		isP1AllFaint := battle.P1Fighters.IsAllFaint()
-		isP2AllFaint := battle.P2Fighters.IsAllFaint()
-		if isP1AllFaint && isP2AllFaint {
-			return duct.LeafNodeEvalYs{0.5, 0.5}, nil
-		} else if isP1AllFaint {
-			return duct.LeafNodeEvalYs{0.0, 1.0}, nil
-		} else if isP2AllFaint {
-			return duct.LeafNodeEvalYs{1.0, 0.0}, nil
-		} else {
+		gameResult := battle.GameResult()
+		if gameResult == -1.0 {
 			x := lady.FeatureFunc(battle)
 			y, err := affine.Predict(x)
 			if err != nil {
 				return duct.LeafNodeEvalYs{}, err
 			}
+			v := y[0]
 			return duct.LeafNodeEvalYs{
-				duct.LeafNodeEvalY(y[0]),
-				duct.LeafNodeEvalY(1.0-y[0]),
-			}, nil
+				duct.LeafNodeEvalY(v),
+				duct.LeafNodeEvalY(1.0-v),
+			}, nil 
+		} else {
+			return duct.LeafNodeEvalYs{gameResult, 1.0-gameResult}, nil
 		}
 	}
 
-	gm := game.New(dmgtools.RandBonuses{1.0}, r)
+	gm := game.New(dmgtools.RandBonuses{1.0}, lady.Rand)
 	gm.Player = func(battle *Battle) single.Action {}
 
 	mcts := duct.MCTS[single.Battle, single.Actionss, single.Actions, single.Action]{
@@ -61,24 +78,49 @@ func (lady *Caitlin) SetMCTS() {
 	lady.MCTS = mcts
 }
 
-func (lady *Caitlin) SetSelfBattlePlayer(simulation int, r *rand.Rand) {
+func (lady *Caitlin) SetSelfBattlePlayer(simulation int) {
 	lady.Game.Player = func(battle *single.Battle) (single.Actions, error) {
 		rootNode := lady.MCTS.NewNode(battle) 
-		err := lady.MCTS.Run(simulation, rootNode, r)
+		err := lady.MCTS.Run(simulation, rootNode, lady.Rand)
 		if err != nil {
 			return single.Actions{}, err
 		}
-
-		lady.GameEachTrainX[lady.GameID] = append(
-			lady.GameEachTrainX[lady.GameID],
-			lady.Feature(battle),
-		)
-
-		lady.GameEachTrainY[lady.GameID] = append(
-			lady.GameEachTrainY[lady.GameID],
-			lady.Feature(battle),
-		)
+		
+		jointAvg := rootNode.UCBManagers.JointAverageValue()
+		teacher := RawTeacher{Battle:*battle, Q:jointAvg[0]}
+		return rootNode.UCBManagers.JointActionByMaxTrial(lady.Rand), nil
 	}
+}
+
+func (lady *Caitlin) SelfBattle(gameNum, maxRandActionNum int) error {
+	for i := 0; i < n; i++ {
+		initBattle := lady.NewInitBattleFunc()
+
+		lady.Game.SetRandActionPlayer(lady.Rand)
+		lady.rawTeacherStart := len(lady.RawTeachers)
+		battle, err := lady.Game.Play(initBattle, func(_ *single.Battle, i int) bool { return i == lady.Rand.Intn(maxRandActionNum+1)} )
+		if err != nil {
+			return err
+		}
+		if lady.IsEnd(&battle) {
+			continue
+		}
+
+		lady.SetSelfBattlePlayer()
+		endBattle, err := lady.Game.Playout(battle)
+		if err != nil {
+			return err
+		}
+
+		gameResult := endBattle.GameResult()
+		for i := lady.rawTeacherStart; i < len(lady.RawTeachers); i++ {
+			lady.RawTeachers[i].GameResult = gameResult
+		}
+	}
+}
+
+func (lady *Caitlin) Train() {
+
 }
 
 func main() {
