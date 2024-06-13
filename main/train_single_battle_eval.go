@@ -24,18 +24,17 @@ func main() {
 	affine, variable := model1d.NewStandardAffine(xn, u1n, u2n, yn, 0.0001, 64.0, r)
 
 	leafNodeEvalsFunc := func(battle *single.Battle) (duct.LeafNodeJointEvalY, error) {
-		if isEnd, gameRetVal := gm.IsEnd(battle); isEnd {
-			return fn.Map[[]float64, ]
-		} else {
-			x := feature.SingleBattleClosure(2, feature.ExpectedDamageRatioToCurrentHP, feature.DPSRatioToCurrentHP)(battle)
-			y, err := affine.Predict(x)
-			if err != nil {
-				return duct.LeafNodeEvalYs{}, err
+		if isEnd, gameRetJointVal := gm.IsEnd(battle); isEnd {
+			y := make(duct.LeafNodeJointEvalY, len(gameRetVal))
+			for i, v := range gameRetJointVal {
+				y[i] = v
 			}
-			return duct.LeafNodeEvalYs{
-				duct.LeafNodeEvalY(y[0]),
-				duct.LeafNodeEvalY(1.0-y[0]),
-			}, nil
+			return y
+		} else {
+			x := feature.NewSingleBattleFunc(2, feature.ExpectedDamageRatioToCurrentHP, feature.DPSRatioToCurrentHP)(battle)
+			y, err := affine.Predict(x)
+			v := y[0]
+			return duct.LeafNodeEvalYs{v, 1.0-v}, nil
 		}
 	}
 
@@ -69,7 +68,12 @@ func main() {
 			panic(err)
 		}
 
-		fmt.Println("i=", i)
+		swappedBattleHistory := make(single.Battle, len(battleHistory))
+		for i, b := range battleHistory {
+			swappedBattleHistory[i] = b.SwapPlayers()
+		}
+
+		for 
 		
 		if len(trainX) >= batchSize - 100 {
 			for j := 0; j < batchSize; j++ {
