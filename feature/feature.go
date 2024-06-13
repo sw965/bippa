@@ -43,9 +43,9 @@ func DefenseIndex(pokemon *bp.Pokemon) tensor.D1 {
 
 type TeamFunc func(team.Team) tensor.D1
 
-func NewTeamFunc(capacity int, fs ...func(*bp.Pokemon) tensor.D1) TeamFunc {
+func NewTeamFunc(n int, fs ...func(*bp.Pokemon) tensor.D1) TeamFunc {
 	return func(party team.Team) tensor.D1 {
-		ret := make(tensor.D1, 0, capacity)
+		ret := make(tensor.D1, 0, n)
 		for _, pokemon := range party {
 			feature := make(tensor.D1, 0, n)
 			for _, f := range fs {
@@ -114,14 +114,14 @@ func DPSRatioToCurrentHP(p1Pokemon, p2Pokemon *bp.Pokemon) tensor.D1 {
 
 type SingleBattleFunc func(*single.Battle) tensor.D1
 
-func NewSingleBattle(capacity int, fs ...func(*bp.Pokemon, *bp.Pokemon) tensor.D1) SingleBattleFunc {
+func NewSingleBattle(n int, fs ...func(*bp.Pokemon, *bp.Pokemon) tensor.D1) SingleBattleFunc {
 	SPEED_WIN_IDX := 0
 	SPEED_LOSS_IDX := 1
 	P1_FAINT_IDX := 2
 	P2_FAINT_IDX := 3
 
 	return func(battle *single.Battle) tensor.D1 {
-		ret := make(tensor.D1, 0, capacity)
+		ret := make(tensor.D1, 0, 128)
 		for _, p1Pokemon := range battle.P1Fighters {
 			for _, p2Pokemon := range battle.P2Fighters {
 				splited := make(tensor.D2, P2_FAINT_IDX+1)

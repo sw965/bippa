@@ -7,13 +7,13 @@ import (
 	"math/rand"
 )
 
-func New(randDmgBonuses dmgtools.RandBonuses, r *rand.Rand) simultaneous.Game[single.Battle, single.Actionss, single.Actions, single.Action] {
-	ret := simultaneous.Game[single.Battle, single.Actionss, single.Actions, single.Action]{
-		Equal:single.Equal,
-		IsEnd:single.IsEnd,
-		LegalActionss:single.LegalActionss,
-		Push:single.NewPushFunc(randDmgBonuses, r),
-	}
-	ret.SetRandActionPlayer(r)
-	return ret
+func New(randDmgBonuses dmgtools.RandBonuses, r *rand.Rand) simultaneous.Game[single.Battle, single.ActionSlices, single.Actions, single.Action] {
+    gm := simultaneous.Game[single.Battle, single.ActionSlices, single.Actions, single.Action]{
+        Equal:                single.Equal,
+        IsEnd:                single.IsEnd,
+        LegalSeparateActions: single.LegalSeparateActions,
+        Push:                 single.NewPushFunc(randDmgBonuses, r),
+    }
+    gm.SetRandActionPlayer(r)
+    return gm
 }

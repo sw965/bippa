@@ -98,7 +98,7 @@ const (
 	MAX_SIMULTANEOUS_ACTION_NUM = 2
 )
 
-type Actionss []Actions
+type ActionSlices []Actions
 
 type Battle struct {
 	P1Fighters Fighters
@@ -289,16 +289,27 @@ func Equal(b1, b2 *Battle) bool {
 	return b1.P1Fighters.Equal(&b2.P1Fighters) && b1.P2Fighters.Equal(&b2.P2Fighters) && b1.Turn == b2.Turn
 }
 
-func IsEnd(b *Battle) bool {
-	return b.P1Fighters.IsAllFaint() || b.P2Fighters.IsAllFaint()
+func IsEnd(b *Battle) (bool, []float64) {
+	isP1AllFaint := b.P1Fighters.IsAllFaint()
+	isP2AllFaint := b.P2Fighters.IsAllFaint()
+
+	if isP1AllFaint && isP2AllFaint {
+		return true, []float64{0.5, 0.5}
+	} else if isP1AllFaint {
+		return true, []float64{0.0, 1.0}
+	} else if isP2AllFaint {
+		return true, []float64{1.0, 0.0}
+	} else {
+		return false, []float64{}
+	}
 }
 
-func LegalActionss(b *Battle) Actionss {
+func LegalSeparateActions(b *Battle) ActionSlices {
 	moveNamess := b.CommandableMoveNamess()
 	pokeNamess := b.SwitchablePokeNamess()
-	actionss := make(Actionss, MAX_SIMULTANEOUS_ACTION_NUM)
+	ret := make(ActionSlices, MAX_SIMULTANEOUS_ACTION_NUM)
 	isPlayer1s := []bool{true, false}
-	for playerI := range actionss {
+	for playerI := range ret {
 		isPlayer1 := isPlayer1s[playerI]
 		moveNames := moveNamess[playerI]
 		pokeNames := pokeNamess[playerI]
@@ -309,12 +320,12 @@ func LegalActionss(b *Battle) Actionss {
 		for _, name := range pokeNames {
 			actions = append(actions, Action{SwitchPokeName:name, IsPlayer1:isPlayer1})
 		}
-		if len(actions) == 0 {
+		if len(ret) == 0 {
 			actions = append(actions, Action{IsPlayer1:isPlayer1})
 		}
-		actionss[playerI] = actions
+		ret[playerI] = actions
 	}
-	return actionss
+	return ret
 }
 
 func NewPushFunc(randDmgBonuses dmgtools.RandBonuses, r *rand.Rand) func(Battle, Actions) (Battle, error) {
