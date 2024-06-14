@@ -114,7 +114,7 @@ func DPSRatioToCurrentHP(p1Pokemon, p2Pokemon *bp.Pokemon) tensor.D1 {
 
 type SingleBattleFunc func(*single.Battle) tensor.D1
 
-func NewSingleBattle(n int, fs ...func(*bp.Pokemon, *bp.Pokemon) tensor.D1) SingleBattleFunc {
+func NewSingleBattleFunc(n int, fs ...func(*bp.Pokemon, *bp.Pokemon) tensor.D1) SingleBattleFunc {
 	SPEED_WIN_IDX := 0
 	SPEED_LOSS_IDX := 1
 	P1_FAINT_IDX := 2

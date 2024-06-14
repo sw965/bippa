@@ -159,7 +159,7 @@ func (b *Battle) p2CommandableMoveNames() bp.MoveNames {
 	return names
 }
 
-func (b *Battle) CommandableMoveNamess() bp.MoveNamess {
+func (b *Battle) SeparateCommandableMoveNames() bp.MoveNamess {
 	p1 := b.p1CommandableMoveNames()
 	p2 := b.p2CommandableMoveNames()
 	return bp.MoveNamess{p1, p2}
@@ -202,7 +202,7 @@ func (b *Battle) p2SwitchablePokeNames() bp.PokeNames {
 	return names
 }
 
-func (b *Battle) SwitchablePokeNamess() bp.PokeNamess {
+func (b *Battle) SeparateSwitchablePokeNames() bp.PokeNamess {
 	p1 := b.p1SwitchablePokeNames()
 	p2 := b.p2SwitchablePokeNames()
 	return bp.PokeNamess{p1, p2}
@@ -271,20 +271,6 @@ func (b *Battle) SortActionsByOrder(p1Action, p2Action *Action, r *rand.Rand) Ac
 	}
 }
 
-func (b *Battle) GameResult() float64 {
-	isP1AllFaint := b.P1Fighters.IsAllFaint()
-	isP2AllFaint := b.P2Fighters.IsAllFaint()
-	if isP1AllFaint && isP2AllFaint {
-		return 0.5
-	} else if isP1AllFaint {
-		return 0.0
-	} else if isP2AllFaint {
-		return 1.0
-	} else {
-		return -1.0
-	}
-}
-
 func Equal(b1, b2 *Battle) bool {
 	return b1.P1Fighters.Equal(&b2.P1Fighters) && b1.P2Fighters.Equal(&b2.P2Fighters) && b1.Turn == b2.Turn
 }
@@ -305,14 +291,14 @@ func IsEnd(b *Battle) (bool, []float64) {
 }
 
 func LegalSeparateActions(b *Battle) ActionSlices {
-	moveNamess := b.CommandableMoveNamess()
-	pokeNamess := b.SwitchablePokeNamess()
+	separateMoveNames := b.SeparateCommandableMoveNames()
+	separatePokeNames := b.SeparateSwitchablePokeNames()
 	ret := make(ActionSlices, MAX_SIMULTANEOUS_ACTION_NUM)
 	isPlayer1s := []bool{true, false}
 	for playerI := range ret {
 		isPlayer1 := isPlayer1s[playerI]
-		moveNames := moveNamess[playerI]
-		pokeNames := pokeNamess[playerI]
+		moveNames := separateMoveNames[playerI]
+		pokeNames := separatePokeNames[playerI]
 		actions := make(Actions, 0, len(moveNames) + len(pokeNames))
 		for _, name := range moveNames {
 			actions = append(actions, Action{CmdMoveName:name, IsPlayer1:isPlayer1})
@@ -320,7 +306,7 @@ func LegalSeparateActions(b *Battle) ActionSlices {
 		for _, name := range pokeNames {
 			actions = append(actions, Action{SwitchPokeName:name, IsPlayer1:isPlayer1})
 		}
-		if len(ret) == 0 {
+		if len(actions) == 0 {
 			actions = append(actions, Action{IsPlayer1:isPlayer1})
 		}
 		ret[playerI] = actions
@@ -330,9 +316,17 @@ func LegalSeparateActions(b *Battle) ActionSlices {
 
 func NewPushFunc(randDmgBonuses dmgtools.RandBonuses, r *rand.Rand) func(Battle, Actions) (Battle, error) {
 	return func(battle Battle, actions Actions) (Battle, error) {
+		if len(actions) != 2 {
+			return Battle{}, fmt.Errorf("len(actions) != 2 (NewPushFunc)")
+		}
+
+		for actions[0].IsPlayer1 == actions[1].IsPlayer1 {
+			return Battle{}, fmt.Errorf("プレイヤー1もしくはプレイヤー2が連続で行動しようとした。(actions[0].IsPlayer1 == actions[1].IsPlayer1)")
+		}
 		if actions.IsAllEmpty() {
 			return Battle{}, fmt.Errorf("両プレイヤーのActionがEmptyになっているため、Pushできません。Emptyじゃないようにするには、Action.CmdMoveNameかAction.SwitchPokeNameのいずれかは、ゼロ値以外の値である必要があります。")
 		}
+
 		var err error
 		sorted := battle.SortActionsByOrder(&actions[0], &actions[1], r)
 		for i := range sorted {

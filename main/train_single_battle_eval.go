@@ -8,44 +8,89 @@ import (
 	"github.com/sw965/bippa/feature"
 	"github.com/sw965/crow/model/1d"
 	"github.com/sw965/bippa/battle/single"
-	"github.com/sw965/crow/ucb"
 	"github.com/sw965/bippa/battle/dmgtools"
 	bp "github.com/sw965/bippa"
 	"github.com/sw965/crow/tensor"
+	omwslices "github.com/sw965/omw/slices"
+	"github.com/sw965/bippa/battle/single/mcts"
 )
+
+type RawTeacher struct {
+	Battle single.Battle
+	JointQ []float64
+	GameResultJointValue []float64
+}
+
+type RawTeachers []*RawTeacher
+
+func NewRawTeachers(battleHistory []single.Battle, jointQs [][]float64, gameRetJointVal []float64) RawTeachers {
+	ts := make(RawTeachers, len(battleHistory))
+	for i := range ts {
+		ts[i] = &RawTeacher{
+			Battle:battleHistory[i],
+			JointQ:jointQs[i],
+			GameResultJointValue:gameRetJointVal,
+		}
+	}
+	return ts
+}
+
+func (ts RawTeachers) DataAugmentation() RawTeachers {
+	data := make(RawTeachers, len(ts))
+	for i, t := range ts {
+		data[i] = &RawTeacher{
+			Battle:t.Battle.SwapPlayers(),
+			JointQ:omwslices.Reverse(t.JointQ),
+			GameResultJointValue:omwslices.Reverse(t.GameResultJointValue),
+		}
+	}
+	return omwslices.Concat(ts, data)
+}
+
+func (ts RawTeachers) TrainXY(f feature.SingleBattleFunc, qRatio float64) (tensor.D2, tensor.D2) {
+	n := len(ts)
+	x := make(tensor.D2, n)
+	y := make(tensor.D2, n)
+	for i, t := range ts {
+		x[i] = f(&t.Battle)
+		y[i] = tensor.D1{(qRatio * t.JointQ[0]) + (1.0-qRatio) * t.GameResultJointValue[0]}
+	}
+	return x, y
+}
 
 func main() {
 	r := omwrand.NewMt19937()
 	xn := 90
-	fmt.Println("xn", xn)
 	u1n := 64
 	u2n := 16
 	yn := 1
 	affine, variable := model1d.NewStandardAffine(xn, u1n, u2n, yn, 0.0001, 64.0, r)
 
-	leafNodeEvalsFunc := func(battle *single.Battle) (duct.LeafNodeJointEvalY, error) {
-		if isEnd, gameRetJointVal := gm.IsEnd(battle); isEnd {
-			y := make(duct.LeafNodeJointEvalY, len(gameRetVal))
+	gm := game.New(dmgtools.RandBonuses{1.0}, r)
+
+	leafNodeJointEvalFunc := func(battle *single.Battle) (duct.LeafNodeJointEvalY, error) {
+		if isEnd, gameRetJointVal := single.IsEnd(battle); isEnd {
+			y := make(duct.LeafNodeJointEvalY, len(gameRetJointVal))
 			for i, v := range gameRetJointVal {
 				y[i] = v
 			}
-			return y
+			return y, nil
 		} else {
 			x := feature.NewSingleBattleFunc(2, feature.ExpectedDamageRatioToCurrentHP, feature.DPSRatioToCurrentHP)(battle)
 			y, err := affine.Predict(x)
 			v := y[0]
-			return duct.LeafNodeEvalYs{v, 1.0-v}, nil
+			return duct.LeafNodeJointEvalY{v, 1.0-v}, err
 		}
 	}
+
+	mctSearch := mcts.New(dmgtools.RandBonuses{1.0}, r)
+	mctSearch.LeafNodeJointEvalFunc = leafNodeJointEvalFunc
 
 	batchSize := 1280
 	trainX := make(tensor.D2, 0, batchSize)
 	trainY := make(tensor.D2, 0, batchSize)
 
-	gm := game.New(dmgtools.RandBonuses{1.0}, r)
-	mcts := mcts.New(dmgtools.RandBonuses{1.0}, r)
-
-	selfBattleNum := 1280
+	selfBattleNum := 960
 	for i := 0; i < selfBattleNum; i++ {
 		initBattle := single.Battle{
 			P1Fighters:single.Fighters{bp.NewTemplateBulbasaur(), bp.NewTemplateCharmander(), bp.NewTemplateSquirtle()},
@@ -58,24 +103,23 @@ func main() {
 			panic(err)
 		}
 
-		if isEnd, _ := gm.IsEnd(&battle); isEnd {
+		if isEnd, _ := single.IsEnd(&battle); isEnd {
 			continue
 		}
 
-		gm.Player = mcts.NewPlayer(512, r)
-		_, battleHistory, _, qHistory, err = gm.PlayoutWithHistory(battle)
+		gm.Player = mctSearch.NewPlayer(512, r)
+		endBattle, battleHistory, _, qHistory, err := gm.PlayoutWithHistory(battle, 128)
 		if err != nil {
 			panic(err)
 		}
 
-		swappedBattleHistory := make(single.Battle, len(battleHistory))
-		for i, b := range battleHistory {
-			swappedBattleHistory[i] = b.SwapPlayers()
-		}
+		_, gameRetJointVal := single.IsEnd(&endBattle)
+		oneGameTrainX, oneGameTrainY := NewRawTeachers(battleHistory, qHistory, gameRetJointVal).DataAugmentation().TrainXY(feature.NewSingleBattleFunc(2, feature.ExpectedDamageRatioToCurrentHP, feature.DPSRatioToCurrentHP), 0.5)
+		trainX = append(trainX, oneGameTrainX...)
+		trainY = append(trainY, oneGameTrainY...)
 
-		for 
-		
 		if len(trainX) >= batchSize - 100 {
+			fmt.Println("minibatch")
 			for j := 0; j < batchSize; j++ {
 				idx := r.Intn(len(trainX))
 				affine.SGD(trainX[idx], trainY[idx], 0.01)
@@ -83,6 +127,7 @@ func main() {
 			trainX = make(tensor.D2, 0, batchSize)
 			trainY = make(tensor.D2, 0, batchSize)
 		}
+		fmt.Println("i = ", i)
 	}
 	variable.Param.WriteJSON("c:/Users/kuroko/Desktop/test.json")
 }
