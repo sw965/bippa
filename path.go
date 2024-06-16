@@ -1,11 +1,21 @@
 package bippa
 
 import (
-	opath "github.com/sw965/omw/path"
+	//"os"
+	//"path/filepath"
 )
 
 var (
-	DATA_PATH = opath.SW965 + "bippa/"
+	DATA_PATH = "C:/Go/project/bippa/main/bippa/"
+	// DATA_PATH = func() string {
+	// 	exePath, err := os.Executable()
+	// 	if err != nil {
+	// 		panic(err)
+	// 	}
+	// 	path := filepath.Dir(exePath) + "/bippa/"
+	// 	return path
+	// }()
+
 	ALL_POKE_NAMES_PATH = DATA_PATH + "all_poke_names.json"
 	POKE_DATA_PATH = DATA_PATH + "poke_data/"
 

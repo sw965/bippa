@@ -100,22 +100,38 @@ const (
 
 type ActionSlices []Actions
 
+type Step int
+
+const (
+	BEFORE_MOVE_USE_STEP Step = iota
+	AFTER_MOVE_USE_STEP
+	BEFORE_MOVE_DAMAGE_STEP
+	AFTER_MOVE_DAMAGE_STEP
+	BEFORE_SWITCH_STEP
+	AFTER_SWITCH_STEP
+	SELF_FAINT_STEP
+	OPPONENT_FAINT_STEP
+)
+
 type Battle struct {
-	P1Fighters Fighters
-	P2Fighters Fighters
+	SelfFighters Fighters
+	OpponentFighters Fighters
 	Turn int
-	IsSelf bool
+	IsRealSelf bool
+
+	RandDmgBonuses dmgtools.RandBonuses
+	Observer func(*Battle, Step)
 }
 
 func (b Battle) SwapPlayers() Battle {
-	b.P1Fighters, b.P2Fighters = b.P2Fighters, b.P1Fighters
-	b.IsSelf = !b.IsSelf
+	b.SelfFighters, b.OpponentFighters = b.OpponentFighters, b.SelfFighters
+	b.IsRealSelf = !b.IsRealSelf
 	return b
 }
 
-func (b *Battle) CalcDamage(moveName bp.MoveName, randDmgBonuses dmgtools.RandBonuses, r *rand.Rand) int {
-	attacker := b.P1Fighters[0]
-	defender := b.P2Fighters[0]
+func (b *Battle) CalcDamage(moveName bp.MoveName, r *rand.Rand) int {
+	attacker := b.SelfFighters[0]
+	defender := b.OpponentFighters[0]
 
 	calculator := dmgtools.Calculator{
 		dmgtools.Attacker{
@@ -131,21 +147,21 @@ func (b *Battle) CalcDamage(moveName bp.MoveName, randDmgBonuses dmgtools.RandBo
 			SpDef:defender.SpDef,
 		},
 	}
-	randDmgBonus := omwrand.Choice(randDmgBonuses, r)
+	randDmgBonus := omwrand.Choice(b.RandDmgBonuses, r)
 	return calculator.Calculation(moveName, randDmgBonus)
 }
 
 func (b *Battle) p1CommandableMoveNames() bp.MoveNames {
-	if b.P1Fighters[0].IsFaint() {
+	if b.SelfFighters[0].IsFaint() {
 		return bp.MoveNames{}
 	}
 	
-	if b.P2Fighters[0].IsFaint() {
+	if b.OpponentFighters[0].IsFaint() {
 		return bp.MoveNames{}
 	}
 
 	names := make(bp.MoveNames, 0, bp.MAX_MOVESET)
-	for moveName, pp := range b.P1Fighters[0].Moveset {
+	for moveName, pp := range b.SelfFighters[0].Moveset {
 		if pp.Current > 0 {
 			names = append(names, moveName)
 		}
@@ -165,30 +181,44 @@ func (b *Battle) SeparateCommandableMoveNames() bp.MoveNamess {
 	return bp.MoveNamess{p1, p2}
 }
 
-func (b Battle) CommandMove(moveName bp.MoveName, randDmgBonuses dmgtools.RandBonuses, r *rand.Rand) Battle {
-	if b.P1Fighters[0].IsFaint() {
-		return b
+func (b Battle) CommandMove(moveName bp.MoveName, r *rand.Rand) (Battle, error) {
+	if b.SelfFighters[0].IsFaint() {
+		return b, nil
 	}
-	if b.P2Fighters[0].IsFaint() {
-		return b
-	}
-	moveset := b.P1Fighters[0].Moveset.Clone()
-	//moveset[moveName].Current -= 1
 
-	b.P1Fighters[0].Moveset = moveset
-	dmg := b.CalcDamage(moveName, randDmgBonuses, r)
-	dmg = omwmath.Min(dmg, b.P2Fighters[0].CurrentHP)
-	b.P2Fighters[0].CurrentHP -= dmg
-	return b
+	if b.OpponentFighters[0].IsFaint() {
+		return b, nil
+	}
+
+	if _, ok := b.SelfFighters[0].Moveset[moveName]; !ok {
+		msg := fmt.Sprintf("%s は %s を 繰り出そうとしたが、覚えていない", b.SelfFighters[0].Name.ToString(), moveName.ToString())
+		return b, fmt.Errorf(msg)
+	}
+
+	moveset := b.SelfFighters[0].Moveset.Clone()
+	moveset[moveName].Current -= 1
+
+	b.Observer(&b, BEFORE_MOVE_USE_STEP)
+	b.SelfFighters[0].Moveset = moveset
+	b.Observer(&b, AFTER_MOVE_USE_STEP)
+
+	dmg := b.CalcDamage(moveName, r)
+	dmg = omwmath.Min(dmg, b.OpponentFighters[0].CurrentHP)
+
+	b.Observer(&b, BEFORE_MOVE_DAMAGE_STEP)
+	b.OpponentFighters[0].CurrentHP -= dmg
+	b.Observer(&b, AFTER_MOVE_DAMAGE_STEP)
+
+	return b, nil
 }
 
 func (b *Battle) p1SwitchablePokeNames() bp.PokeNames {
 	//相手だけ瀕死状態ならば、自分は行動出来ない。
-	if b.P1Fighters[0].CurrentHP > 0 && b.P2Fighters[0].CurrentHP <= 0 {
+	if b.SelfFighters[0].CurrentHP > 0 && b.OpponentFighters[0].CurrentHP <= 0 {
 		return bp.PokeNames{}
 	}
 	names := make(bp.PokeNames, 0, FIGHTER_NUM-1)
-	for _, pokemon := range b.P1Fighters[1:] {
+	for _, pokemon := range b.SelfFighters[1:] {
 		if pokemon.CurrentHP > 0 {
 			names = append(names, pokemon.Name)
 		}
@@ -209,7 +239,7 @@ func (b *Battle) SeparateSwitchablePokeNames() bp.PokeNamess {
 }
 
 func (b Battle) Switch(pokeName bp.PokeName) (Battle, error) {
-	idx := b.P1Fighters.IndexByName(pokeName)
+	idx := b.SelfFighters.IndexByName(pokeName)
 	if idx == -1 {
 		name := bp.POKE_NAME_TO_STRING[pokeName]
 		msg := fmt.Sprintf("「%s]へ交代しようとしたが、Fightersの中に含まれていなかった。", name)
@@ -221,14 +251,16 @@ func (b Battle) Switch(pokeName bp.PokeName) (Battle, error) {
 		msg := fmt.Sprintf("「%s]へ交代しようとしたが、既に場に出ている。", name)
 		return Battle{}, fmt.Errorf(msg)
 	}
-
-	b.P1Fighters[0], b.P1Fighters[idx] = b.P1Fighters[idx], b.P1Fighters[0]
+	
+	b.Observer(&b, BEFORE_SWITCH_STEP)
+	b.SelfFighters[0], b.SelfFighters[idx] = b.SelfFighters[idx], b.SelfFighters[0]
+	b.Observer(&b, AFTER_SWITCH_STEP)
 	return b, nil
 }
 
-func (b *Battle) Action(action Action, randDmgBonuses dmgtools.RandBonuses, r *rand.Rand) (Battle, error) {
+func (b *Battle) Action(action Action, r *rand.Rand) (Battle, error) {
 	if action.IsCommandMove() {
-		return b.CommandMove(action.CmdMoveName, randDmgBonuses, r), nil
+		return b.CommandMove(action.CmdMoveName, r)
 	} else {
 		return b.Switch(action.SwitchPokeName)
 	}
@@ -251,8 +283,8 @@ func (b *Battle) IsActionFirst(p1Action, p2Action *Action, r *rand.Rand) bool {
 		return false
 	}
 
-	attacker := b.P1Fighters[0]
-	defender := b.P2Fighters[0]
+	attacker := b.SelfFighters[0]
+	defender := b.OpponentFighters[0]
 
 	if attacker.Speed > defender.Speed {
 		return true
@@ -272,12 +304,12 @@ func (b *Battle) SortActionsByOrder(p1Action, p2Action *Action, r *rand.Rand) Ac
 }
 
 func Equal(b1, b2 *Battle) bool {
-	return b1.P1Fighters.Equal(&b2.P1Fighters) && b1.P2Fighters.Equal(&b2.P2Fighters) && b1.Turn == b2.Turn
+	return b1.SelfFighters.Equal(&b2.SelfFighters) && b1.OpponentFighters.Equal(&b2.OpponentFighters) && b1.Turn == b2.Turn
 }
 
 func IsEnd(b *Battle) (bool, []float64) {
-	isP1AllFaint := b.P1Fighters.IsAllFaint()
-	isP2AllFaint := b.P2Fighters.IsAllFaint()
+	isP1AllFaint := b.SelfFighters.IsAllFaint()
+	isP2AllFaint := b.OpponentFighters.IsAllFaint()
 
 	if isP1AllFaint && isP2AllFaint {
 		return true, []float64{0.5, 0.5}
@@ -314,7 +346,7 @@ func LegalSeparateActions(b *Battle) ActionSlices {
 	return ret
 }
 
-func NewPushFunc(randDmgBonuses dmgtools.RandBonuses, r *rand.Rand) func(Battle, Actions) (Battle, error) {
+func NewPushFunc(r *rand.Rand) func(Battle, Actions) (Battle, error) {
 	return func(battle Battle, actions Actions) (Battle, error) {
 		if len(actions) != 2 {
 			return Battle{}, fmt.Errorf("len(actions) != 2 (NewPushFunc)")
@@ -335,12 +367,21 @@ func NewPushFunc(randDmgBonuses dmgtools.RandBonuses, r *rand.Rand) func(Battle,
 				continue
 			}
 			if action.IsPlayer1 {
-				battle, err = battle.Action(action, randDmgBonuses, r)
+				battle, err = battle.Action(action, r)
 			} else {
 				battle = battle.SwapPlayers()
-				battle, err = battle.Action(action, randDmgBonuses, r)
+				battle, err = battle.Action(action, r)
 				battle = battle.SwapPlayers()
 			}
+
+			if battle.SelfFighters[0].IsFaint() {
+				battle.Observer(&battle, SELF_FAINT_STEP)
+			}
+
+			if battle.OpponentFighters[0].IsFaint() {
+				battle.Observer(&battle, OPPONENT_FAINT_STEP)
+			}
+
 			if err != nil {
 				return Battle{}, err
 			}

@@ -1,0 +1,10 @@
+{
+    "types":["みず"],
+    "baseHP":100,
+    "baseAtk":75,
+    "baseDef":115,
+    "baseSpAtk":90,
+    "baseSpDef":115,
+    "baseSpeed":85,
+    "learnset":["なみのり", "れいとうビーム"] 
+}

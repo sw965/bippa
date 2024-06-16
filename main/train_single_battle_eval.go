@@ -36,13 +36,25 @@ func NewRawTeachers(battleHistory []single.Battle, jointQs [][]float64, gameRetJ
 }
 
 func (ts RawTeachers) DataAugmentation() RawTeachers {
-	data := make(RawTeachers, len(ts))
-	for i, t := range ts {
-		data[i] = &RawTeacher{
+	data := make(RawTeachers, 0, len(ts) * 3)
+	for _, t := range ts {
+		data = append(data, &RawTeacher{
 			Battle:t.Battle.SwapPlayers(),
 			JointQ:omwslices.Reverse(t.JointQ),
 			GameResultJointValue:omwslices.Reverse(t.GameResultJointValue),
-		}
+		})
+
+		data = append(data, &RawTeacher{
+			Battle:single.Battle{P1Fighters:t.Battle.P1Fighters, P2Fighters:t.Battle.P1Fighters},
+			JointQ:[]float64{0.5, 0.5},
+			GameResultJointValue:[]float64{0.5, 0.5},
+		})
+
+		data = append(data, &RawTeacher{
+			Battle:single.Battle{P1Fighters:t.Battle.P2Fighters, P2Fighters:t.Battle.P2Fighters},
+			JointQ:[]float64{0.5, 0.5},
+			GameResultJointValue:[]float64{0.5, 0.5},
+		})
 	}
 	return omwslices.Concat(ts, data)
 }
@@ -86,11 +98,11 @@ func main() {
 	mctSearch := mcts.New(dmgtools.RandBonuses{1.0}, r)
 	mctSearch.LeafNodeJointEvalFunc = leafNodeJointEvalFunc
 
-	batchSize := 1280
+	batchSize := 2560
 	trainX := make(tensor.D2, 0, batchSize)
 	trainY := make(tensor.D2, 0, batchSize)
 
-	selfBattleNum := 960
+	selfBattleNum := 1960
 	for i := 0; i < selfBattleNum; i++ {
 		initBattle := single.Battle{
 			P1Fighters:single.Fighters{bp.NewTemplateBulbasaur(), bp.NewTemplateCharmander(), bp.NewTemplateSquirtle()},

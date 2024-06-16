@@ -1,0 +1,10 @@
+{
+    "types":["ドラゴン", "じめん"],
+    "baseHP":108,
+    "baseAtk":130,
+    "baseDef":95,
+    "baseSpAtk":80,
+    "baseSpDef":85,
+    "baseSpeed":102,
+    "learnset":["ストーンエッジ"]
+}

@@ -1,0 +1,201 @@
+{
+    "さみしがり": {
+        "AtkBonus": 1.1,
+        "DefBonus": 0.9,
+        "SpAtkBonus": 1.0,
+        "SpDefBonus": 1.0,
+        "SpeedBonus": 1.0
+    },
+
+    "いじっぱり": {
+        "AtkBonus": 1.1,
+        "DefBonus": 1.0,
+        "SpAtkBonus": 0.9,
+        "SpDefBonus": 1.0,
+        "SpeedBonus": 1.0
+    },
+
+    "やんちゃ": {
+        "AtkBonus": 1.1,
+        "DefBonus": 1.0,
+        "SpAtkBonus": 1.0,
+        "SpDefBonus": 0.9,
+        "SpeedBonus": 1.0
+    },
+
+    "ゆうかん": {
+        "AtkBonus": 1.1,
+        "DefBonus": 1.0,
+        "SpAtkBonus": 1.0,
+        "SpDefBonus": 1.0,
+        "SpeedBonus": 0.9
+    },
+
+    "ずぶとい": {
+        "AtkBonus": 0.9,
+        "DefBonus": 1.1,
+        "SpAtkBonus": 1.0,
+        "SpDefBonus": 1.0,
+        "SpeedBonus": 1.0
+    },
+
+    "わんぱく": {
+        "AtkBonus": 1.0,
+        "DefBonus": 1.1,
+        "SpAtkBonus": 0.9,
+        "SpDefBonus": 1.0,
+        "SpeedBonus": 1.0
+    },
+
+    "のうてんき": {
+        "AtkBonus": 1.0,
+        "DefBonus": 1.1,
+        "SpAtkBonus": 1.0,
+        "SpDefBonus": 0.9,
+        "SpeedBonus": 1.0
+    },
+
+    "のんき": {
+        "AtkBonus": 1.0,
+        "DefBonus": 1.1,
+        "SpAtkBonus": 1.0,
+        "SpDefBonus": 1.0,
+        "SpeedBonus": 0.9
+    },
+
+    "ひかえめ": {
+        "AtkBonus": 0.9,
+        "DefBonus": 1.0,
+        "SpAtkBonus": 1.1,
+        "SpDefBonus": 1.0,
+        "SpeedBonus": 1.0
+    },
+
+    "おっとり": {
+        "AtkBonus": 1.0,
+        "DefBonus": 0.9,
+        "SpAtkBonus": 1.1,
+        "SpDefBonus": 1.0,
+        "SpeedBonus": 1.0
+    },
+
+    "うっかりや": {
+        "AtkBonus": 1.0,
+        "DefBonus": 1.0,
+        "SpAtkBonus": 1.1,
+        "SpDefBonus": 0.9,
+        "SpeedBonus": 1.0
+    },
+
+    "れいせい": {
+        "AtkBonus": 1.0,
+        "DefBonus": 1.0,
+        "SpAtkBonus": 1.1,
+        "SpDefBonus": 1.0,
+        "SpeedBonus": 0.9
+    },
+
+    "おだやか": {
+        "AtkBonus": 0.9,
+        "DefBonus": 1.0,
+        "SpAtkBonus": 1.0,
+        "SpDefBonus": 1.1,
+        "SpeedBonus": 1.0
+    },
+
+    "おとなしい": {
+        "AtkBonus": 1.0,
+        "DefBonus": 0.9,
+        "SpAtkBonus": 1.0,
+        "SpDefBonus": 1.1,
+        "SpeedBonus": 1.0
+    },
+
+    "しんちょう": {
+        "AtkBonus": 1.0,
+        "DefBonus": 1.0,
+        "SpAtkBonus": 0.9,
+        "SpDefBonus": 1.1,
+        "SpeedBonus": 1.0
+    },
+
+    "なまいき": {
+        "AtkBonus": 1.0,
+        "DefBonus": 1.0,
+        "SpAtkBonus": 1.0,
+        "SpDefBonus": 1.1,
+        "SpeedBonus": 0.9
+    },
+
+    "おくびょう": {
+        "AtkBonus": 0.9,
+        "DefBonus": 1.0,
+        "SpAtkBonus": 1.0,
+        "SpDefBonus": 1.0,
+        "SpeedBonus": 1.1
+    },
+
+    "せっかち": {
+        "AtkBonus": 1.0,
+        "DefBonus": 0.9,
+        "SpAtkBonus": 1.0,
+        "SpDefBonus": 1.0,
+        "SpeedBonus": 1.1
+    },
+
+    "ようき": {
+        "AtkBonus": 1.0,
+        "DefBonus": 1.0,
+        "SpAtkBonus": 0.9,
+        "SpDefBonus": 1.0,
+        "SpeedBonus": 1.1
+    },
+
+    "むじゃき": {
+        "AtkBonus": 1.0,
+        "DefBonus": 1.0,
+        "SpAtkBonus": 1.0,
+        "SpDefBonus": 0.9,
+        "SpeedBonus": 1.1
+    },
+
+    "てれや": {
+        "AtkBonus": 1.0,
+        "DefBonus": 1.0,
+        "SpAtkBonus": 1.0,
+        "SpDefBonus": 1.0,
+        "SpeedBonus": 1.0
+    },
+
+    "がんばりや": {
+        "AtkBonus": 1.0,
+        "DefBonus": 1.0,
+        "SpAtkBonus": 1.0,
+        "SpDefBonus": 1.0,
+        "SpeedBonus": 1.0
+    },
+
+    "すなお": {
+        "AtkBonus": 1.0,
+        "DefBonus": 1.0,
+        "SpAtkBonus": 1.0,
+        "SpDefBonus": 1.0,
+        "SpeedBonus": 1.0
+    },
+
+    "きまぐれ": {
+        "AtkBonus": 1.0,
+        "DefBonus": 1.0,
+        "SpAtkBonus": 1.0,
+        "SpDefBonus": 1.0,
+        "SpeedBonus": 1.0
+    },
+    
+    "まじめ": {
+        "AtkBonus": 1.0,
+        "DefBonus": 1.0,
+        "SpAtkBonus": 1.0,
+        "SpDefBonus": 1.0,
+        "SpeedBonus": 1.0
+    }
+}

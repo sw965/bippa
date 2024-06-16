@@ -57,56 +57,56 @@ func NewTeamFunc(n int, fs ...func(*bp.Pokemon) tensor.D1) TeamFunc {
 	}
 }
 
-func ExpectedDamageRatioToCurrentHP(p1Pokemon, p2Pokemon *bp.Pokemon) tensor.D1 {
+func ExpectedDamageRatioToCurrentHP(selfPokemon, opponentPokemon *bp.Pokemon) tensor.D1 {
 	dmgCalc := dmgtools.Calculator{
 		Attacker:dmgtools.Attacker{
-			PokeName:p1Pokemon.Name,
+			PokeName:selfPokemon.Name,
 			Level:bp.DEFAULT_LEVEL,
-			Atk:p1Pokemon.Atk,
-			SpAtk:p1Pokemon.SpAtk,
+			Atk:selfPokemon.Atk,
+			SpAtk:selfPokemon.SpAtk,
 		},
 
 		Defender:dmgtools.Defender{
-			PokeName:p2Pokemon.Name,
+			PokeName:opponentPokemon.Name,
 			Level:bp.DEFAULT_LEVEL,
-			Def:p2Pokemon.Def,
-			SpDef:p2Pokemon.SpDef,
+			Def:opponentPokemon.Def,
+			SpDef:opponentPokemon.SpDef,
 		},
 	}
 
 	ret := make([]float64, 0, bp.MAX_MOVESET)
-	for moveName, _ := range p1Pokemon.Moveset {
+	for moveName, _ := range selfPokemon.Moveset {
 		dmg := dmgCalc.Expected(moveName)
 		accuracy := bp.MOVEDEX[moveName].Accuracy
-		expected := dmg / float64(p2Pokemon.CurrentHP) * float64(accuracy) / 100.0
+		expected := dmg / float64(opponentPokemon.CurrentHP) * float64(accuracy) / 100.0
 		ret = append(ret, omwmath.Min(expected, 1.0))
 	}
 	return tensor.D1{omwmath.Max(ret...)}
 }
 
-func DPSRatioToCurrentHP(p1Pokemon, p2Pokemon *bp.Pokemon) tensor.D1 {
+func DPSRatioToCurrentHP(selfPokemon, opponentPokemon *bp.Pokemon) tensor.D1 {
 	dmgCalc := dmgtools.Calculator{
 		Attacker:dmgtools.Attacker{
-			PokeName:p1Pokemon.Name,
+			PokeName:selfPokemon.Name,
 			Level:bp.DEFAULT_LEVEL,
-			Atk:p1Pokemon.Atk,
-			SpAtk:p1Pokemon.SpAtk,
+			Atk:selfPokemon.Atk,
+			SpAtk:selfPokemon.SpAtk,
 		},
 
 		Defender:dmgtools.Defender{
-			PokeName:p2Pokemon.Name,
+			PokeName:opponentPokemon.Name,
 			Level:bp.DEFAULT_LEVEL,
-			Def:p2Pokemon.Def,
-			SpDef:p2Pokemon.SpDef,
+			Def:opponentPokemon.Def,
+			SpDef:opponentPokemon.SpDef,
 		},
 	}
 
 	ret := make([]float64, 0, bp.MAX_MOVESET)
-	for moveName, _ := range p1Pokemon.Moveset {
+	for moveName, _ := range selfPokemon.Moveset {
 		accuracy := bp.MOVEDEX[moveName].Accuracy
-		dmg := omwmath.Max(dmgCalc.Expected(moveName) , float64(p2Pokemon.CurrentHP))
-		koHit := math.Ceil(float64(p2Pokemon.CurrentHP) / float64(dmg))
-		dpsRatio := float64(dmg) / float64(p2Pokemon.CurrentHP) * math.Pow(float64(accuracy) / 100.0, koHit)
+		dmg := omwmath.Max(dmgCalc.Expected(moveName) , float64(opponentPokemon.CurrentHP))
+		koHit := math.Ceil(float64(opponentPokemon.CurrentHP) / float64(dmg))
+		dpsRatio := float64(dmg) / float64(opponentPokemon.CurrentHP) * math.Pow(float64(accuracy) / 100.0, koHit)
 		ret = append(ret, dpsRatio)
 	}
 	return tensor.D1{omwmath.Max(ret...)}
@@ -117,42 +117,42 @@ type SingleBattleFunc func(*single.Battle) tensor.D1
 func NewSingleBattleFunc(n int, fs ...func(*bp.Pokemon, *bp.Pokemon) tensor.D1) SingleBattleFunc {
 	SPEED_WIN_IDX := 0
 	SPEED_LOSS_IDX := 1
-	P1_FAINT_IDX := 2
-	P2_FAINT_IDX := 3
+	SELF_FAINT_IDX := 2
+	OPPONENT_FAINT_IDX := 3
 
 	return func(battle *single.Battle) tensor.D1 {
 		ret := make(tensor.D1, 0, 128)
-		for _, p1Pokemon := range battle.P1Fighters {
-			for _, p2Pokemon := range battle.P2Fighters {
-				splited := make(tensor.D2, P2_FAINT_IDX+1)
+		for _, selfPokemon := range battle.SelfFighters {
+			for _, opponentPokemon := range battle.OpponentFighters {
+				splited := make(tensor.D2, OPPONENT_FAINT_IDX+1)
 				splited[SPEED_WIN_IDX] = tensor.NewD1Zeros(n*2)
 				splited[SPEED_LOSS_IDX] = tensor.NewD1Zeros(n*2)
-				splited[P1_FAINT_IDX] = tensor.NewD1Zeros(1)
-				splited[P2_FAINT_IDX] = tensor.NewD1Zeros(1)
+				splited[SELF_FAINT_IDX] = tensor.NewD1Zeros(1)
+				splited[OPPONENT_FAINT_IDX] = tensor.NewD1Zeros(1)
 	
 				both := make(tensor.D1 , 0, n*n*4+2)
 				for _, f := range fs {
-					both = append(both, omwslices.Concat(f(&p1Pokemon, &p2Pokemon), f(&p2Pokemon, &p1Pokemon))...)
+					both = append(both, omwslices.Concat(f(&selfPokemon, &opponentPokemon), f(&opponentPokemon, &selfPokemon))...)
 				}
 
-				isP1Faint := p1Pokemon.IsFaint()
-				isP2Faint := p2Pokemon.IsFaint()
-				isNotFaint := !isP1Faint && !isP2Faint
+				isSelfFaint := selfPokemon.IsFaint()
+				isOpponentFaint := opponentPokemon.IsFaint()
+				isNotFaint := !isSelfFaint && !isOpponentFaint
 	
-				if isNotFaint && p1Pokemon.Speed >= p2Pokemon.Speed {
+				if isNotFaint && selfPokemon.Speed >= opponentPokemon.Speed {
 					splited[SPEED_WIN_IDX] = both
 				}
 	
-				if isNotFaint && p1Pokemon.Speed <= p2Pokemon.Speed {
+				if isNotFaint && selfPokemon.Speed <= opponentPokemon.Speed {
 					splited[SPEED_LOSS_IDX] = both
 				}
 	
-				if isP1Faint {
-					splited[P1_FAINT_IDX] = tensor.D1{1}
+				if isSelfFaint {
+					splited[SELF_FAINT_IDX] = tensor.D1{1}
 				}
 	
-				if isP2Faint {
-					splited[P2_FAINT_IDX] = tensor.D1{1}
+				if isOpponentFaint {
+					splited[OPPONENT_FAINT_IDX] = tensor.D1{1}
 				}
 				for _, v := range splited {
 					ret = append(ret, v...)
