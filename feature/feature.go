@@ -130,9 +130,9 @@ func NewSingleBattleFunc(n int, fs ...func(*bp.Pokemon, *bp.Pokemon) tensor.D1) 
 				splited[SELF_FAINT_IDX] = tensor.NewD1Zeros(1)
 				splited[OPPONENT_FAINT_IDX] = tensor.NewD1Zeros(1)
 	
-				both := make(tensor.D1 , 0, n*n*4+2)
+				pair := make(tensor.D1 , 0, n*n*4+2)
 				for _, f := range fs {
-					both = append(both, omwslices.Concat(f(&selfPokemon, &opponentPokemon), f(&opponentPokemon, &selfPokemon))...)
+					pair = append(pair, omwslices.Concat(f(&selfPokemon, &opponentPokemon), f(&opponentPokemon, &selfPokemon))...)
 				}
 
 				isSelfFaint := selfPokemon.IsFaint()
@@ -140,11 +140,11 @@ func NewSingleBattleFunc(n int, fs ...func(*bp.Pokemon, *bp.Pokemon) tensor.D1) 
 				isNotFaint := !isSelfFaint && !isOpponentFaint
 	
 				if isNotFaint && selfPokemon.Speed >= opponentPokemon.Speed {
-					splited[SPEED_WIN_IDX] = both
+					splited[SPEED_WIN_IDX] = pair
 				}
 	
 				if isNotFaint && selfPokemon.Speed <= opponentPokemon.Speed {
-					splited[SPEED_LOSS_IDX] = both
+					splited[SPEED_LOSS_IDX] = pair
 				}
 	
 				if isSelfFaint {

@@ -14,6 +14,8 @@ import (
 	"bufio"
 	battlemsg "github.com/sw965/bippa/battle/msg"
 	"os"
+	//omwcui "github.com/sw965/omw/cui"
+	//"time"
 )
 
 func main() {
@@ -62,11 +64,39 @@ func main() {
 				lastLeadPokeName = battle.SelfFighters[0].Name
 			case single.AFTER_SWITCH_STEP:
 				for _, m := range battlemsg.NewBack("", lastLeadPokeName, battle.IsRealSelf).Accumulate() {
+					fmt.Println(
+						"p1", battle.SelfFighters.Names().ToStrings(),
+						battle.SelfFighters[0].CurrentHP,
+						battle.SelfFighters[1].CurrentHP,
+						battle.SelfFighters[2].CurrentHP,
+					)
+					fmt.Println(
+						"p2", battle.OpponentFighters.Names().ToStrings(),
+						battle.OpponentFighters[0].CurrentHP,
+						battle.OpponentFighters[1].CurrentHP,
+						battle.OpponentFighters[2].CurrentHP,
+					)
 					fmt.Println(m)
+					// time.Sleep(100 * time.Millisecond)
+					// omwcui.ClearConsole()
 				}
 
 				for _, m := range battlemsg.NewGo("", battle.SelfFighters[0].Name, battle.IsRealSelf).Accumulate() {
+					fmt.Println(
+						"p1", battle.SelfFighters.Names().ToStrings(),
+						battle.SelfFighters[0].CurrentHP,
+						battle.SelfFighters[1].CurrentHP,
+						battle.SelfFighters[2].CurrentHP,
+					)
+					fmt.Println(
+						"p2", battle.OpponentFighters.Names().ToStrings(),
+						battle.OpponentFighters[0].CurrentHP,
+						battle.OpponentFighters[1].CurrentHP,
+						battle.OpponentFighters[2].CurrentHP,
+					)
 					fmt.Println(m)
+					// time.Sleep(100 * time.Millisecond)
+					// omwcui.ClearConsole()
 				}
 			case single.BEFORE_MOVE_USE_STEP:
 				lastMoveset = battle.SelfFighters[0].Moveset.Clone()
@@ -79,33 +109,77 @@ func main() {
 					}
 				}
 				for _, m := range battlemsg.NewMoveUse(battle.SelfFighters[0].Name, lastUsedMoveName, battle.IsRealSelf).Accumulate() {
+					fmt.Println(
+						"p1", battle.SelfFighters.Names().ToStrings(),
+						battle.SelfFighters[0].CurrentHP,
+						battle.SelfFighters[1].CurrentHP,
+						battle.SelfFighters[2].CurrentHP,
+					)
+					fmt.Println(
+						"p2", battle.OpponentFighters.Names().ToStrings(),
+						battle.OpponentFighters[0].CurrentHP,
+						battle.OpponentFighters[1].CurrentHP,
+						battle.OpponentFighters[2].CurrentHP,
+					)
 					fmt.Println(m)
+					// time.Sleep(100 * time.Millisecond)
+					// omwcui.ClearConsole()
 				}
 			case single.BEFORE_MOVE_DAMAGE_STEP:
 				lastCurrentHP = battle.OpponentFighters[0].CurrentHP
 			case single.AFTER_MOVE_DAMAGE_STEP:
 				dmg := lastCurrentHP - battle.OpponentFighters[0].CurrentHP
-				fmt.Println("dmg", dmg)
+				fmt.Println(dmg)
 			case single.SELF_FAINT_STEP:
 				fmt.Println(battle.IsRealSelf, "real koko")
 				for _, m := range battlemsg.NewFaint(battle.SelfFighters[0].Name, battle.IsRealSelf).Accumulate() {
+					fmt.Println(
+						"p1", battle.SelfFighters.Names().ToStrings(),
+						battle.SelfFighters[0].CurrentHP,
+						battle.SelfFighters[1].CurrentHP,
+						battle.SelfFighters[2].CurrentHP,
+					)
+					fmt.Println(
+						"p2", battle.OpponentFighters.Names().ToStrings(),
+						battle.OpponentFighters[0].CurrentHP,
+						battle.OpponentFighters[1].CurrentHP,
+						battle.OpponentFighters[2].CurrentHP,
+					)
 					fmt.Println(m)
+					// time.Sleep(100 * time.Millisecond)
+					// omwcui.ClearConsole()
 				}
 			case single.OPPONENT_FAINT_STEP:
 				fmt.Println(battle.IsRealSelf, "real")
 				for _, m := range battlemsg.NewFaint(battle.OpponentFighters[0].Name, battle.IsRealSelf).Accumulate() {
+					fmt.Println(
+						"p1", battle.SelfFighters.Names().ToStrings(),
+						battle.SelfFighters[0].CurrentHP,
+						battle.SelfFighters[1].CurrentHP,
+						battle.SelfFighters[2].CurrentHP,
+					)
+					fmt.Println(
+						"p2", battle.OpponentFighters.Names().ToStrings(),
+						battle.OpponentFighters[0].CurrentHP,
+						battle.OpponentFighters[1].CurrentHP,
+						battle.OpponentFighters[2].CurrentHP,
+					)
 					fmt.Println(m)
+					// omwcui.ClearConsole()
+					// time.Sleep(100 * time.Millisecond)
 				}
 		}
 	}
 
 	initBattle := single.Battle{
-		SelfFighters:single.Fighters{bp.NewTemplateBulbasaur(), bp.NewTemplateSuicune(), bp.NewTemplateSquirtle()},
-		OpponentFighters:single.Fighters{bp.NewTemplateGarchomp(), bp.NewTemplateCharmander(), bp.NewTemplateSquirtle()},
+		SelfFighters:single.Fighters{bp.NewTemplateBulbasaur(), bp.NewTemplateCharmander(), bp.NewTemplateSquirtle()},
+		OpponentFighters:single.Fighters{bp.NewTemplateBulbasaur(), bp.NewTemplateCharmander(), bp.NewTemplateSquirtle()},
 		IsRealSelf:true,
 		RandDmgBonuses:dmgtools.RandBonuses{1.0},
 		Observer:cui,
 	}
+
+	initBattle.OpponentFighters[0].CurrentHP = 0
 
 	gm.Player = func(battle *single.Battle) (single.Actions, []float64, error) {
 		fmt.Println(
