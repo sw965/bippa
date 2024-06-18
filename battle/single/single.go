@@ -374,16 +374,16 @@ func NewPushFunc(r *rand.Rand) func(Battle, Actions) (Battle, error) {
 				battle = battle.SwapPlayers()
 			}
 
+			if err != nil {
+				return Battle{}, err
+			}
+
 			if battle.SelfFighters[0].IsFaint() {
 				battle.Observer(&battle, SELF_FAINT_STEP)
 			}
 
 			if battle.OpponentFighters[0].IsFaint() {
 				battle.Observer(&battle, OPPONENT_FAINT_STEP)
-			}
-
-			if err != nil {
-				return Battle{}, err
 			}
 		}
 		battle.Turn += 1

@@ -11,13 +11,13 @@ type MoveName int
 
 const (
 	EMPTY_MOVE_NAME MoveName = iota
-	STONE_EDGE
-	EMBER
-	TACKLE
-	VINE_WHIP
-	SURF
-	WATER_GUN
-	ICE_BEAM
+	STONE_EDGE // ストーンエッジ
+	EMBER      // ひのこ
+	TACKLE     // たいあたり
+	VINE_WHIP  // みずでっぽう
+	SURF       // なみのり
+	WATER_GUN  // みずでっぽう
+	ICE_BEAM   // れいとうビーム
 )
 
 var STRING_TO_MOVE_NAME = map[string]MoveName{

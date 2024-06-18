@@ -59,6 +59,7 @@ func main() {
 	var lastCurrentHP int
 
 	cui := func(battle *single.Battle, step single.Step) {
+		fmt.Println("cui")
 		switch step {
 			case single.BEFORE_SWITCH_STEP:
 				lastLeadPokeName = battle.SelfFighters[0].Name
@@ -210,16 +211,20 @@ func main() {
 		}
 
 		battle.Observer = func(_ *single.Battle, _ single.Step) {}
-		jointAction, jointQ, err := mctSearch.NewPlayer(51200, r)(battle)
+		fmt.Println(battle.Observer == nil)
+
+		fmt.Println("mcts呼び出し")
+		jointAction, jointQ, err := mctSearch.NewPlayer(5120, r)(battle)
 		if err != nil {
 			return single.Actions{}, []float64{}, err
 		}
+		fmt.Println("mcts呼び出し終了")
 		battle.Observer = cui
 
 		fmt.Println(jointAction[0].CmdMoveName.ToString(), jointAction[0].SwitchPokeName.ToString(), jointAction[0].IsPlayer1)
 		fmt.Println(jointAction[1].CmdMoveName.ToString(), jointAction[1].SwitchPokeName.ToString(), jointAction[1].IsPlayer1)
 		fmt.Println("jointQ", jointQ)
-		fmt.Println("")
+		fmt.Println("player終わり")
 
 		return single.Actions{jointAction[0], action}, []float64{}, nil
 	}

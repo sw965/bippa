@@ -9,6 +9,10 @@ import (
 
 type Message string
 
+func NewChallengeByTrainer(trainerName string) Message {
+	return Message(fmt.Sprintf("%s が 勝負を しかけてきた！", trainerName))
+}
+
 func NewMoveUse(pokeName bp.PokeName, moveName bp.MoveName, isSelf bool) Message {
 	m := map[bool]string{
 		true:"",
@@ -41,6 +45,10 @@ func NewFaint(pokeName bp.PokeName, isSelf bool) Message {
 	return Message(fmt.Sprintf("%s%s は 倒れた！", m, pokeName.ToString()))
 }
 
+func (m Message) ToSlice() []string {
+	return strings.Split(string(m), "")
+}
+
 func (m Message) Accumulate() []string {
-	return fn.Accumulate(strings.Split(string(m), ""))
+	return fn.Accumulate(m.ToSlice())
 }
