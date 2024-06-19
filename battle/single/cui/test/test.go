@@ -14,5 +14,5 @@ func main() {
 		OpponentFighters:single.Fighters{bp.NewTemplateBulbasaur(), bp.NewTemplateCharmander(), bp.NewTemplateSquirtle()},
 	}
 
-	cui.Cui(&battle, "してんのうの カトレア", 0.5)
+	cui.Cui(&battle, "してんのうの カトレア", 1.0, 0, 0)
 }
