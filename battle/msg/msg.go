@@ -24,6 +24,10 @@ func NewChallengeByTrainer(trainerName string, s string) Message {
 	return Message(ret)
 }
 
+func NewActionPrompt(pokeName bp.PokeName) Message {
+    return Message(fmt.Sprintf("%sは どうする？", pokeName.ToString()))
+}
+
 func NewMoveUse(pokeName bp.PokeName, moveName bp.MoveName, isSelf bool) Message {
 	m := map[bool]string{
 		true:"",
