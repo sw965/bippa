@@ -58,6 +58,12 @@ type Action struct {
 	IsPlayer1 bool
 }
 
+func StringToAction(str string, isPlayer1 bool) Action {
+	moveName := bp.STRING_TO_MOVE_NAME[str]
+	pokeName := bp.STRING_TO_POKE_NAME[str]
+	return Action{CmdMoveName:moveName, SwitchPokeName:pokeName, IsPlayer1:isPlayer1}
+}
+
 func (a *Action) ToString() string {
 	p := map[bool]string{true:"player1", false:"player2"}[a.IsPlayer1]
 	return bp.MOVE_NAME_TO_STRING[a.CmdMoveName] + bp.POKE_NAME_TO_STRING[a.SwitchPokeName] + " " + p

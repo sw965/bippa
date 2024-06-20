@@ -11,30 +11,31 @@ import (
 	"github.com/sw965/bippa/battle/dmgtools"
 	bp "github.com/sw965/bippa"
 	"github.com/sw965/bippa/battle/single/mcts"
-	"bufio"
-	battlemsg "github.com/sw965/bippa/battle/msg"
-	"os"
-	//omwcui "github.com/sw965/omw/cui"
-	//"time"
+	"net/http"
 )
 
 func main() {
-	r := omwrand.NewMt19937()
+	server := http.Server{
+        Addr:":8080",
+        Handler:nil,
+    }
+
+	rg := omwrand.NewMt19937()
 	xn := 90
 	u1n := 64
 	u2n := 16
 	yn := 1
-	affine, variable := model1d.NewStandardAffine(xn, u1n, u2n, yn, 0.0001, 64.0, r)
+	affine, variable := model1d.NewStandardAffine(xn, u1n, u2n, yn, 0.0001, 64.0, rg)
 	param, err := model1d.LoadParamJSON("C:/Users/kuroko/Desktop/test.json")
 	if err != nil {
 		panic(err)
 	}
 	variable.SetParam(param)
 
-	gm := game.New(r)
+	gm := game.New(rg)
 
-	mctSearch := mcts.New(r)
-	mctSearch.Game.SetRandActionPlayer(r)
+	mctSearch := mcts.New(rg)
+	mctSearch.Game.SetRandActionPlayer(rg)
 
 	leafNodeJointEvalFunc := func(battle *single.Battle) (duct.LeafNodeJointEvalY, error) {
 		if isEnd, gameRetJointVal := single.IsEnd(battle); isEnd {
@@ -53,179 +54,32 @@ func main() {
 
 	mctSearch.LeafNodeJointEvalFunc = leafNodeJointEvalFunc
 
-	var lastMoveset bp.Moveset
-	var lastUsedMoveName bp.MoveName
-	var lastLeadPokeName bp.PokeName
-	var lastCurrentHP int
-
-	cui := func(battle *single.Battle, step single.Step) {
-		fmt.Println("cui")
-		switch step {
-			case single.BEFORE_SWITCH_STEP:
-				lastLeadPokeName = battle.SelfFighters[0].Name
-			case single.AFTER_SWITCH_STEP:
-				for _, m := range battlemsg.NewBack("", lastLeadPokeName, battle.IsRealSelf).Accumulate() {
-					fmt.Println(
-						"p1", battle.SelfFighters.Names().ToStrings(),
-						battle.SelfFighters[0].CurrentHP,
-						battle.SelfFighters[1].CurrentHP,
-						battle.SelfFighters[2].CurrentHP,
-					)
-					fmt.Println(
-						"p2", battle.OpponentFighters.Names().ToStrings(),
-						battle.OpponentFighters[0].CurrentHP,
-						battle.OpponentFighters[1].CurrentHP,
-						battle.OpponentFighters[2].CurrentHP,
-					)
-					fmt.Println(m)
-					// time.Sleep(100 * time.Millisecond)
-					// omwcui.ClearConsole()
-				}
-
-				for _, m := range battlemsg.NewGo("", battle.SelfFighters[0].Name, battle.IsRealSelf).Accumulate() {
-					fmt.Println(
-						"p1", battle.SelfFighters.Names().ToStrings(),
-						battle.SelfFighters[0].CurrentHP,
-						battle.SelfFighters[1].CurrentHP,
-						battle.SelfFighters[2].CurrentHP,
-					)
-					fmt.Println(
-						"p2", battle.OpponentFighters.Names().ToStrings(),
-						battle.OpponentFighters[0].CurrentHP,
-						battle.OpponentFighters[1].CurrentHP,
-						battle.OpponentFighters[2].CurrentHP,
-					)
-					fmt.Println(m)
-					// time.Sleep(100 * time.Millisecond)
-					// omwcui.ClearConsole()
-				}
-			case single.BEFORE_MOVE_USE_STEP:
-				lastMoveset = battle.SelfFighters[0].Moveset.Clone()
-			case single.AFTER_MOVE_USE_STEP:
-				currentMoveset := battle.SelfFighters[0].Moveset
-				for moveName, pp := range currentMoveset {
-					if pp.Current < lastMoveset[moveName].Current {
-						lastUsedMoveName = moveName
-						break
-					}
-				}
-				for _, m := range battlemsg.NewMoveUse(battle.SelfFighters[0].Name, lastUsedMoveName, battle.IsRealSelf).Accumulate() {
-					fmt.Println(
-						"p1", battle.SelfFighters.Names().ToStrings(),
-						battle.SelfFighters[0].CurrentHP,
-						battle.SelfFighters[1].CurrentHP,
-						battle.SelfFighters[2].CurrentHP,
-					)
-					fmt.Println(
-						"p2", battle.OpponentFighters.Names().ToStrings(),
-						battle.OpponentFighters[0].CurrentHP,
-						battle.OpponentFighters[1].CurrentHP,
-						battle.OpponentFighters[2].CurrentHP,
-					)
-					fmt.Println(m)
-					// time.Sleep(100 * time.Millisecond)
-					// omwcui.ClearConsole()
-				}
-			case single.BEFORE_MOVE_DAMAGE_STEP:
-				lastCurrentHP = battle.OpponentFighters[0].CurrentHP
-			case single.AFTER_MOVE_DAMAGE_STEP:
-				dmg := lastCurrentHP - battle.OpponentFighters[0].CurrentHP
-				fmt.Println(dmg)
-			case single.SELF_FAINT_STEP:
-				fmt.Println(battle.IsRealSelf, "real koko")
-				for _, m := range battlemsg.NewFaint(battle.SelfFighters[0].Name, battle.IsRealSelf).Accumulate() {
-					fmt.Println(
-						"p1", battle.SelfFighters.Names().ToStrings(),
-						battle.SelfFighters[0].CurrentHP,
-						battle.SelfFighters[1].CurrentHP,
-						battle.SelfFighters[2].CurrentHP,
-					)
-					fmt.Println(
-						"p2", battle.OpponentFighters.Names().ToStrings(),
-						battle.OpponentFighters[0].CurrentHP,
-						battle.OpponentFighters[1].CurrentHP,
-						battle.OpponentFighters[2].CurrentHP,
-					)
-					fmt.Println(m)
-					// time.Sleep(100 * time.Millisecond)
-					// omwcui.ClearConsole()
-				}
-			case single.OPPONENT_FAINT_STEP:
-				fmt.Println(battle.IsRealSelf, "real")
-				for _, m := range battlemsg.NewFaint(battle.OpponentFighters[0].Name, battle.IsRealSelf).Accumulate() {
-					fmt.Println(
-						"p1", battle.SelfFighters.Names().ToStrings(),
-						battle.SelfFighters[0].CurrentHP,
-						battle.SelfFighters[1].CurrentHP,
-						battle.SelfFighters[2].CurrentHP,
-					)
-					fmt.Println(
-						"p2", battle.OpponentFighters.Names().ToStrings(),
-						battle.OpponentFighters[0].CurrentHP,
-						battle.OpponentFighters[1].CurrentHP,
-						battle.OpponentFighters[2].CurrentHP,
-					)
-					fmt.Println(m)
-					// omwcui.ClearConsole()
-					// time.Sleep(100 * time.Millisecond)
-				}
-		}
-	}
-
 	initBattle := single.Battle{
 		SelfFighters:single.Fighters{bp.NewTemplateBulbasaur(), bp.NewTemplateCharmander(), bp.NewTemplateSquirtle()},
 		OpponentFighters:single.Fighters{bp.NewTemplateBulbasaur(), bp.NewTemplateCharmander(), bp.NewTemplateSquirtle()},
 		IsRealSelf:true,
 		RandDmgBonuses:dmgtools.RandBonuses{1.0},
-		Observer:cui,
+		Observer:func(_ *single.Battle, _ single.Step) {},
 	}
 
 	initBattle.OpponentFighters[0].CurrentHP = 0
 
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+
+	hoge := func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		fmt.Fprintf(w, "神の宣告")
+	}
+
 	gm.Player = func(battle *single.Battle) (single.Actions, []float64, error) {
-		fmt.Println(
-			"p1", battle.SelfFighters.Names().ToStrings(),
-			battle.SelfFighters[0].CurrentHP,
-			battle.SelfFighters[1].CurrentHP,
-			battle.SelfFighters[2].CurrentHP,
-		)
-		fmt.Println(
-			"p2", battle.OpponentFighters.Names().ToStrings(),
-			battle.OpponentFighters[0].CurrentHP,
-			battle.OpponentFighters[1].CurrentHP,
-			battle.OpponentFighters[2].CurrentHP,
-		)
-
-		var action single.Action
-		for {
-			s := bufio.NewScanner(os.Stdin)
-			s.Scan()
-			text := s.Text()
-			if moveName, ok := bp.STRING_TO_MOVE_NAME[text]; ok {
-				action = single.Action{CmdMoveName:moveName, IsPlayer1:false}
-				break
-			} else if pokeName, ok := bp.STRING_TO_POKE_NAME[text]; ok {
-				action = single.Action{SwitchPokeName:pokeName, IsPlayer1:false}
-				break
-			}
-		}
-
+		action := single.StringToAction(r.URL.Query().Get("action"), false)
+		fmt.Println("action", action.ToString())
 		battle.Observer = func(_ *single.Battle, _ single.Step) {}
-		fmt.Println(battle.Observer == nil)
-
-		fmt.Println("mcts呼び出し")
-		jointAction, jointQ, err := mctSearch.NewPlayer(5120, r)(battle)
+		jointAction, jointQ, err := mctSearch.NewPlayer(5120, rg)(battle)
 		if err != nil {
 			return single.Actions{}, []float64{}, err
 		}
-		fmt.Println("mcts呼び出し終了")
-		battle.Observer = cui
-
-		fmt.Println(jointAction[0].CmdMoveName.ToString(), jointAction[0].SwitchPokeName.ToString(), jointAction[0].IsPlayer1)
-		fmt.Println(jointAction[1].CmdMoveName.ToString(), jointAction[1].SwitchPokeName.ToString(), jointAction[1].IsPlayer1)
 		fmt.Println("jointQ", jointQ)
-		fmt.Println("player終わり")
-
 		return single.Actions{jointAction[0], action}, []float64{}, nil
 	}
 
@@ -235,4 +89,11 @@ func main() {
 	}
 	isEnd, gameRetJointVal := single.IsEnd(&endBattle)
 	fmt.Println("isEnd", isEnd, gameRetJointVal)
+
+	http.HandleFunc("/hoge/", hoge)
+	fmt.Println("サーバ建て")
+	err = server.ListenAndServe()
+    if err != nil {
+        panic(err)
+    }
 }

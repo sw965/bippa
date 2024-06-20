@@ -77,7 +77,6 @@ func main() {
 	u2n := 16
 	yn := 1
 	affine, variable := model1d.NewStandardAffine(xn, u1n, u2n, yn, 0.0001, 64.0, r)
-
 	gm := game.New(dmgtools.RandBonuses{1.0}, r)
 
 	leafNodeJointEvalFunc := func(battle *single.Battle) (duct.LeafNodeJointEvalY, error) {
