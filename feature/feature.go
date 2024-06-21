@@ -114,11 +114,17 @@ func DPSRatioToCurrentHP(selfPokemon, opponentPokemon *bp.Pokemon) tensor.D1 {
 
 type SingleBattleFunc func(*single.Battle) tensor.D1
 
-func NewSingleBattleFunc(n int, fs ...func(*bp.Pokemon, *bp.Pokemon) tensor.D1) SingleBattleFunc {
+func NewSingleBattleFunc(fs ...func(*bp.Pokemon, *bp.Pokemon) tensor.D1) SingleBattleFunc {
 	SPEED_WIN_IDX := 0
 	SPEED_LOSS_IDX := 1
 	SELF_FAINT_IDX := 2
 	OPPONENT_FAINT_IDX := 3
+
+	n := 0
+	dummyPokemon := bp.NewTemplateBulbasaur()
+	for _, f := range fs {
+		n += len(f(&dummyPokemon, &dummyPokemon))
+	}
 
 	return func(battle *single.Battle) tensor.D1 {
 		ret := make(tensor.D1, 0, 128)
