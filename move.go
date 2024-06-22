@@ -150,3 +150,12 @@ func (m Moveset) Clone() Moveset {
 	}
 	return clone
 }
+
+func (m Moveset) ToEasyRead() EasyReadMoveset {
+	ret := EasyReadMoveset{}
+	for moveName, pp := range m {
+		ret[moveName.ToString()] = pp
+	}
+	return ret
+}
+

@@ -10,12 +10,16 @@ import (
 	bp "github.com/sw965/bippa"
 	"github.com/sw965/bippa/battle/single/mcts"
 	"net/http"
+	"encoding/json"
+	"github.com/sw965/bippa/battle/single/game"
 )
 
-type ResponseData struct {
-    Status  string `json:"status"`
-    Message string `json:"message"`
+type ResponseDataElement struct {
+	EasyReadBattle single.EasyReadBattle
+	Step single.Step
 }
+
+type ResponseData []ResponseDataElement
 
 func main() {
 	server := http.Server{
@@ -35,25 +39,44 @@ func main() {
 	}
 	variable.SetParam(param)
 
-	mctSearch := mcts.New(rg)
+	mctSearch := mcts.New(
+		&single.Context{
+			DamageRandBonuses:dmgtools.RandBonuses{1.0},
+			Rand:rg,
+			Observer:single.EmptyObserver,
+		},
+	)
 	mctSearch.Game.SetRandActionPlayer(rg)
-	f := feature.NewSingleBattleFunc(feature.ExpectedDamageRatioToCurrentHP, feature.DPSRatioToCurrentHP)
-	mctSearch.LeafNodeJointEvalFunc = mcts.NewLeafNodeJointEvalFunc(affine, f)
+
+	featureFunc := feature.NewSingleBattleFunc(feature.ExpectedDamageRatioToCurrentHP, feature.DPSRatioToCurrentHP)
+	mctSearch.LeafNodeJointEvalFunc = mcts.NewStandardLeafNodeJointEvalFunc(affine, featureFunc)
 
 	battle := single.Battle{
-		SelfFighters:single.Fighters{bp.NewTemplateBulbasaur(), bp.NewTemplateCharmander(), bp.NewTemplateSquirtle()},
-		OpponentFighters:single.Fighters{bp.NewTemplateBulbasaur(), bp.NewTemplateCharmander(), bp.NewTemplateSquirtle()},
+		SelfFighters:bp.Pokemons{bp.NewTemplateBulbasaur(), bp.NewTemplateCharmander(), bp.NewTemplateSquirtle()},
+		OpponentFighters:bp.Pokemons{bp.NewTemplateBulbasaur(), bp.NewTemplateCharmander(), bp.NewTemplateSquirtle()},
 		IsRealSelf:true,
-		RandDmgBonuses:dmgtools.RandBonuses{1.0},
-		Observer:func(_ *single.Battle, _ single.Step) {},
 	}
-	
+
+	responseData := make(ResponseData, 0, 64)
+	observer := func(battle *single.Battle, step single.Step) {
+		responseData = append(responseData, ResponseDataElement{EasyReadBattle:battle.ToEasyRead(), Step:step})
+	}
+
 	handler := func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
-		procType := r.URL.Query().Get("procType")
-		switch procType {
-			case "0":
-				fmt.Fprint(w, "")
+		actionStr := r.URL.Query().Get("action")
+		if actionStr == "-1" {
+			w.Header().Set("Content-Type", "application/json")
+			responseData = append(responseData, ResponseDataElement{EasyReadBattle:battle.ToEasyRead(), Step:-1})
+			jsonResponse, err := json.Marshal(responseData)
+			if err != nil {
+				fmt.Println("json errorを呼び出してよ")
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			w.Write(jsonResponse)
+			responseData = make(ResponseData, 0, 64)
+			return 
 		}
 
 		action := single.StringToAction(actionStr, true)
@@ -62,21 +85,29 @@ func main() {
 		if err != nil {
 			panic(err)
 		}
+
 		jointAction := rootNode.SeparateUCBManager.JointActionByMaxTrial(rg)
 		jointAvg := rootNode.SeparateUCBManager.JointAverageValue()
 		fmt.Println("joint", jointAction[0].ToString(), jointAction[1].ToString(), jointAvg)
 		fmt.Fprint(w, fmt.Sprintf("%s %s %v", jointAction[0].ToString(), jointAction[1].ToString(), jointAvg))
 
-		battle, err = single.NewPushFunc(rg)(battle, single.Actions{action, jointAction[1]})
+		battle, err = game.NewPushFunc(
+			&single.Context{
+				DamageRandBonuses:dmgtools.RandBonuses{1.0},
+				Rand:rg,
+				Observer:observer,
+			},
+		)(battle, single.Actions{action, jointAction[0]})
 		if err != nil {
 			panic(err)
 		}
-		if isEnd, _ := single.IsEnd(&battle); isEnd {
+		if isEnd, _ := game.IsEnd(&battle); isEnd {
 			fmt.Println(battle.SelfFighters[0].Name.ToString(), battle.SelfFighters[0].CurrentHP, battle.OpponentFighters[0].Name.ToString(), battle.OpponentFighters[0].CurrentHP)
 			fmt.Println("ゲームが終了した")
 			return
 		}
 		fmt.Println(battle.SelfFighters[0].Name.ToString(), battle.SelfFighters[0].CurrentHP, battle.OpponentFighters[0].Name.ToString(), battle.OpponentFighters[0].CurrentHP)
+		responseData = make(ResponseData, 0, 64)
 	}
 
 	http.HandleFunc("/caitlin/", handler)

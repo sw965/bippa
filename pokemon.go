@@ -181,6 +181,28 @@ func (p *Pokemon) IsFaint() bool {
 	return p.CurrentHP <= 0
 }
 
+func (p *Pokemon) ToEasyRead() EasyReadPokemon {
+	return EasyReadPokemon{
+		Name:p.Name.ToString(),
+
+		Level:p.Level,
+		Nature:p.Nature.ToString(),
+		Moveset:p.Moveset.ToEasyRead(),
+		UnassignedLearnMoveCount:p.UnassignedLearnMoveCount,
+
+		IVStat:p.IVStat,
+		EVStat:p.EVStat,
+
+		MaxHP:p.MaxHP,
+		CurrentHP:p.CurrentHP,
+		Atk:p.Atk,
+		Def:p.Def,
+		SpAtk:p.SpAtk,
+		SpDef:p.SpDef,
+		Speed:p.Speed,
+	}
+}
+
 func NewTemplateBulbasaur() Pokemon {
 	pokemon, err := NewPokemon(BULBASAUR, ADAMANT, MoveNames{TACKLE, VINE_WHIP}, &MAX_IV_STAT, &HA252_S4)
 	if err != nil {
@@ -219,4 +241,58 @@ func NewTemplateGarchomp() Pokemon {
 		panic(err)
 	}
 	return pokemon
+}
+
+type Pokemons []Pokemon
+
+func (ps Pokemons) Names() PokeNames {
+	ret := make(PokeNames, len(ps))
+	for i, p := range ps {
+		ret[i] = p.Name
+	}
+	return ret
+}
+
+func (ps Pokemons) Clone() Pokemons {
+	ret := make(Pokemons, len(ps))
+	for i, p := range ret {
+		ret[i] = p.Clone()
+	}
+	return ret
+}
+
+func (ps Pokemons) Equal(other Pokemons) bool {
+	for i, p1 := range ps {
+		p2 := other[i]
+		if !p1.Equal(&p2) {
+			return false
+		}
+	}
+	return true
+}
+
+func (ps Pokemons) IndexByName(name PokeName) int {
+	for i, p := range ps {
+		if p.Name == name {
+			return i
+		}
+	}
+	return -1
+}
+
+func (ps Pokemons) IsAllFaint() bool {
+	for _, p := range ps {
+		if p.CurrentHP > 0 {
+			return false
+		}
+	}
+	return true
+}
+
+func (ps Pokemons) ToEasyRead() EasyReadPokemons {
+	ret := make(EasyReadPokemons, len(ps))
+	for i, p := range ps {
+		ret[i] = p.ToEasyRead()
+	}
+	return ret
 }

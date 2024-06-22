@@ -1,7 +1,6 @@
 package mcts
 
 import (
-	"math/rand"
 	"github.com/sw965/crow/mcts/duct"
 	"github.com/sw965/bippa/battle/single/game"
 	"github.com/sw965/bippa/battle/single"
@@ -10,9 +9,9 @@ import (
 	"github.com/sw965/crow/model/1d"
 )
 
-func NewLeafNodeJointEvalFunc(affine model1d.Sequential, f feature.SingleBattleFunc) duct.LeafNodeJointEvalFunc[single.Battle] {
+func NewStandardLeafNodeJointEvalFunc(affine model1d.Sequential, f feature.SingleBattleFunc) duct.LeafNodeJointEvalFunc[single.Battle] {
 	return func(battle *single.Battle) (duct.LeafNodeJointEvalY, error) {
-		if isEnd, gameRetJointVal := single.IsEnd(battle); isEnd {
+		if isEnd, gameRetJointVal := game.IsEnd(battle); isEnd {
 			y := make(duct.LeafNodeJointEvalY, len(gameRetJointVal))
 			for i, v := range gameRetJointVal {
 				y[i] = v
@@ -27,9 +26,9 @@ func NewLeafNodeJointEvalFunc(affine model1d.Sequential, f feature.SingleBattleF
 	}
 }
 
-func New(r *rand.Rand) duct.MCTS[single.Battle, single.ActionSlices, single.Actions, single.Action] {
+func New(context *single.Context) duct.MCTS[single.Battle, single.ActionSlices, single.Actions, single.Action] {
 	mcts := duct.MCTS[single.Battle, single.ActionSlices, single.Actions, single.Action]{
-		Game:game.New(r),
+		Game:game.New(context),
 		UCBFunc:ucb.NewAlphaGoFunc(5),
 		NextNodesCap:64,
 		LastJointActionsCap:1,
