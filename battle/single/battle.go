@@ -23,6 +23,15 @@ type Battle struct {
 	IsRealSelf bool
 }
 
+func (b Battle) Clone() Battle {
+	return Battle{
+		SelfFighters:b.SelfFighters.Clone(),
+		OpponentFighters:b.OpponentFighters.Clone(),
+		Turn:b.Turn,
+		IsRealSelf:b.IsRealSelf,
+	}
+}
+
 func (b Battle) SwapPlayers() Battle {
 	b.SelfFighters, b.OpponentFighters = b.OpponentFighters, b.SelfFighters
 	b.IsRealSelf = !b.IsRealSelf
@@ -95,20 +104,15 @@ func (b Battle) CommandMove(moveName bp.MoveName, context *Context) (Battle, err
 
 	b.SelfFighters = b.SelfFighters.Clone()
 	b.OpponentFighters = b.OpponentFighters.Clone()
-
-	moveset := b.SelfFighters[0].Moveset.Clone()
-	moveset[moveName].Current -= 1
 	
-	context.Observer(&b, BEFORE_MOVE_USE_STEP)
-	b.SelfFighters[0].Moveset = moveset
+	b.SelfFighters[0].Moveset[moveName].Current -= 1
 	context.Observer(&b, AFTER_MOVE_USE_STEP)
 
 	dmg := b.CalcDamage(moveName, context)
 	dmg = omwmath.Min(dmg, b.OpponentFighters[0].CurrentHP)
 
-	context.Observer(&b, BEFORE_MOVE_DAMAGE_STEP)
 	b.OpponentFighters[0].CurrentHP -= dmg
-	context.Observer(&b, AFTER_MOVE_DAMAGE_STEP)
+	context.Observer(&b, AFTER_OPPONENT_DAMAGE_STEP)
 
 	return b, nil
 }
@@ -152,8 +156,7 @@ func (b Battle) Switch(pokeName bp.PokeName, context *Context) (Battle, error) {
 		msg := fmt.Sprintf("「%s]へ交代しようとしたが、既に場に出ている。", name)
 		return Battle{}, fmt.Errorf(msg)
 	}
-	
-	context.Observer(&b, BEFORE_SWITCH_STEP)
+
 	selfFighters := b.SelfFighters.Clone()
 	selfFighters[0], selfFighters[idx] = selfFighters[idx], selfFighters[0]
 	b.SelfFighters = selfFighters

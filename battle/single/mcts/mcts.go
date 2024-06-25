@@ -9,7 +9,7 @@ import (
 	"github.com/sw965/crow/model/1d"
 )
 
-func NewStandardLeafNodeJointEvalFunc(affine model1d.Sequential, f feature.SingleBattleFunc) duct.LeafNodeJointEvalFunc[single.Battle] {
+func NewLeafNodeJointEvalFunc(model model1d.Sequential, f feature.SingleBattleFunc) duct.LeafNodeJointEvalFunc[single.Battle] {
 	return func(battle *single.Battle) (duct.LeafNodeJointEvalY, error) {
 		if isEnd, gameRetJointVal := game.IsEnd(battle); isEnd {
 			y := make(duct.LeafNodeJointEvalY, len(gameRetJointVal))
@@ -19,7 +19,7 @@ func NewStandardLeafNodeJointEvalFunc(affine model1d.Sequential, f feature.Singl
 			return y, nil
 		} else {
 			x := f(battle)
-			y, err := affine.Predict(x)
+			y, err := model.Predict(x)
 			v := y[0]
 			return duct.LeafNodeJointEvalY{v, 1.0-v}, err
 		}

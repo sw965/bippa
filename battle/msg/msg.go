@@ -9,14 +9,6 @@ import (
 
 type Message string
 
-func Box() string {
-	ret := "+-----------------------------------------------------------+"
-	ret += "|                                                           |"
-	ret += "|                                                           |"
-	ret += "+-----------------------------------------------------------+"
-	return ret
-}
-
 func NewChallengeByTrainer(trainerName string, s string) Message {
 	ret := fmt.Sprintf("%sが", trainerName)
 	ret += s

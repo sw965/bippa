@@ -255,7 +255,7 @@ func (ps Pokemons) Names() PokeNames {
 
 func (ps Pokemons) Clone() Pokemons {
 	ret := make(Pokemons, len(ps))
-	for i, p := range ret {
+	for i, p := range ps {
 		ret[i] = p.Clone()
 	}
 	return ret

@@ -16,6 +16,18 @@ type Context struct {
 	Observer Observer
 }
 
+func NewContext(r *rand.Rand) Context {
+	return Context{
+		DamageRandBonuses:dmgtools.RAND_BONUSES,
+		Rand:r,
+		Observer:EmptyObserver,
+	}
+}
+
+func (c Context) SetDamageRandBonuses(dmgRandBonuses ...dmgtools.RandBonus) {
+	c.DamageRandBonuses = dmgRandBonuses
+}
+
 func (c *Context) DamageRandBonus() dmgtools.RandBonus {
 	return omwrand.Choice(c.DamageRandBonuses, c.Rand)
 }

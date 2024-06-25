@@ -84,11 +84,11 @@ func NewPushFunc(context *single.Context) func(single.Battle, single.Actions) (s
 			}
 
 			if battle.SelfFighters[0].IsFaint() {
-				context.Observer(&battle, single.SELF_FAINT_STEP)
+				context.Observer(&battle, single.AFTER_SELF_FAINT_STEP)
 			}
 
 			if battle.OpponentFighters[0].IsFaint() {
-				context.Observer(&battle, single.OPPONENT_FAINT_STEP)
+				context.Observer(&battle, single.AFTER_OPPONENT_FAINT_STEP)
 			}
 		}
 		battle.Turn += 1
@@ -103,6 +103,5 @@ func New(context *single.Context) simultaneous.Game[single.Battle, single.Action
         LegalSeparateActions: LegalSeparateActions,
         Push:                 NewPushFunc(context),
     }
-    gm.SetRandActionPlayer(context.Rand)
     return gm
 }

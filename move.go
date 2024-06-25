@@ -79,6 +79,10 @@ var STRING_TO_MOVE_CATEGORY = map[string]MoveCategory{
 
 var MOVE_CATEGORY_TO_STRING = omaps.Invert[map[MoveCategory]string](STRING_TO_MOVE_CATEGORY)
 
+func (m MoveCategory) ToString() string {
+	return MOVE_CATEGORY_TO_STRING[m]
+}
+
 type PointUp int
 
 const (
@@ -154,8 +158,7 @@ func (m Moveset) Clone() Moveset {
 func (m Moveset) ToEasyRead() EasyReadMoveset {
 	ret := EasyReadMoveset{}
 	for moveName, pp := range m {
-		ret[moveName.ToString()] = pp
+		ret[moveName.ToString()] = *pp
 	}
 	return ret
 }
-
