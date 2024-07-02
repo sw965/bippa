@@ -82,6 +82,14 @@ var NATURE_TO_STRING = omwmaps.Invert[map[Nature]string](STRING_TO_NATURE)
 
 type Natures []Nature
 
+func (ns Natures) ToStrings() []string {
+    ret := make([]string, len(ns))
+    for i, n := range ns {
+        ret[i] = n.ToString()
+    } 
+    return ret
+}
+
 type NatureBonus float64
 
 const (

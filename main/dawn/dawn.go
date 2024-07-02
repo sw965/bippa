@@ -21,6 +21,8 @@ func handler(w http.ResponseWriter, r *http.Request) {
             response, err = json.Marshal(bp.ALL_POKE_NAMES.ToStrings())
         case "all_move_names":
             response, err = json.Marshal(bp.ALL_MOVE_NAMES.ToStrings())
+        case "all_natures":
+            response, err = json.Marshal(bp.ALL_NATURES.ToStrings())
     }
 
     if err != nil {
