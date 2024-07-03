@@ -42,6 +42,11 @@ func (p *PokeData) ToEasyRead() EasyReadPokeData {
 }
 
 func LoadPokeData(pokeName PokeName) (PokeData, error) {
+	if _, ok := POKE_NAME_TO_STRING[pokeName]; !ok {
+		msg := fmt.Sprintf("%s が POKE_NAME_TO_STRING の中に存在しない", pokeName.ToString())
+		return PokeData{}, fmt.Errorf(msg)
+	}
+
 	path := POKE_DATA_PATH + POKE_NAME_TO_STRING[pokeName] + omwjson.EXTENSION
 	buff, err := omwjson.Load[EasyReadPokeData](path)
 	if err != nil {
@@ -114,6 +119,11 @@ type MoveData struct {
 }
 
 func LoadMoveData(moveName MoveName) (MoveData, error) {
+	if _, ok := MOVE_NAME_TO_STRING[moveName]; !ok {
+		msg := fmt.Sprintf("%s が MOVE_NAME_TO_STRING の中に存在しない", moveName.ToString())
+		return MoveData{}, fmt.Errorf(msg)
+	}
+
 	path := MOVE_DATA_PATH + MOVE_NAME_TO_STRING[moveName] + omwjson.EXTENSION
 	buff, err := omwjson.Load[EasyReadMoveData](path)
 	if err != nil {

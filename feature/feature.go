@@ -7,7 +7,6 @@ import (
 	"github.com/sw965/bippa/battle/single"
 	omwslices "github.com/sw965/omw/slices"
 	omwmath "github.com/sw965/omw/math"
-	"github.com/sw965/bippa/team"
 	"math"
 )
 
@@ -41,12 +40,12 @@ func DefenseIndex(pokemon *bp.Pokemon) tensor.D1 {
 }
 
 
-type TeamFunc func(team.Team) tensor.D1
+type PokemonsFunc func(bp.Pokemons) tensor.D1
 
-func NewTeamFunc(n int, fs ...func(*bp.Pokemon) tensor.D1) TeamFunc {
-	return func(party team.Team) tensor.D1 {
+func NewPokemonsFunc(n int, fs ...func(*bp.Pokemon) tensor.D1) PokemonsFunc {
+	return func(pokemons bp.Pokemons) tensor.D1 {
 		ret := make(tensor.D1, 0, n)
-		for _, pokemon := range party {
+		for _, pokemon := range pokemons {
 			feature := make(tensor.D1, 0, n)
 			for _, f := range fs {
 				feature = append(feature, f(&pokemon)...)

@@ -78,7 +78,7 @@ func main() {
 	u2n := 16
 	yn := 1
 	affine, variable := model1d.NewStandardAffine(xn, u1n, u2n, yn, 0.0001, 64.0, rg)
-	featureFn := feature.NewSingleBattleFunc(feature.ExpectedDamageRatioToCurrentHP, feature.DPSRatioToCurrentHP)
+	featureFunc := feature.NewSingleBattleFunc(feature.ExpectedDamageRatioToCurrentHP, feature.DPSRatioToCurrentHP)
 
 	mctSearch := mcts.New(&battleContext)
 	mctSearch.LeafNodeJointEvalFunc = mcts.NewLeafNodeJointEvalFunc(affine, featureFunc)
@@ -89,7 +89,7 @@ func main() {
 
 	randActionPlayer := gameManager.NewRandActionPlayer(rg)
 	mctsPlayer := mctSearch.NewPlayer(512, rg)
-	selfBattleNum := 1960
+	selfBattleNum := 512
 
 	for i := 0; i < selfBattleNum; i++ {
 		initBattle := single.Battle{
@@ -112,7 +112,7 @@ func main() {
 		}
 
 		_, gameRetJointVal := game.IsEnd(&endBattle)
-		oneGameTrainX, oneGameTrainY := NewRawTeachers(battleHistory, qHistory, gameRetJointVal).DataAugmentation().ToTrainXY(featureFn, 0.5)
+		oneGameTrainX, oneGameTrainY := NewRawTeachers(battleHistory, qHistory, gameRetJointVal).DataAugmentation().ToTrainXY(featureFunc, 0.5)
 		trainX = append(trainX, oneGameTrainX...)
 		trainY = append(trainY, oneGameTrainY...)
 
@@ -127,5 +127,5 @@ func main() {
 		}
 		fmt.Println("i = ", i)
 	}
-	variable.Param.WriteJSON("c:/Users/kuroko/Desktop/test.json")
+	variable.Param.WriteJSON("C:/Go/project/bippa/main/single_battle/nn_param.json")
 }

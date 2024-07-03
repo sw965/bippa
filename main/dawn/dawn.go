@@ -1,6 +1,7 @@
 package main
 
 import (
+    "fmt"
 	"net/http"
     bp "github.com/sw965/bippa"
     "encoding/json"
@@ -10,6 +11,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
     w.Header().Set("Access-Control-Allow-Origin", "*")
     w.Header().Set("Content-Type", "application/json")
     dataType := r.URL.Query().Get("data_type")
+    fmt.Println("data_type", dataType)
     var response []byte
     var err error
     switch dataType {
@@ -34,7 +36,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 
 func main() {
 	server := http.Server{
-        Addr:":8080",
+        Addr:":8081",
         Handler:nil,
     }
     http.HandleFunc("/dawn/", handler)

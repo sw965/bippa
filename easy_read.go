@@ -32,11 +32,12 @@ type EasyReadMoveset map[string]PowerPoint
 
 type EasyReadPokemon struct {
 	Name string
-
 	Level Level
 	Nature string
+
+	MoveNames []string
+	PointUps PointUps
 	Moveset EasyReadMoveset
-	UnassignedLearnMoveCount int
 
 	IVStat IVStat
 	EVStat EVStat

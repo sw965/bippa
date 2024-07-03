@@ -11,17 +11,20 @@ type MoveName int
 
 const (
 	EMPTY_MOVE_NAME MoveName = iota
-	STONE_EDGE // ストーンエッジ
-	EMBER      // ひのこ
-	TACKLE     // たいあたり
-	VINE_WHIP  // みずでっぽう
-	SURF       // なみのり
-	WATER_GUN  // みずでっぽう
-	ICE_BEAM   // れいとうビーム
+	THUNDERBOLT // 10まんボルト
+	STONE_EDGE  // ストーンエッジ
+	EMBER       // ひのこ
+	TACKLE      // たいあたり
+	VINE_WHIP   // みずでっぽう
+	SURF        // なみのり
+	WATER_GUN   // みずでっぽう
+	ICE_BEAM    // れいとうビーム
+	STRUGGLE    // わるあがき
 )
 
 var STRING_TO_MOVE_NAME = map[string]MoveName{
 	"":           EMPTY_MOVE_NAME,
+	"10まんボルト":THUNDERBOLT,
 	"ストーンエッジ":STONE_EDGE,
 	"ひのこ":     EMBER,
 	"たいあたり": TACKLE,
@@ -29,6 +32,7 @@ var STRING_TO_MOVE_NAME = map[string]MoveName{
 	"なみのり":SURF,
 	"みずでっぽう": WATER_GUN,
 	"れいとうビーム":ICE_BEAM,
+	"わるあがき":STRUGGLE,
 }
 
 var MOVE_NAME_TO_STRING = omaps.Invert[map[MoveName]string](STRING_TO_MOVE_NAME)
@@ -88,6 +92,8 @@ type PointUp int
 const (
 	MAX_POINT_UP = 3
 )
+
+type PointUps []PointUp
 
 type PowerPoint struct {
 	Max int

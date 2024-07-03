@@ -6,7 +6,7 @@ import (
 )
 
 var (
-	DATA_PATH = "C:/Go/project/bippa/main/bippa/"
+	DATA_PATH = "C:/Go/project/bippa/main/data/"
 	// DATA_PATH = func() string {
 	// 	exePath, err := os.Executable()
 	// 	if err != nil {

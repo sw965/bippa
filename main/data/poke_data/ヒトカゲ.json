@@ -1,0 +1,10 @@
+{
+    "types":["ほのお"],
+    "baseHP":39,
+    "baseAtk":52,
+    "baseDef":43,
+    "baseSpAtk":60,
+    "baseSpDef":50,
+    "baseSpeed":65,
+    "learnset":["ひのこ"] 
+}

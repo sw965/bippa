@@ -11,6 +11,7 @@ const (
 	BULBASAUR
 	CHARMANDER
 	SQUIRTLE
+	ZAPDOS
 	SUICUNE
 	GARCHOMP
 )
@@ -20,6 +21,7 @@ var STRING_TO_POKE_NAME = map[string]PokeName{
 	"フシギダネ":BULBASAUR,
 	"ヒトカゲ":CHARMANDER,
 	"ゼニガメ":SQUIRTLE,
+	"サンダー":ZAPDOS,
 	"スイクン":SUICUNE,
 	"ガブリアス":GARCHOMP,
 }
@@ -71,11 +73,12 @@ func (c *StatCalculator) HPOther(bonus NatureBonus) int {
 
 type Pokemon struct {
 	Name PokeName
-
 	Level Level
 	Nature Nature
+
+	MoveNames MoveNames
+	PointUps PointUps
 	Moveset Moveset
-	UnassignedLearnMoveCount int
 
 	IVStat IVStat
 	EVStat EVStat
@@ -184,11 +187,12 @@ func (p *Pokemon) IsFaint() bool {
 func (p *Pokemon) ToEasyRead() EasyReadPokemon {
 	return EasyReadPokemon{
 		Name:p.Name.ToString(),
-
 		Level:p.Level,
 		Nature:p.Nature.ToString(),
+
+		MoveNames:p.MoveNames.ToStrings(),
+		PointUps:p.PointUps,
 		Moveset:p.Moveset.ToEasyRead(),
-		UnassignedLearnMoveCount:p.UnassignedLearnMoveCount,
 
 		IVStat:p.IVStat,
 		EVStat:p.EVStat,

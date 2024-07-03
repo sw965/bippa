@@ -24,7 +24,7 @@ func NewContext(r *rand.Rand) Context {
 	}
 }
 
-func (c Context) SetDamageRandBonuses(dmgRandBonuses ...dmgtools.RandBonus) {
+func (c *Context) SetDamageRandBonuses(dmgRandBonuses ...dmgtools.RandBonus) {
 	c.DamageRandBonuses = dmgRandBonuses
 }
 

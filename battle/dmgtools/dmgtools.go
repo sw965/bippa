@@ -78,15 +78,24 @@ func (c *Calculator) Calculation(moveName bp.MoveName, randBonus RandBonus) int 
 	dmg = dmg * power * atkVal / defVal
 	dmg = (dmg/50) + 2
 
-	var stab float64 
-	if slices.Contains(attackerPokeData.Types, moveData.Type) {
-		stab = 6144.0/4096.0
+	var sameTypeAttackBonus float64
+	if moveName == bp.STRUGGLE {
+		sameTypeAttackBonus = 1.0
+	} else if slices.Contains(attackerPokeData.Types, moveData.Type) {
+		sameTypeAttackBonus = 6144.0/4096.0
 	} else {
-		stab = 1.0
+		sameTypeAttackBonus = 1.0
 	}
 
-	dmg = RoundOverHalf(float64(dmg) * stab)
-	dmg = int(float64(dmg) * Effectiveness(moveData.Type, defenderPokeData.Types))
+	var effect float64
+	if moveName == bp.STRUGGLE {
+		effect = 1.0
+	} else {
+		effect = Effectiveness(moveData.Type, defenderPokeData.Types)
+	}
+
+	dmg = RoundOverHalf(float64(dmg) * sameTypeAttackBonus)
+	dmg = int(float64(dmg) * effect)
 	dmg = int(float64(dmg) * float64(randBonus))
 	return omwmath.Max(dmg, 1)
 }
