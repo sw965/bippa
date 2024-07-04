@@ -9,9 +9,8 @@ import (
 
 type Message string
 
-func NewChallengeByTrainerMessage(trainerName string, s string) Message {
+func NewChallengeByTrainerMessage(trainerName string) Message {
 	ret := fmt.Sprintf("%sが", trainerName)
-	ret += s
 	ret += "勝負を しかけてきた！"
 	return Message(ret)
 }
@@ -28,37 +27,41 @@ func NewMoveUseMessage(pokeName bp.PokeName, moveName bp.MoveName, isSelf bool) 
 	return Message(fmt.Sprintf(m + "%s の " + "%s！", pokeName.ToString(), moveName.ToString()))
 }
 
-func NewGoMessage(trainerName string, pokeName bp.PokeName, isSelf bool, s string) Message {
+func NewGoMessage(trainerName string, pokeName bp.PokeName, isSelf bool) Message {
 	if isSelf {
 		return Message(fmt.Sprintf("行け！ %s！", pokeName.ToString()))
 	} else {
 		ret := fmt.Sprintf("%sは", trainerName)
-		ret += s
 		ret += fmt.Sprintf("%sを 繰り出した！", pokeName.ToString())
 		return Message(ret)
 	}
 }
 
-func NewBackMessage(trainer string, pokeName bp.PokeName, isSelf bool) Message {
+func NewBackMessage(trainerName string, pokeName bp.PokeName, isSelf bool) Message {
 	if isSelf {
 		return Message(fmt.Sprintf("戻れ！ %s", pokeName.ToString()))
 	} else {
-		return Message(fmt.Sprintf("%s は %s を 引っ込めた！", trainer, pokeName.ToString()))
+		return Message(fmt.Sprintf("%s は %s を 引っ込めた！", trainerName, pokeName.ToString()))
 	}
 }
 
-func NewFaintMessage(pokeName bp.PokeName, isSelf bool) Message {
+func NewFaintMessage(trainerName string, pokeName bp.PokeName, isSelf bool) Message {
 	m := map[bool]string{
 		true:"",
-		false:"相手の ",
+		false:trainerName + "の ",
 	}[isSelf]
 	return Message(fmt.Sprintf("%s%s は 倒れた！", m, pokeName.ToString()))
 }
 
-func (m Message) ToSlice() []string {
-	return strings.Split(string(m), "")
+func (m Message) ToSlice() []Message {
+	slice := strings.Split(string(m), "")
+	ret := make([]Message, len(slice))
+	for i, s := range slice {
+		ret[i] = Message(s)
+	}
+	return ret
 }
 
-func (m Message) Accumulate() []string {
+func (m Message) Accumulate() []Message {
 	return fn.Accumulate(m.ToSlice())
 }

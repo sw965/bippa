@@ -23,7 +23,14 @@ func TestUI(t *testing.T) {
 		},
 		IsRealSelf:true,
 	}
-	ui := single.UI{}
+
+	ui, err := single.NewObserverUI(&battle)
+	ui.SelfTrainerName = "ヒカリ"
+	ui.OpponentTrainerName = "カトレア"
+	if err != nil {
+		t.Errorf(fmt.Sprintf("%v", err))
+	}
+
 	rg := omwrand.NewMt19937()
 	context := single.NewContext(rg)
 	context.Observer = ui.Observer
@@ -31,11 +38,14 @@ func TestUI(t *testing.T) {
 	push := game.NewPushFunc(&context)
 	actions := single.Actions{
 		single.Action{CmdMoveName:bp.STONE_EDGE, IsSelf:true},
-		single.Action{CmdMoveName:bp.SURF, IsSelf:false},
+		single.Action{SwitchPokeName:bp.BULBASAUR, IsSelf:false},
 	}
-	battle, err := push(battle, actions)
+	battle, err = push(battle, actions)
 	if err != nil {
 		t.Errorf(fmt.Sprintf("%v", err))
 	}
-	fmt.Println(battle)
+
+	for _, display := range ui.Displays {
+		fmt.Println(display)
+	}
 }

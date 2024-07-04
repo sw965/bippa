@@ -74,9 +74,9 @@ func NewPushFunc(context *single.Context) func(single.Battle, single.Actions) (s
 			if action.IsSelf {
 				battle, err = battle.Action(action, context)
 			} else {
-				battle = battle.SwapPlayers()
+				battle = battle.SwapView()
 				battle, err = battle.Action(action, context)
-				battle = battle.SwapPlayers()
+				battle = battle.SwapView()
 			}
 
 			if err != nil {

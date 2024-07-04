@@ -33,7 +33,7 @@ func (b Battle) Clone() Battle {
 	}
 }
 
-func (b Battle) SwapPlayers() Battle {
+func (b Battle) SwapView() Battle {
 	b.SelfFighters, b.OpponentFighters = b.OpponentFighters, b.SelfFighters
 	b.IsRealSelf = !b.IsRealSelf
 	return b
@@ -78,7 +78,7 @@ func (b *Battle) p1CommandableMoveNames() bp.MoveNames {
 }
 
 func (b *Battle) p2CommandableMoveNames() bp.MoveNames {
-	bv := b.SwapPlayers()
+	bv := b.SwapView()
 	names := bv.p1CommandableMoveNames()
 	return names
 }
@@ -144,7 +144,7 @@ func (b *Battle) p1SwitchablePokeNames() bp.PokeNames {
 }
 
 func (b *Battle) p2SwitchablePokeNames() bp.PokeNames {
-	bv := b.SwapPlayers()
+	bv := b.SwapView()
 	names := bv.p1SwitchablePokeNames()
 	return names
 }
