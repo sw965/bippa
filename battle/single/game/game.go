@@ -30,20 +30,20 @@ func LegalSeparateActions(b *single.Battle) single.ActionSlices {
 	separateMoveNames := b.SeparateCommandableMoveNames()
 	separatePokeNames := b.SeparateSwitchablePokeNames()
 	ret := make(single.ActionSlices, single.PLAYER_NUM * single.LEAD_NUM)
-	isPlayer1s := []bool{true, false}
+	isSelfs := []bool{true, false}
 	for playerI := range ret {
-		isPlayer1 := isPlayer1s[playerI]
+		isSelf := isSelfs[playerI]
 		moveNames := separateMoveNames[playerI]
 		pokeNames := separatePokeNames[playerI]
 		actions := make(single.Actions, 0, len(moveNames) + len(pokeNames))
 		for _, name := range moveNames {
-			actions = append(actions, single.Action{CmdMoveName:name, IsPlayer1:isPlayer1})
+			actions = append(actions, single.Action{CmdMoveName:name, IsSelf:isSelf})
 		}
 		for _, name := range pokeNames {
-			actions = append(actions, single.Action{SwitchPokeName:name, IsPlayer1:isPlayer1})
+			actions = append(actions, single.Action{SwitchPokeName:name, IsSelf:isSelf})
 		}
 		if len(actions) == 0 {
-			actions = append(actions, single.Action{IsPlayer1:isPlayer1})
+			actions = append(actions, single.Action{IsSelf:isSelf})
 		}
 		ret[playerI] = actions
 	}
@@ -56,8 +56,8 @@ func NewPushFunc(context *single.Context) func(single.Battle, single.Actions) (s
 			return single.Battle{}, fmt.Errorf("len(actions) != 2 (NewPushFunc)")
 		}
 
-		for actions[0].IsPlayer1 == actions[1].IsPlayer1 {
-			return single.Battle{}, fmt.Errorf("プレイヤー1もしくはプレイヤー2が連続で行動しようとした。(actions[0].IsPlayer1 == actions[1].IsPlayer1)")
+		for actions[0].IsSelf == actions[1].IsSelf {
+			return single.Battle{}, fmt.Errorf("プレイヤー1もしくはプレイヤー2が連続で行動しようとした。(actions[0].IsSelf == actions[1].IsSelf)")
 		}
 		if actions.IsAllEmpty() {
 			return single.Battle{}, fmt.Errorf("両プレイヤーのActionがEmptyになっているため、Pushできません。Emptyじゃないようにするには、Action.CmdMoveNameかAction.SwitchPokeNameのいずれかは、ゼロ値以外の値である必要があります。")
@@ -71,7 +71,7 @@ func NewPushFunc(context *single.Context) func(single.Battle, single.Actions) (s
 				continue
 			}
 
-			if action.IsPlayer1 {
+			if action.IsSelf {
 				battle, err = battle.Action(action, context)
 			} else {
 				battle = battle.SwapPlayers()
@@ -84,11 +84,11 @@ func NewPushFunc(context *single.Context) func(single.Battle, single.Actions) (s
 			}
 
 			if battle.SelfFighters[0].IsFaint() {
-				context.Observer(&battle, single.AFTER_SELF_FAINT_STEP)
+				context.Observer(&battle, single.SELF_FAINT_EVENT)
 			}
 
 			if battle.OpponentFighters[0].IsFaint() {
-				context.Observer(&battle, single.AFTER_OPPONENT_FAINT_STEP)
+				context.Observer(&battle, single.OPPONENT_FAINT_EVENT)
 			}
 		}
 		battle.Turn += 1

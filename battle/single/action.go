@@ -7,17 +7,17 @@ import (
 type Action struct {
 	CmdMoveName bp.MoveName
 	SwitchPokeName bp.PokeName
-	IsPlayer1 bool
+	IsSelf bool
 }
 
 func StringToAction(s string, isPlayer1 bool) Action {
 	moveName := bp.STRING_TO_MOVE_NAME[s]
 	pokeName := bp.STRING_TO_POKE_NAME[s]
-	return Action{CmdMoveName:moveName, SwitchPokeName:pokeName, IsPlayer1:isPlayer1}
+	return Action{CmdMoveName:moveName, SwitchPokeName:pokeName, IsSelf:isPlayer1}
 }
 
 func (a *Action) ToString() string {
-	p := map[bool]string{true:"player1", false:"player2"}[a.IsPlayer1]
+	p := map[bool]string{true:"player1", false:"player2"}[a.IsSelf]
 	return bp.MOVE_NAME_TO_STRING[a.CmdMoveName] + bp.POKE_NAME_TO_STRING[a.SwitchPokeName] + " " + p
 }
 

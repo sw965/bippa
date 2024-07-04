@@ -6,9 +6,9 @@ import (
 	"github.com/sw965/bippa/battle/dmgtools"
 )
 
-type Observer func(*Battle, Step)
+type Observer func(*Battle, EventType)
 
-func EmptyObserver(_ *Battle, _ Step) {}
+func EmptyObserver(_ *Battle, _ EventType) {}
 
 type Context struct {
 	DamageRandBonuses dmgtools.RandBonuses
@@ -22,10 +22,6 @@ func NewContext(r *rand.Rand) Context {
 		Rand:r,
 		Observer:EmptyObserver,
 	}
-}
-
-func (c *Context) SetDamageRandBonuses(dmgRandBonuses ...dmgtools.RandBonus) {
-	c.DamageRandBonuses = dmgRandBonuses
 }
 
 func (c *Context) DamageRandBonus() dmgtools.RandBonus {

@@ -108,32 +108,35 @@ func main() {
 	// 	}
 	// }
 
+	strToTeam := func(teamStr string) bp.EasyReadPokemons {
+		decodedTeamStr, err := url.QueryUnescape(teamStr)
+		if err != nil {
+			panic(err)
+		}
+
+		var team bp.EasyReadPokemons
+		err = json.Unmarshal([]byte(decodedTeamStr), &team)
+		if err != nil {
+			panic(err)
+		}
+		return team
+	}
+
+	var selfTeam bp.EasyReadPokemons
+	var opponentTeam bp.EasyReadPokemons
+
 	handler := func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.Header().Set("Content-Type", "application/json")
-		fmt.Println("ここ")
 
 		selfTeamStr := r.URL.Query().Get("self_team")
 		opponentTeamStr := r.URL.Query().Get("opponent_team")
-		decodedSelfTeamStr, err := url.QueryUnescape(selfTeamStr)
-		if err != nil {
-			fmt.Println("Error decoding string:", err)
-		}
-		fmt.Println("Decoded selfTeamStr:", decodedSelfTeamStr)
 
-		var team bp.EasyReadPokemons
-		err = json.Unmarshal([]byte(decodedSelfTeamStr), &team)
-		if err != nil {
-			fmt.Println("Error unmarshalling JSON:", err)
+		//どちらが片方だけの場合、エラーが起きるようにしておく。
+		if selfTeamStr != "" && opponentTeamStr != "" {
+			selfTeam = strToTeam(selfTeamStr)
+			opponentTeam = strToTeam(opponentTeamStr)
 			return
-		}
-	
-		fmt.Println("team = ", team)
-
-		if selfTeamStr != "" {
-			fmt.Println("selfTeamStr", selfTeamStr)
-		} else if opponentTeamStr != "" {
-			fmt.Println("opponentTeamStr", opponentTeamStr)
 		}
 
 		responseData, err := json.Marshal([][]string{[]string{"たいあたり", "神様"}, []string{"じしん", "ユウリちゃん"}})

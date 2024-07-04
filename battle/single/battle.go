@@ -2,6 +2,7 @@ package single
 
 import (
 	"fmt"
+	"math"
 	"math/rand"
 	bp "github.com/sw965/bippa"
 	omwrand "github.com/sw965/omw/math/rand"
@@ -97,8 +98,14 @@ func (b Battle) CommandMove(moveName bp.MoveName, context *Context) (Battle, err
 		return b, nil
 	}
 
-	if _, ok := b.SelfFighters[0].Moveset[moveName]; !ok {
+	pp, ok := b.SelfFighters[0].Moveset[moveName]
+	if !ok {
 		msg := fmt.Sprintf("%s は %s を 繰り出そうとしたが、覚えていない", b.SelfFighters[0].Name.ToString(), moveName.ToString())
+		return b, fmt.Errorf(msg)
+	}
+
+	if pp.Current <= 0 {
+		msg := fmt.Sprintf("%s は %s を 繰り出そうとしたが、PPが0", b.SelfFighters[0].Name.ToString(), moveName.ToString())
 		return b, fmt.Errorf(msg)
 	}
 
@@ -106,14 +113,19 @@ func (b Battle) CommandMove(moveName bp.MoveName, context *Context) (Battle, err
 	b.OpponentFighters = b.OpponentFighters.Clone()
 	
 	b.SelfFighters[0].Moveset[moveName].Current -= 1
-	context.Observer(&b, AFTER_MOVE_USE_STEP)
+	context.Observer(&b, MOVE_USE_EVENT)
 
 	dmg := b.CalcDamage(moveName, context)
 	dmg = omwmath.Min(dmg, b.OpponentFighters[0].CurrentHP)
 
 	b.OpponentFighters[0].CurrentHP -= dmg
-	context.Observer(&b, AFTER_OPPONENT_DAMAGE_STEP)
+	context.Observer(&b, OPPONENT_DAMAGE_EVENT)
 
+	if moveName == bp.STRUGGLE {
+		dmg := int(math.Round(float64(b.SelfFighters[0].CurrentHP) * 0.25))
+		b.SelfFighters[0].CurrentHP -= dmg
+		context.Observer(&b, RECOIL_EVENT)
+	}
 	return b, nil
 }
 
@@ -160,7 +172,7 @@ func (b Battle) Switch(pokeName bp.PokeName, context *Context) (Battle, error) {
 	selfFighters := b.SelfFighters.Clone()
 	selfFighters[0], selfFighters[idx] = selfFighters[idx], selfFighters[0]
 	b.SelfFighters = selfFighters
-	context.Observer(&b, AFTER_SWITCH_STEP)
+	context.Observer(&b, SWITCH_EVENT)
 	return b, nil
 }
 

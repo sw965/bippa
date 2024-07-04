@@ -9,18 +9,18 @@ import (
 
 type Message string
 
-func NewChallengeByTrainer(trainerName string, s string) Message {
+func NewChallengeByTrainerMessage(trainerName string, s string) Message {
 	ret := fmt.Sprintf("%sが", trainerName)
 	ret += s
 	ret += "勝負を しかけてきた！"
 	return Message(ret)
 }
 
-func NewActionPrompt(pokeName bp.PokeName) Message {
+func NewActionPromptMessage(pokeName bp.PokeName) Message {
     return Message(fmt.Sprintf("%sは どうする？", pokeName.ToString()))
 }
 
-func NewMoveUse(pokeName bp.PokeName, moveName bp.MoveName, isSelf bool) Message {
+func NewMoveUseMessage(pokeName bp.PokeName, moveName bp.MoveName, isSelf bool) Message {
 	m := map[bool]string{
 		true:"",
 		false:"相手の ",
@@ -28,7 +28,7 @@ func NewMoveUse(pokeName bp.PokeName, moveName bp.MoveName, isSelf bool) Message
 	return Message(fmt.Sprintf(m + "%s の " + "%s！", pokeName.ToString(), moveName.ToString()))
 }
 
-func NewGo(trainerName string, pokeName bp.PokeName, isSelf bool, s string) Message {
+func NewGoMessage(trainerName string, pokeName bp.PokeName, isSelf bool, s string) Message {
 	if isSelf {
 		return Message(fmt.Sprintf("行け！ %s！", pokeName.ToString()))
 	} else {
@@ -39,7 +39,7 @@ func NewGo(trainerName string, pokeName bp.PokeName, isSelf bool, s string) Mess
 	}
 }
 
-func NewBack(trainer string, pokeName bp.PokeName, isSelf bool) Message {
+func NewBackMessage(trainer string, pokeName bp.PokeName, isSelf bool) Message {
 	if isSelf {
 		return Message(fmt.Sprintf("戻れ！ %s", pokeName.ToString()))
 	} else {
@@ -47,7 +47,7 @@ func NewBack(trainer string, pokeName bp.PokeName, isSelf bool) Message {
 	}
 }
 
-func NewFaint(pokeName bp.PokeName, isSelf bool) Message {
+func NewFaintMessage(pokeName bp.PokeName, isSelf bool) Message {
 	m := map[bool]string{
 		true:"",
 		false:"相手の ",
