@@ -12,7 +12,7 @@ import (
 	"github.com/sw965/bippa/battle/single/mcts"
 	"net/http"
 	"encoding/json"
-	//"github.com/sw965/bippa/battle/single/game"
+	"github.com/sw965/bippa/battle/single/game"
 	//battlemsg "github.com/sw965/bippa/battle/msg"
 	"net/url"
 )
@@ -46,68 +46,6 @@ func main() {
 	featureFunc := feature.NewSingleBattleFunc(feature.ExpectedDamageRatioToCurrentHP, feature.DPSRatioToCurrentHP)
 	mctSearch.LeafNodeJointEvalFunc = mcts.NewLeafNodeJointEvalFunc(affine, featureFunc)
 
-	battle := single.Battle{
-		SelfFighters:bp.Pokemons{bp.NewTemplateBulbasaur(), bp.NewTemplateCharmander(), bp.NewTemplateSquirtle()},
-		OpponentFighters:bp.Pokemons{bp.NewTemplateBulbasaur(), bp.NewTemplateCharmander(), bp.NewTemplateSquirtle()},
-		IsRealSelf:true,
-	}
-
-	fmt.Println(battle)
-
-	// selfViewLastBattle := battle
-	// opponentViewLastBattle := battle.SwapPlayers()
-
-	// observer := func(battle *single.Battle, step single.Step) {
-	// 	var lastBattle single.Battle
-	// 	if battle.IsRealSelf {
-	// 		lastBattle = selfViewLastBattle
-	// 	} else {
-	// 		lastBattle = opponentViewLastBattle
-	// 	}
-
-	// 	switch step {
-	// 		case single.AFTER_MOVE_USE_STEP:
-	// 			var lastUsedMoveName bp.MoveName
-	// 			lastMoveset := lastBattle.SelfFighters[0].Moveset
-	// 			currentMoveset := battle.SelfFighters[0].Moveset
-	// 			for moveName, pp := range currentMoveset {
-	// 				if pp.Current != lastMoveset[moveName].Current {
-	// 					lastUsedMoveName = moveName
-	// 					break
-	// 				}
-	// 			}
-	// 			operationData = append(operationData, []string{"battleMsg", "clear"})
-	// 			for _, msg := range battlemsg.NewMoveUse(battle.SelfFighters[0].Name, lastUsedMoveName, battle.IsRealSelf).ToSlice() {
-	// 				operationData = append(operationData, []string{"battleMsg", "add", msg})
-	// 			}
-	// 		case single.AFTER_OPPONENT_DAMAGE_STEP:
-	// 			lastCurrentHP := lastBattle.OpponentFighters[0].CurrentHP
-	// 			dmg := lastCurrentHP - battle.OpponentFighters[0].CurrentHP
-	// 			lastMsg := omwslices.End[UIs](responseData).BattleMessage
-	// 			for i := 1; i < dmg; i++ {
-	// 				lastBattle = lastBattle.Clone()
-	// 				lastBattle.OpponentFighters[0].CurrentHP -= dmg
-	// 				responseData = append(responseData, NewUI(&lastBattle, lastMsg, lastBattle.IsRealSelf))
-	// 			}
-	// 		case single.AFTER_SELF_FAINT_STEP:
-	// 			for _, msg := range battlemsg.NewFaint(battle.SelfFighters[0].Name, lastBattle.IsRealSelf).Accumulate() {
-	// 				lastBattle = lastBattle.Clone()
-	// 				responseData = append(responseData, NewUI(&lastBattle, msg, lastBattle.IsRealSelf))
-	// 			}
-	// 		case single.AFTER_OPPONENT_FAINT_STEP:
-	// 			for _, msg := range battlemsg.NewFaint(battle.OpponentFighters[0].Name, !lastBattle.IsRealSelf).Accumulate() {
-	// 				lastBattle = lastBattle.Clone()
-	// 				responseData = append(responseData, NewUI(&lastBattle, msg, lastBattle.IsRealSelf))
-	// 			}
-	// 	}
-
-	// 	if battle.IsRealSelf {
-	// 		selfViewLastBattle = battle.Clone()
-	// 	} else {
-	// 		opponentViewLastBattle = battle.Clone()
-	// 	}
-	// }
-
 	strToTeam := func(teamStr string) bp.EasyReadPokemons {
 		decodedTeamStr, err := url.QueryUnescape(teamStr)
 		if err != nil {
@@ -122,8 +60,9 @@ func main() {
 		return team
 	}
 
-	var selfTeam bp.EasyReadPokemons
-	var opponentTeam bp.EasyReadPokemons
+	var ui single.ObserverUI
+	var battle single.Battle
+	var push func(single.Battle, single.Actions) (single.Battle, error)
 
 	handler := func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
@@ -133,69 +72,84 @@ func main() {
 		opponentTeamStr := r.URL.Query().Get("opponent_team")
 
 		//どちらが片方だけの場合、エラーが起きるようにしておく。
-		if selfTeamStr != "" && opponentTeamStr != "" {
-			selfTeam = strToTeam(selfTeamStr)
-			opponentTeam = strToTeam(opponentTeamStr)
+		if selfTeamStr != "null" && opponentTeamStr != "null" {
+			selfTeam := strToTeam(selfTeamStr).From()
+			opponentTeam := strToTeam(opponentTeamStr).From()
+			fmt.Println("selfTeam", selfTeam, len(selfTeam))
+			fmt.Println("opponentTeam", opponentTeam, len(opponentTeam))
+
+			battle = single.Battle{
+				SelfFighters:selfTeam[:3],
+				OpponentFighters:opponentTeam[:3],
+				IsRealSelf:true,
+			}
+
+			fmt.Println("battle", battle)
+			initDisplayUIs, err := single.NewInitDisplayUIs("カトレア", &battle)
+			if err != nil {
+				panic(err)
+			}
+
+			response, err := json.Marshal(&initDisplayUIs)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			w.Write(response)
+			
+			ui, err = single.NewObserverUI(&battle)
+			if err != nil {
+				panic(err)
+			}
+			ui.SelfTrainerName = "ユウリ"
+			ui.OpponentTrainerName = "カトレア"
+			push = game.NewPushFunc(
+				&single.Context{
+					DamageRandBonuses:dmgtools.RandBonuses{1.0},
+					Rand:rg,
+					Observer:ui.Observer,
+				},
+			)
 			return
 		}
 
-		responseData, err := json.Marshal([][]string{[]string{"たいあたり", "神様"}, []string{"じしん", "ユウリちゃん"}})
+		rootNode := mctSearch.NewNode(&battle)
+		err := mctSearch.Run(5120, rootNode, rg)
 		if err != nil {
 			panic(err)
 		}
-		w.Write(responseData)
-		// if r.URL.Query().Get("init") ==  "true" {
-		// 	responseData = append(responseData, ResponseDataElement{EasyReadBattle:battle.ToEasyRead(), Step:-1})
-		// 	jsonResponse, err := json.Marshal(responseData)
-		// 	if err != nil {
-		// 		http.Error(w, err.Error(), http.StatusInternalServerError)
-		// 		return
-		// 	}
-		// 	w.Write(jsonResponse)
-		// 	responseData = make(ResponseData, 0, 64)
-		// 	return
-		// }
 
-		// action := single.StringToAction(actionStr, true)
-		// fmt.Println("action", action)
-		// rootNode := mctSearch.NewNode(&battle)
-		// err := mctSearch.Run(5120, rootNode, rg)
-		// if err != nil {
-		// 	panic(err)
-		// }
+		jointAction := rootNode.SeparateUCBManager.JointActionByMaxTrial(rg)
+		jointAvg := rootNode.SeparateUCBManager.JointAverageValue()
+		fmt.Println("joint", jointAction[0].ToString(), jointAction[1].ToString(), jointAvg)
 
-		// jointAction := rootNode.SeparateUCBManager.JointActionByMaxTrial(rg)
-		// jointAvg := rootNode.SeparateUCBManager.JointAverageValue()
-		// fmt.Println("joint", jointAction[0].ToString(), jointAction[1].ToString(), jointAvg)
-		// battle, err = game.NewPushFunc(
-		// 	&single.Context{
-		// 		DamageRandBonuses:dmgtools.RandBonuses{1.0},
-		// 		Rand:rg,
-		// 		Observer:observer,
-		// 	},
-		// )(battle, single.Actions{action, jointAction[1]})
-		// if err != nil {
-		// 	panic(err)
-		// }
-		// if isEnd, _ := game.IsEnd(&battle); isEnd {
-		// 	fmt.Println(battle.SelfFighters[0].Name.ToString(), battle.SelfFighters[0].CurrentHP, battle.OpponentFighters[0].Name.ToString(), battle.OpponentFighters[0].CurrentHP)
-		// 	fmt.Println("ゲームが終了した")
-		// 	return
-		// }
-		// fmt.Println(battle.SelfFighters[0].Name.ToString(), battle.SelfFighters[0].CurrentHP, battle.OpponentFighters[0].Name.ToString(), battle.OpponentFighters[0].CurrentHP)
-		// jsonResponse, err := json.Marshal(responseData)
-		// if err != nil {
-		// 	fmt.Println("json errorを呼び出してよ")
-		// 	http.Error(w, err.Error(), http.StatusInternalServerError)
-		// 	return
-		// }
-		// w.Write(jsonResponse)
-		// responseData = make(ResponseData, 0, 64)
+		actionStr := r.URL.Query().Get("action")
+		fmt.Println("actionStr", actionStr)
+		action := single.StringToAction(actionStr, true)
+		fmt.Println("jointAction", action, jointAction[1])
+
+		battle, err = push(battle, single.Actions{action, jointAction[1]})
+		if err != nil {
+			panic(err)
+		}
+
+		if isEnd, _ := game.IsEnd(&battle); isEnd {
+			fmt.Println(battle.SelfFighters[0].Name.ToString(), battle.SelfFighters[0].CurrentHP, battle.OpponentFighters[0].Name.ToString(), battle.OpponentFighters[0].CurrentHP)
+			fmt.Println("ゲームが終了した")
+			return
+		}
+
+		response, err := json.Marshal(ui.Displays)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		w.Write(response)
+		ui.Displays = make(single.DisplayUIs, 0, 128)
 	}
 
 	http.HandleFunc("/caitlin/", handler)
 	fmt.Println("サーバ建て")
-	fmt.Println(battle.SelfFighters[0].Name.ToString(), battle.SelfFighters[0].CurrentHP, battle.OpponentFighters[0].Name.ToString(), battle.OpponentFighters[0].CurrentHP)
 	err = server.ListenAndServe()
     if err != nil {
         panic(err)

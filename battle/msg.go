@@ -10,7 +10,7 @@ import (
 type Message string
 
 func NewChallengeByTrainerMessage(trainerName string) Message {
-	ret := fmt.Sprintf("%sが", trainerName)
+	ret := fmt.Sprintf("%sが ", trainerName)
 	ret += "勝負を しかけてきた！"
 	return Message(ret)
 }
@@ -25,6 +25,10 @@ func NewMoveUseMessage(pokeName bp.PokeName, moveName bp.MoveName, isSelf bool) 
 		false:"相手の ",
 	}[isSelf]
 	return Message(fmt.Sprintf(m + "%s の " + "%s！", pokeName.ToString(), moveName.ToString()))
+}
+
+func NewRecoilMessage(trainerName string, pokeName bp.PokeName) Message {
+	return Message(fmt.Sprintf("%sの %sは 攻撃の 反動を 受けた", trainerName, pokeName.ToString()))
 }
 
 func NewGoMessage(trainerName string, pokeName bp.PokeName, isSelf bool) Message {

@@ -74,7 +74,12 @@ func (b *Battle) p1CommandableMoveNames() bp.MoveNames {
 			names = append(names, moveName)
 		}
 	}
-	return names
+
+	if len(names) == 0 {
+		return bp.MoveNames{bp.STRUGGLE}
+	} else {
+		return names
+	}
 }
 
 func (b *Battle) p2CommandableMoveNames() bp.MoveNames {

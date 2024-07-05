@@ -19,12 +19,12 @@ const (
 )
 
 type DisplayUI struct {
-	RealSelfPokeName bp.PokeName
+	RealSelfPokeName string
 	RealSelfLevel bp.Level
 	RealSelfMaxHP int
 	RealSelfCurrentHP int
 
-	RealOpponentPokeName bp.PokeName
+	RealOpponentPokeName string
 	RealOpponentLevel bp.Level
 	RealOpponentMaxHP int
 	RealOpponentCurrentHP int
@@ -32,7 +32,7 @@ type DisplayUI struct {
 	Message bt.Message
 }
 
-func NewDisplayUI(battle *Battle, msg bt.Message) DisplayUI {
+func NewDisplayUI(battle *Battle, msg bt.Message) (DisplayUI) {
 	var realSelfPokemon bp.Pokemon
 	var realOpponentPokemon bp.Pokemon
 
@@ -45,12 +45,12 @@ func NewDisplayUI(battle *Battle, msg bt.Message) DisplayUI {
 	}
 
 	return DisplayUI{
-		RealSelfPokeName:realSelfPokemon.Name,
+		RealSelfPokeName:realSelfPokemon.Name.ToString(),
 		RealSelfLevel:realSelfPokemon.Level,
 		RealSelfMaxHP:realSelfPokemon.MaxHP,
 		RealSelfCurrentHP:realSelfPokemon.CurrentHP,
 
-		RealOpponentPokeName:realOpponentPokemon.Name,
+		RealOpponentPokeName:realOpponentPokemon.Name.ToString(),
 		RealOpponentLevel:realOpponentPokemon.Level,
 		RealOpponentMaxHP:realOpponentPokemon.MaxHP,
 		RealOpponentCurrentHP:realOpponentPokemon.CurrentHP,
@@ -59,9 +59,86 @@ func NewDisplayUI(battle *Battle, msg bt.Message) DisplayUI {
 	}
 }
 
+func (ui DisplayUI) Conceal(isRealSelf bool) DisplayUI {
+	if isRealSelf {
+		ui.RealSelfPokeName = ""
+		ui.RealSelfLevel = -1
+		ui.RealSelfMaxHP = -1
+		ui.RealSelfCurrentHP = -1
+	} else {
+		ui.RealOpponentPokeName = ""
+		ui.RealOpponentLevel = -1
+		ui.RealOpponentMaxHP = -1
+		ui.RealOpponentCurrentHP = -1
+	}
+	return ui
+}
+
+func (ui DisplayUI) Clone() DisplayUI {
+	return ui
+}
+
 type DisplayUIs []DisplayUI
 
-func (uis DisplayUIs) 
+func NewInitDisplayUIs(opponentTrainerName string, battle *Battle) (DisplayUIs, error) {
+	if !battle.IsRealSelf {
+		return DisplayUIs{}, fmt.Errorf("NewInitDisplayUIsに渡されるBattleは、Battle.IsRealSelf = trueでなければならない")
+	}
+
+	ret := make(DisplayUIs, 0)
+	//○○が勝負を仕掛けてきた！
+	for _, msg := range bt.NewChallengeByTrainerMessage(opponentTrainerName).Accumulate() {
+		ret = append(ret, DisplayUI{Message:msg}.Conceal(true).Conceal(false))
+	}
+
+	//相手は○○を繰り出した！
+	msg := bt.NewGoMessage(opponentTrainerName, battle.OpponentFighters[0].Name, false)
+	ret = ret.AppendMessage(msg, true)
+
+	//相手のポケモンが現れる
+	lastMsg := omwslices.End(ret).Message
+	ret = append(ret, NewDisplayUI(battle, lastMsg).Conceal(true))
+
+	//行け！○○
+	msg = bt.NewGoMessage("", battle.SelfFighters[0].Name, true)
+	ret = ret.AppendMessage(msg, true)
+
+	//自分のポケモンが現れる
+	lastMsg = omwslices.End(ret).Message
+	ret = append(ret, NewDisplayUI(battle, lastMsg))
+	return ret, nil
+}
+
+func (uis DisplayUIs) AppendMessage(msg bt.Message, clearMessage bool) DisplayUIs {
+	end := omwslices.End(uis).Clone()
+	if clearMessage {
+		end.Message = ""
+	}
+	for _, m := range msg.Accumulate() {
+		end.Message = m
+		uis = append(uis, end)
+		end = end.Clone()
+	}
+	return uis
+}
+
+func (uis DisplayUIs) AppendRealOpponentDamageOrHeal(diff int) DisplayUIs {
+	var sign int
+	if diff >= 0 {
+		sign = 1
+	} else {
+		sign = -1
+	}
+
+	ui := omwslices.End(uis).Clone()
+	n := sign * diff
+	for i := 0; i < n; i++ {
+		ui.RealOpponentCurrentHP += sign
+		uis = append(uis, ui)
+		ui = ui.Clone()
+	}
+	return uis
+}
 
 type ObserverUI struct {
 	LastSelfViewBattle Battle
@@ -121,59 +198,77 @@ func (o *ObserverUI) LastUsedMoveName(battle *Battle) (bp.MoveName, error) {
 	}
 }
 
-func (o *ObserverUI) OpponentCurrentHPDiff(battle *Battle) int {
+func (o *ObserverUI) RealOpponentCurrentHPDiff(battle *Battle) int {
 	lastBattle := o.LastBattle(battle.IsRealSelf)
+	fmt.Println(battle.OpponentFighters[0].Name, lastBattle.OpponentFighters[0].Name)
+	fmt.Println(battle.OpponentFighters[0].Name.ToString(), lastBattle.OpponentFighters[0].Name.ToString())
 	diff := battle.OpponentFighters[0].CurrentHP - lastBattle.OpponentFighters[0].CurrentHP
 	return diff
 }
 
 func (o *ObserverUI) Observer(battle *Battle, eventType EventType) {
+	fmt.Println("ovs", battle.SelfFighters[0].Name, battle.OpponentFighters[0].Name)
 	switch eventType {
 		case MOVE_USE_EVENT:
 			lastUsedMoveName, err := o.LastUsedMoveName(battle)
 			if err != nil {
 				panic(err)
 			}
-			for _, msg := range bt.NewMoveUseMessage(battle.SelfFighters[0].Name, lastUsedMoveName, battle.IsRealSelf).Accumulate() {
-				o.Displays = append(o.Displays, NewDisplayUI(battle, msg))
-			}
+			msg := bt.NewMoveUseMessage(battle.SelfFighters[0].Name, lastUsedMoveName, battle.IsRealSelf)
+			o.Displays = o.Displays.AppendMessage(msg, true)
 		case OPPONENT_DAMAGE_EVENT:
-			endDisplay := omwslices.End(o.Displays)
-			lastMsg := endDisplay.Message
-			dmg := (o.OpponentCurrentHPDiff(battle) * -1)
-			if dmg < 0 {
-				panic("OPPONENT_DAMAGE_EVENTで回復している。")
+			diff := o.RealOpponentCurrentHPDiff(battle)
+			if diff > 0 {
+				panic("OPPONENT_DAMAGE_EVENTで、HPが回復している。")
 			}
-			lastBattle := o.LastBattle(battle.IsRealSelf).Clone()
-			for i := 0; i < dmg; i++ {
-				lastBattle.OpponentFighters[0].CurrentHP -= 1
-				o.Displays = append(o.Displays, NewDisplayUI(&lastBattle, lastMsg))
-				lastBattle = lastBattle.Clone()
-			}
+			o.Displays = o.Displays.AppendRealOpponentDamageOrHeal(diff)
 		case SWITCH_EVENT:
 			lastBattle := o.LastBattle(battle.IsRealSelf)
 			lastPokeName := lastBattle.SelfFighters[0].Name
 			trainerName := o.TrainerName(battle.IsRealSelf)
-			var endDisplay DisplayUI
-			if len(o.Displays) == 0 {
-				endDisplay = NewDisplayUI(&lastBattle, "")
-			} else {
-				endDisplay = omwslices.End(o.Displays).Clone()
-			}
-			for _, msg := range bt.NewBackMessage(trainerName, lastPokeName, battle.IsRealSelf).Accumulate() {
-				endDisplay.Message = msg
-				o.Displays = append(o.Displays, endDisplay)
-				endDisplay = endDisplay.Clone()
-			}
 
-			endDisplay = 
-			for _, msg := range bt.NewGoMessage(trainerName, battle.SelfFighters[0].Name, battle.IsRealSelf).Accumulate() {
-			}
+			//○○は○○を引っ込めた！
+			msg := bt.NewBackMessage(trainerName, lastPokeName, battle.IsRealSelf)
+			o.Displays = o.Displays.AppendMessage(msg, true)
+
+			//ポケモンのUIを隠す
+			o.Displays = append(o.Displays, omwslices.End(o.Displays).Conceal(battle.IsRealSelf))
+
+			//○○は○○を繰り出した！
+			msg = bt.NewGoMessage(trainerName, battle.SelfFighters[0].Name, battle.IsRealSelf)
+			o.Displays = o.Displays.AppendMessage(msg, true)
+
+			//ポケモンを出現させる
+			lastMsg := omwslices.End(o.Displays).Message
+			o.Displays = append(o.Displays, NewDisplayUI(battle, lastMsg))
 		case SELF_FAINT_EVENT:
-			fmt.Println("自分は倒れた")
+			lastBattle := o.LastBattle(battle.IsRealSelf)
+			trainerName := o.TrainerName(battle.IsRealSelf)
+			pokeName := lastBattle.SelfFighters[0].Name
+			if pokeName != battle.SelfFighters[0].Name {
+				panic("SELF_FAINT_EVENTで、直前のポケモン名と現在のポケモン名が異なっている。")
+			}
+			msg := bt.NewFaintMessage(trainerName, pokeName, battle.IsRealSelf)
+			o.Displays = o.Displays.AppendMessage(msg, true)
 		case OPPONENT_FAINT_EVENT:
-			fmt.Println("相手は倒れた")
+			lastBattle := o.LastBattle(battle.IsRealSelf)
+			pokeName := lastBattle.OpponentFighters[0].Name
+			trainerName := o.TrainerName(!battle.IsRealSelf)
+			if pokeName != battle.OpponentFighters[0].Name {
+				panic("OPPONENT_FAINT_EVENTで、直前のポケモン名と現在のポケモン名が異なっている。")
+			}
+			msg := bt.NewFaintMessage(trainerName, pokeName, battle.IsRealSelf)
+			o.Displays = o.Displays.AppendMessage(msg, true)
 		case RECOIL_EVENT:
-			fmt.Println("反動")
+			trainerName := o.TrainerName(battle.IsRealSelf)
+			lastBattle := o.LastBattle(battle.IsRealSelf)
+			msg := bt.NewRecoilMessage(trainerName, lastBattle.SelfFighters[0].Name)
+			o.Displays = o.Displays.AppendMessage(msg, true)
+	}
+
+	if battle.IsRealSelf {
+		o.LastSelfViewBattle = battle.Clone()
+	} else {
+		o.LastOpponentViewBattle = battle.Clone()
 	}
 }

@@ -5,6 +5,7 @@ import (
 	"golang.org/x/exp/slices"
 	osliecs "github.com/sw965/omw/slices"
 	omaps "github.com/sw965/omw/maps"
+	"github.com/sw965/omw/fn"
 )
 
 type MoveName int
@@ -35,6 +36,10 @@ var STRING_TO_MOVE_NAME = map[string]MoveName{
 	"わるあがき":STRUGGLE,
 }
 
+func StringToMoveName(s string) MoveName {
+	return STRING_TO_MOVE_NAME[s]
+}
+
 var MOVE_NAME_TO_STRING = omaps.Invert[map[MoveName]string](STRING_TO_MOVE_NAME)
 
 func (name MoveName) ToString() string {
@@ -42,6 +47,10 @@ func (name MoveName) ToString() string {
 }
 
 type MoveNames []MoveName
+
+func StringsToMoveNames(ss []string) MoveNames {
+	return fn.Map[MoveNames](ss, StringToMoveName)
+}
 
 func (names MoveNames) ToStrings() []string {
 	ret := make([]string, len(names))

@@ -60,6 +60,7 @@ func NewPushFunc(context *single.Context) func(single.Battle, single.Actions) (s
 			return single.Battle{}, fmt.Errorf("プレイヤー1もしくはプレイヤー2が連続で行動しようとした。(actions[0].IsSelf == actions[1].IsSelf)")
 		}
 		if actions.IsAllEmpty() {
+			fmt.Println("エラー前battle", battle.ToEasyRead())
 			return single.Battle{}, fmt.Errorf("両プレイヤーのActionがEmptyになっているため、Pushできません。Emptyじゃないようにするには、Action.CmdMoveNameかAction.SwitchPokeNameのいずれかは、ゼロ値以外の値である必要があります。")
 		}
 

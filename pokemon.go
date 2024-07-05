@@ -26,6 +26,10 @@ var STRING_TO_POKE_NAME = map[string]PokeName{
 	"ガブリアス":GARCHOMP,
 }
 
+func StringToPokeName(s string) PokeName {
+	return STRING_TO_POKE_NAME[s]
+}
+
 var POKE_NAME_TO_STRING = omwmaps.Invert[map[PokeName]string](STRING_TO_POKE_NAME)
 
 func (name PokeName) ToString() string {

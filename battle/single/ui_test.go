@@ -27,6 +27,7 @@ func TestUI(t *testing.T) {
 	ui, err := single.NewObserverUI(&battle)
 	ui.SelfTrainerName = "ヒカリ"
 	ui.OpponentTrainerName = "カトレア"
+	ui.Displays, err = single.NewInitDisplayUIs(ui.OpponentTrainerName, &battle)
 	if err != nil {
 		t.Errorf(fmt.Sprintf("%v", err))
 	}
