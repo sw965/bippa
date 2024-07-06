@@ -17,6 +17,33 @@ import (
 	"net/url"
 )
 
+func stringToEasyReadPokemons(pokemonsStr string) bp.EasyReadPokemons {
+	decodedPokemonsStr, err := url.QueryUnescape(pokemonsStr)
+	if err != nil {
+		panic(err)
+	}
+
+	var pokemons bp.EasyReadPokemons
+	err = json.Unmarshal([]byte(decodedPokemonsStr), &pokemons)
+	if err != nil {
+		panic(err)
+	}
+	return pokemons
+}
+
+func stringToAction(actionStr string, isSelf bool) single.Action {
+	decodedActionStr, err := url.QueryUnescape(actionStr)
+	if err != nil {
+		panic(err)
+	}
+	return single.StringToAction(decodedActionStr, true)
+}
+
+type ResponseBattle struct {
+	SelfFighters bp.EasyReadPokemons
+	OpponentFighters bp.EasyReadPokemons
+}
+
 func main() {
 	server := http.Server{
         Addr:":8080",
@@ -46,20 +73,6 @@ func main() {
 	featureFunc := feature.NewSingleBattleFunc(feature.ExpectedDamageRatioToCurrentHP, feature.DPSRatioToCurrentHP)
 	mctSearch.LeafNodeJointEvalFunc = mcts.NewLeafNodeJointEvalFunc(affine, featureFunc)
 
-	strToTeam := func(teamStr string) bp.EasyReadPokemons {
-		decodedTeamStr, err := url.QueryUnescape(teamStr)
-		if err != nil {
-			panic(err)
-		}
-
-		var team bp.EasyReadPokemons
-		err = json.Unmarshal([]byte(decodedTeamStr), &team)
-		if err != nil {
-			panic(err)
-		}
-		return team
-	}
-
 	var ui single.ObserverUI
 	var battle single.Battle
 	var push func(single.Battle, single.Actions) (single.Battle, error)
@@ -71,45 +84,44 @@ func main() {
 		selfTeamStr := r.URL.Query().Get("self_team")
 		opponentTeamStr := r.URL.Query().Get("opponent_team")
 
-		//どちらが片方だけの場合、エラーが起きるようにしておく。
 		if selfTeamStr != "null" && opponentTeamStr != "null" {
-			selfTeam := strToTeam(selfTeamStr).From()
-			opponentTeam := strToTeam(opponentTeamStr).From()
-			fmt.Println("selfTeam", selfTeam, len(selfTeam))
-			fmt.Println("opponentTeam", opponentTeam, len(opponentTeam))
+			easyReadSelfPokemons := stringToEasyReadPokemons(selfTeamStr)
+			easyReadOpponentPokemons := stringToEasyReadPokemons(opponentTeamStr)
 
-			battle = single.Battle{
-				SelfFighters:selfTeam[:3],
-				OpponentFighters:opponentTeam[:3],
-				IsRealSelf:true,
-			}
-
-			fmt.Println("battle", battle)
-			initDisplayUIs, err := single.NewInitDisplayUIs("カトレア", &battle)
-			if err != nil {
-				panic(err)
-			}
-
-			response, err := json.Marshal(&initDisplayUIs)
+			response, err := json.Marshal(&ResponseBattle{SelfFighters:easyReadSelfPokemons[:3], OpponentFighters:easyReadOpponentPokemons[:3]})
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
 			w.Write(response)
+
+			selfFighters := easyReadSelfPokemons.From()[:3]
+			opponentFighters := easyReadOpponentPokemons.From()[:3]
+
+			battle = single.Battle{
+				SelfFighters:selfFighters,
+				OpponentFighters:opponentFighters,
+				IsRealSelf:true,
+			}
 			
-			ui, err = single.NewObserverUI(&battle)
+			ui, err = single.NewObserverUI(&battle, 128)
 			if err != nil {
 				panic(err)
 			}
 			ui.SelfTrainerName = "ユウリ"
 			ui.OpponentTrainerName = "カトレア"
-			push = game.NewPushFunc(
-				&single.Context{
-					DamageRandBonuses:dmgtools.RandBonuses{1.0},
-					Rand:rg,
-					Observer:ui.Observer,
-				},
-			)
+
+			context := &single.Context{
+				DamageRandBonuses:dmgtools.RandBonuses{1.0},
+				Rand:rg,
+				Observer:ui.Observer,
+			}
+			push = game.NewPushFunc(context)
+			ui.Displays = append(ui.Displays, single.NewDisplayUI(&battle, ""))
+			return
+		} else if selfTeamStr != "null" || opponentTeamStr != "null" {
+			err := fmt.Errorf("どちらか一方のチームの情報しか渡されていません。両チームの情報は、同時に渡してください。")
+			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
@@ -125,7 +137,7 @@ func main() {
 
 		actionStr := r.URL.Query().Get("action")
 		fmt.Println("actionStr", actionStr)
-		action := single.StringToAction(actionStr, true)
+		action := stringToAction(actionStr, true)
 		fmt.Println("jointAction", action, jointAction[1])
 
 		battle, err = push(battle, single.Actions{action, jointAction[1]})
@@ -133,9 +145,11 @@ func main() {
 			panic(err)
 		}
 
+		for i, display := range ui.Displays {
+			fmt.Println(i, display)
+		}
+
 		if isEnd, _ := game.IsEnd(&battle); isEnd {
-			fmt.Println(battle.SelfFighters[0].Name.ToString(), battle.SelfFighters[0].CurrentHP, battle.OpponentFighters[0].Name.ToString(), battle.OpponentFighters[0].CurrentHP)
-			fmt.Println("ゲームが終了した")
 			return
 		}
 
@@ -145,7 +159,7 @@ func main() {
 			return
 		}
 		w.Write(response)
-		ui.Displays = make(single.DisplayUIs, 0, 128)
+		ui.Displays = ui.Displays.LastElementSlice()
 	}
 
 	http.HandleFunc("/caitlin/", handler)
