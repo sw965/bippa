@@ -15,18 +15,19 @@ func handler(w http.ResponseWriter, r *http.Request) {
     var response []byte
     var err error
     switch dataType {
-        case "pokedex":
-            response, err = json.Marshal(bp.POKEDEX.ToEasyRead())
-        case "movedex":
-            response, err = json.Marshal(bp.MOVEDEX.ToEasyRead())
         case "all_poke_names":
             response, err = json.Marshal(bp.ALL_POKE_NAMES.ToStrings())
+        case "pokedex":
+            response, err = json.Marshal(bp.POKEDEX.ToEasyRead())
         case "all_move_names":
             response, err = json.Marshal(bp.ALL_MOVE_NAMES.ToStrings())
+        case "movedex":
+            response, err = json.Marshal(bp.MOVEDEX.ToEasyRead())
         case "all_natures":
             response, err = json.Marshal(bp.ALL_NATURES.ToStrings())
+        case "naturedex":
+            response, err = json.Marshal(bp.NATUREDEX.ToEasyRead())
     }
-
     if err != nil {
         http.Error(w, err.Error(), http.StatusInternalServerError)
         return
