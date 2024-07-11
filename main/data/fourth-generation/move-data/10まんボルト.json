@@ -1,0 +1,11 @@
+{
+    "type":"でんき",
+    "category":"特殊",
+    "power":95,
+    "accuracy":100,
+    "basePP":15,
+    "isContact":false,
+    "priorityRank":0,
+    "criticalRank":0,
+    "target":"通常"
+}

@@ -1,0 +1,11 @@
+{
+    "type":"はがね",
+    "category":"物理",
+    "power":40,
+    "accuracy":100,
+    "basePP":30,
+    "isContact":true,
+    "priorityRank":1,
+    "criticalRank":0,
+    "target":"通常"
+}

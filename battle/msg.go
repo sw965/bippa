@@ -9,8 +9,8 @@ import (
 
 type Message string
 
-func NewChallengeByTrainerMessage(trainerName string) Message {
-	ret := fmt.Sprintf("%sが ", trainerName)
+func NewChallengeByTrainerMessage(name bp.TrainerName) Message {
+	ret := fmt.Sprintf("%sが ", name)
 	ret += "勝負を しかけてきた！"
 	return Message(ret)
 }
@@ -27,11 +27,23 @@ func NewMoveUseMessage(pokeName bp.PokeName, moveName bp.MoveName, isSelf bool) 
 	return Message(fmt.Sprintf(m + "%s の " + "%s！", pokeName.ToString(), moveName.ToString()))
 }
 
-func NewRecoilMessage(trainerName string, pokeName bp.PokeName) Message {
+func NewEffectMessage(effectType bp.EffectType) Message {
+	switch effectType {
+		case bp.SUPER_EFFECT:
+			return Message("効果はバツグンだ！")
+		case bp.BAD_EFFECT:
+			return Message("効果はいまひとつのようだ...")
+		case bp.NO_EFFECT:
+			return Message("しかし効果はないようだ...")
+	}
+	return Message("")
+}
+
+func NewRecoilMessage(trainerName bp.TrainerName, pokeName bp.PokeName) Message {
 	return Message(fmt.Sprintf("%sの %sは 攻撃の 反動を 受けた", trainerName, pokeName.ToString()))
 }
 
-func NewGoMessage(trainerName string, pokeName bp.PokeName, isSelf bool) Message {
+func NewGoMessage(trainerName bp.TrainerName, pokeName bp.PokeName, isSelf bool) Message {
 	if isSelf {
 		return Message(fmt.Sprintf("行け！ %s！", pokeName.ToString()))
 	} else {
@@ -41,7 +53,7 @@ func NewGoMessage(trainerName string, pokeName bp.PokeName, isSelf bool) Message
 	}
 }
 
-func NewBackMessage(trainerName string, pokeName bp.PokeName, isSelf bool) Message {
+func NewBackMessage(trainerName bp.TrainerName, pokeName bp.PokeName, isSelf bool) Message {
 	if isSelf {
 		return Message(fmt.Sprintf("戻れ！ %s", pokeName.ToString()))
 	} else {
@@ -49,10 +61,10 @@ func NewBackMessage(trainerName string, pokeName bp.PokeName, isSelf bool) Messa
 	}
 }
 
-func NewFaintMessage(trainerName string, pokeName bp.PokeName, isSelf bool) Message {
+func NewFaintMessage(trainerName bp.TrainerName, pokeName bp.PokeName, isSelf bool) Message {
 	m := map[bool]string{
 		true:"",
-		false:trainerName + "の ",
+		false:string(trainerName) + "の ",
 	}[isSelf]
 	return Message(fmt.Sprintf("%s%s は 倒れた！", m, pokeName.ToString()))
 }

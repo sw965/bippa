@@ -1,0 +1,21 @@
+{
+    "types": [
+        "ノーマル"
+    ],
+    "baseHP": 55,
+    "baseAtk": 20,
+    "baseDef": 35,
+    "baseSpAtk": 20,
+    "baseSpDef": 45,
+    "baseSpeed": 75,
+    "abilities": [
+        "マイペース",
+        "テクニシャン"
+    ],
+    "learnset": [
+        "ねこだまし",
+        "このゆびとまれ",
+        "ダークホール",
+        "がむしゃら"
+    ]
+}

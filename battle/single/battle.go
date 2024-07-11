@@ -1,12 +1,12 @@
 package single
 
 import (
-	"fmt"
-	"math"
-	"math/rand"
+	//"fmt"
+	//"math"
+	//"math/rand"
 	bp "github.com/sw965/bippa"
-	omwrand "github.com/sw965/omw/math/rand"
-	omwmath "github.com/sw965/omw/math"
+	//omwrand "github.com/sw965/omw/math/rand"
+	//omwmath "github.com/sw965/omw/math"
 	"github.com/sw965/bippa/battle/dmgtools"
 )
 
@@ -18,30 +18,35 @@ const (
 )
 
 type Battle struct {
-	SelfFighters bp.Pokemons
-	OpponentFighters bp.Pokemons
+	SelfLeadPokemons bp.Pokemons
+	SelfBenchPokemons  bp.Pokemons
+	OpponentLeadPokemons bp.Pokemons
+	OpponentBenchPokemons bp.Pokemons
 	Turn int
-	IsRealSelf bool
+	IsRealSelfView bool
 }
 
 func (b Battle) Clone() Battle {
 	return Battle{
-		SelfFighters:b.SelfFighters.Clone(),
-		OpponentFighters:b.OpponentFighters.Clone(),
+		SelfLeadPokemons:b.SelfLeadPokemons.Clone(),
+		SelfBenchPokemons:b.SelfBenchPokemons.Clone(),
+		OpponentLeadPokemons:b.OpponentLeadPokemons.Clone(),
+		OpponentBenchPokemons:b.OpponentBenchPokemons.Clone(),
 		Turn:b.Turn,
-		IsRealSelf:b.IsRealSelf,
+		IsRealSelfView:b.IsRealSelfView,
 	}
 }
 
 func (b Battle) SwapView() Battle {
-	b.SelfFighters, b.OpponentFighters = b.OpponentFighters, b.SelfFighters
-	b.IsRealSelf = !b.IsRealSelf
+	b.SelfLeadPokemons, b.SelfBenchPokemons, b.OpponentLeadPokemons, b.OpponentBenchPokemons =
+		b.OpponentLeadPokemons, b.OpponentBenchPokemons, b.SelfLeadPokemons, b.SelfBenchPokemons
+	b.IsRealSelfView = !b.IsRealSelfView
 	return b
 }
 
-func (b *Battle) CalcDamage(moveName bp.MoveName, context *Context) int {
-	attacker := b.SelfFighters[0]
-	defender := b.OpponentFighters[0]
+func (b *Battle) CalcDamage(moveName bp.MoveName, selfLeadIdx, opponentLeadIdx int, context *Context) int {
+	attacker := b.SelfLeadPokemons[selfLeadIdx]
+	defender := b.OpponentLeadPokemons[opponentLeadIdx]
 	calculator := dmgtools.Calculator{
 		dmgtools.Attacker{
 			PokeName:attacker.Name,
@@ -59,178 +64,109 @@ func (b *Battle) CalcDamage(moveName bp.MoveName, context *Context) int {
 	return calculator.Calculation(moveName, context.DamageRandBonus())
 }
 
-func (b *Battle) p1CommandableMoveNames() bp.MoveNames {
-	if b.SelfFighters[0].IsFaint() {
-		return bp.MoveNames{}
-	}
+// func (b Battle) UseMove(moveName bp.MoveName, selfLeadIdx, opponentLeadIdx int, context *Context) (Battle, error) {
+// 	pp, ok := b.SelfLeadPokemons[selfLeadIdx].Moveset[moveName]
+// 	if !ok {
+// 		msg := fmt.Sprintf("%sは %sを 繰り出そうとしたが、覚えていない", b.SelfLeadPokemons[selfLeadIdx].Name.ToString(), moveName.ToString())
+// 		return b, fmt.Errorf(msg)
+// 	}
+
+// 	if pp.Current <= 0 {
+// 		msg := fmt.Sprintf("%sは %sを 繰り出そうとしたが、PPが0", b.SelfLeadPokemons[selfLeadIdx].Name.ToString(), moveName.ToString())
+// 		return b, fmt.Errorf(msg)
+// 	}
+
+// 	if b.SelfLeadPokemons[selfLeadIdx].IsFainted() {
+// 		return b, nil
+// 	}
+
+// 	var opponentLeadIdxs []int
+// 	if opponentLeadIdx == -1 {
+// 		opponentLeadIdxs = omwslices.MakeInteger(0, len(b.OpponentBenchPokemons))
+// 	} else {
+// 		opponentLeadIdxs = []int{opponentLeadIdx}
+// 	}
+
+// 	b.SelfLeadPokemons = b.SelfLeadPokemons.Clone()
+// 	b.OpponentLeadPokemons = b.OpponentLeadPokemons.Clone()
 	
-	if b.OpponentFighters[0].IsFaint() {
-		return bp.MoveNames{}
-	}
+// 	b.SelfLeadPokemons[selfLeadIdx].Moveset[moveName].Current -= 1
+// 	context.Observer(&b, MOVE_USE_EVENT)
 
-	names := make(bp.MoveNames, 0, bp.MAX_MOVESET)
-	for moveName, pp := range b.SelfFighters[0].Moveset {
-		if pp.Current > 0 {
-			names = append(names, moveName)
-		}
-	}
+// 	for _, idx := range opponentLeadIdxs {
+// 		dmg := b.CalcDamage(moveName, selfLeadIdx, idx, context)
+// 		dmg = omwmath.Min(dmg, b.OpponentLeadPokemons[idx].CurrentHP)
+// 	}
 
-	if len(names) == 0 {
-		return bp.MoveNames{bp.STRUGGLE}
-	} else {
-		return names
-	}
-}
+// 	context.Observer(&b, ATTACK_MOVE_DAMAGE_EVENT)
 
-func (b *Battle) p2CommandableMoveNames() bp.MoveNames {
-	bv := b.SwapView()
-	names := bv.p1CommandableMoveNames()
-	return names
-}
+// 	if moveName == bp.STRUGGLE {
+// 		dmg := int(math.Round(float64(b.SelfLeadPokemons[0].CurrentHP) * 0.25))
+// 		b.SelfLeadPokemons[0].CurrentHP -= dmg
+// 		context.Observer(&b, RECOIL_EVENT)
+// 	}
+// 	return b, nil
+// }
 
-func (b *Battle) SeparateCommandableMoveNames() bp.MoveNamess {
-	p1 := b.p1CommandableMoveNames()
-	p2 := b.p2CommandableMoveNames()
-	return bp.MoveNamess{p1, p2}
-}
+// func (b Battle) Switch(leadIdx, benchIdx int, context *Context) (Battle, error) {
+// 	if b.SelfBenchPokemons[benchIdx].IsFainted() {
+// 		name := b.SelfBenchPokemons[benchIdx].Name
+// 		msg := fmt.Sprintf("%d番目の %sに 交代しようとしたが、瀕死状態である為、交代出来ません。", benchIdx, name)
+// 		return b, fmt.Errorf(msg)
+// 	}
 
-func (b Battle) CommandMove(moveName bp.MoveName, context *Context) (Battle, error) {
-	if b.SelfFighters[0].IsFaint() {
-		return b, nil
-	}
+// 	selfLeadPokemons := b.SelfLeadPokemons.Clone()
+// 	selfBenchPokemons := b.SelfBenchPokemons.Clone()
 
-	if b.OpponentFighters[0].IsFaint() {
-		return b, nil
-	}
+// 	selfLeadPokemons[leadIdx], selfBenchPokemons[benchIdx] = selfBenchPokemons[benchIdx], selfLeadPokemons[leadIdx]
+// 	b.SelfLeadPokemons = selfLeadPokemons
+// 	b.SelfBenchPokemons = selfBenchPokemons
+// 	context.Observer(&b, SWITCH_EVENT)
+// 	return b, nil
+// }
 
-	pp, ok := b.SelfFighters[0].Moveset[moveName]
-	if !ok {
-		msg := fmt.Sprintf("%s は %s を 繰り出そうとしたが、覚えていない", b.SelfFighters[0].Name.ToString(), moveName.ToString())
-		return b, fmt.Errorf(msg)
-	}
+// func (b *Battle) Action(action Action, context *Context) (Battle, error) {
+// 	if action.IsCommandMove() {
+// 		return b.CommandMove(action.CmdMoveName, context)
+// 	} else {
+// 		return b.Switch(action.SwitchPokeName, context)
+// 	}
+// }
 
-	if pp.Current <= 0 {
-		msg := fmt.Sprintf("%s は %s を 繰り出そうとしたが、PPが0", b.SelfFighters[0].Name.ToString(), moveName.ToString())
-		return b, fmt.Errorf(msg)
-	}
+// func (b *Battle) SortActionsByOrder(actions Actions, r *rand.Rand) Actions {
+// 	actions = actions.Clone()
+// 	slices.SortFunc(actions, func(a1, a2 Action) {
+// 		a1Priority := a1.Priority()
+// 		a2Priority := a2.Priority()
 
-	b.SelfFighters = b.SelfFighters.Clone()
-	b.OpponentFighters = b.OpponentFighters.Clone()
-	
-	b.SelfFighters[0].Moveset[moveName].Current -= 1
-	context.Observer(&b, MOVE_USE_EVENT)
+// 		if a1Priority > a2Priority {
+// 			return 1
+// 		} else if a1Priority < a2Priority {
+// 			return -1
+// 		} else {
+// 			a1Speed := a1.Speed
+// 			a2Speed := a2.Speed
+// 			if a1.Speed > a2.Speed {
+// 				return 1
+// 			} else if a1.Speed < a2.Speed {
+// 				return 1
+// 			} else {
+// 				return omwrand.Choice([]int{-1, 1})
+// 			}
+// 		}
+// 	})
+// 	return actions
+// }
 
-	dmg := b.CalcDamage(moveName, context)
-	dmg = omwmath.Min(dmg, b.OpponentFighters[0].CurrentHP)
+// func (b *Battle) ToEasyRead() EasyReadBattle {
+// 	return EasyReadBattle{
+// 		SelfLeadPokemons:b.SelfLeadPokemons.ToEasyRead(),
+// 		SelfBenchPokemons:b.SelfBenchPokemons.ToEasyRead(),
 
-	b.OpponentFighters[0].CurrentHP -= dmg
-	context.Observer(&b, OPPONENT_DAMAGE_EVENT)
+// 		OpponentLeadPokemons:b.OpponentFighters.ToEasyRead(),
+// 		OpponentBenchPokemons:b.OpponentBenchPokemons.ToEasyRead(),
 
-	if moveName == bp.STRUGGLE {
-		dmg := int(math.Round(float64(b.SelfFighters[0].CurrentHP) * 0.25))
-		b.SelfFighters[0].CurrentHP -= dmg
-		context.Observer(&b, RECOIL_EVENT)
-	}
-	return b, nil
-}
-
-func (b *Battle) p1SwitchablePokeNames() bp.PokeNames {
-	//相手だけ瀕死状態ならば、自分は行動出来ない。
-	if b.SelfFighters[0].CurrentHP > 0 && b.OpponentFighters[0].CurrentHP <= 0 {
-		return bp.PokeNames{}
-	}
-	names := make(bp.PokeNames, 0, FIGHTERS_NUM)
-	for _, pokemon := range b.SelfFighters[1:] {
-		if pokemon.CurrentHP > 0 {
-			names = append(names, pokemon.Name)
-		}
-	}
-	return names
-}
-
-func (b *Battle) p2SwitchablePokeNames() bp.PokeNames {
-	bv := b.SwapView()
-	names := bv.p1SwitchablePokeNames()
-	return names
-}
-
-func (b *Battle) SeparateSwitchablePokeNames() bp.PokeNamess {
-	p1 := b.p1SwitchablePokeNames()
-	p2 := b.p2SwitchablePokeNames()
-	return bp.PokeNamess{p1, p2}
-}
-
-func (b Battle) Switch(pokeName bp.PokeName, context *Context) (Battle, error) {
-	idx := b.SelfFighters.IndexByName(pokeName)
-	if idx == -1 {
-		name := bp.POKE_NAME_TO_STRING[pokeName]
-		msg := fmt.Sprintf("「%s]へ交代しようとしたが、Fightersの中に含まれていなかった。", name)
-		return Battle{}, fmt.Errorf(msg)
-	}
-
-	if idx == 0 {
-		name := bp.POKE_NAME_TO_STRING[pokeName]
-		msg := fmt.Sprintf("「%s]へ交代しようとしたが、既に場に出ている。", name)
-		return Battle{}, fmt.Errorf(msg)
-	}
-
-	selfFighters := b.SelfFighters.Clone()
-	selfFighters[0], selfFighters[idx] = selfFighters[idx], selfFighters[0]
-	b.SelfFighters = selfFighters
-	context.Observer(&b, SWITCH_EVENT)
-	return b, nil
-}
-
-func (b *Battle) Action(action Action, context *Context) (Battle, error) {
-	if action.IsCommandMove() {
-		return b.CommandMove(action.CmdMoveName, context)
-	} else {
-		return b.Switch(action.SwitchPokeName, context)
-	}
-}
-
-func (b *Battle) IsActionFirst(p1Action, p2Action *Action, r *rand.Rand) bool {
-	if p1Action.IsEmpty() {
-		return false
-	}
-
-	if p2Action.IsEmpty() {
-		return true
-	}
-
-	if p1Action.IsSwitch() && p2Action.IsCommandMove() {
-		return true
-	}
-
-	if p1Action.IsCommandMove() && p2Action.IsSwitch() {
-		return false
-	}
-
-	attacker := b.SelfFighters[0]
-	defender := b.OpponentFighters[0]
-
-	if attacker.Speed > defender.Speed {
-		return true
-	} else if attacker.Speed < defender.Speed {
-		return false
-	} else {
-		return omwrand.Bool(r)
-	}
-}
-
-func (b *Battle) SortActionsByOrder(p1Action, p2Action *Action, r *rand.Rand) Actions {
-	if b.IsActionFirst(p1Action, p2Action, r) {
-		return Actions{*p1Action, *p2Action}
-	} else {
-		return Actions{*p2Action, *p1Action}
-	}
-}
-
-func (b *Battle) ToEasyRead() EasyReadBattle {
-	return EasyReadBattle{
-		SelfFighters:b.SelfFighters.ToEasyRead(),
-		OpponentFighters:b.OpponentFighters.ToEasyRead(),
-		Turn:b.Turn,
-		IsRealSelf:b.IsRealSelf,
-	}
-}
+// 		Turn:b.Turn,
+// 		IsRealSelfView:b.IsRealSelfView,
+// 	}
+// }

@@ -92,6 +92,9 @@ func (c *Calculator) Calculation(moveName bp.MoveName, randBonus RandBonus) int 
 		effect = 1.0
 	} else {
 		effect = Effectiveness(moveData.Type, defenderPokeData.Types)
+		if effect == 0.0 {
+			return 0
+		}
 	}
 
 	dmg = RoundOverHalf(float64(dmg) * sameTypeAttackBonus)

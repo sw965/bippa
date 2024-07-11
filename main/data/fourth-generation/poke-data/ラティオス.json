@@ -1,0 +1,21 @@
+{
+    "types": [
+        "ドラゴン",
+        "エスパー"
+    ],
+    "baseHP": 80,
+    "baseAtk": 90,
+    "baseDef": 80,
+    "baseSpAtk": 130,
+    "baseSpDef": 110,
+    "baseSpeed": 110,
+    "abilities": [
+        "ふゆう"
+    ],
+    "learnset": [
+        "りゅうせいぐん",
+        "10まんボルト",
+        "あまごい",
+        "まもる"
+    ]
+}

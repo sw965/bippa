@@ -3,24 +3,14 @@ package dmgtools_test
 import (
 	"testing"
 	"fmt"
-	"golang.org/x/exp/maps"
 	"github.com/sw965/bippa/battle/dmgtools"
 	bp "github.com/sw965/bippa"
 
 )
 
-func TestCalculator(t *testing.T) {
-	attacker, err := bp.NewPokemon(bp.CHARMANDER, bp.MoveNames{bp.EMBER})
-	if err != nil {
-		panic(err)
-	}
-
-	defender, err := bp.NewPokemon(bp.SQUIRTLE, bp.MoveNames{bp.WATER_GUN})
-	if err != nil {
-		panic(err)
-	}
-	fmt.Println(attacker)
-	fmt.Println(defender)
+func TestGarchompZapdos(t *testing.T) {
+	attacker := bp.NewTemplateGarchomp()
+	defender := bp.NewTemplateZapdos()
 
 	attackerInfo := dmgtools.Attacker{
 		PokeName:attacker.Name,
@@ -37,6 +27,10 @@ func TestCalculator(t *testing.T) {
 	}
 
 	calculator := dmgtools.Calculator{Attacker:attackerInfo, Defender:defenderInfo}
-	result := calculator.Calculation(maps.Keys(attacker.Moveset)[0], 1.0)
-	fmt.Println(result)
+	result := calculator.Calculation(bp.STONE_EDGE, 1.0)
+	if result != 156 {
+		fmt.Println("attacker", attacker)
+		fmt.Println("defender", defender)
+		t.Errorf("テスト失敗")
+	}
 }

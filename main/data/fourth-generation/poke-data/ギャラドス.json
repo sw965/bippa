@@ -1,0 +1,22 @@
+{
+    "types": [
+        "みず",
+        "ひこう"
+    ],
+    "baseHP": 95,
+    "baseAtk": 125,
+    "baseDef": 79,
+    "baseSpAtk": 60,
+    "baseSpDef": 100,
+    "baseSpeed": 81,
+    "abilities": [
+        "いかく"
+    ],
+    "learnset": [
+        "たきのぼり",
+        "ストーンエッジ",
+        "でんじは",
+        "まもる",
+        "ちょうはつ"
+    ]
+}

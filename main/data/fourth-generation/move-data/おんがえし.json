@@ -1,0 +1,11 @@
+{
+    "type":"ノーマル",
+    "category":"物理",
+    "power":102,
+    "accuracy":100,
+    "basePP":20,
+    "isContact":true,
+    "priorityRank":0,
+    "criticalRank":0,
+    "target":"通常"
+}

@@ -1,0 +1,11 @@
+{
+    "type":"あく",
+    "category":"変化",
+    "power":-1,
+    "accuracy":80,
+    "basePP":10,
+    "isContact":false,
+    "priorityRank":0,
+    "criticalRank":0,
+    "target":"相手2体"
+}

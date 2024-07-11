@@ -46,7 +46,7 @@ func (names PokeNames) ToStrings() []string {
 	return ret
 }
 
-type PokeNamess []PokeNames
+type PokeNamesSlice []PokeNames
 
 type Level int
 
@@ -184,7 +184,7 @@ func (p *Pokemon) HPPercentage() float64 {
 	return float64(p.CurrentHP) / float64(p.MaxHP)
 }
 
-func (p *Pokemon) IsFaint() bool {
+func (p *Pokemon) IsFainted() bool {
 	return p.CurrentHP <= 0
 }
 
@@ -221,6 +221,14 @@ func NewTemplateBulbasaur() Pokemon {
 
 func NewTemplateCharmander() Pokemon {
 	pokemon, err := NewPokemon(CHARMANDER, MODEST, MoveNames{EMBER}, &MAX_IV_STAT, &HC252_S4)
+	if err != nil {
+		panic(err)
+	}
+	return pokemon
+}
+
+func NewTemplateZapdos() Pokemon {
+	pokemon, err := NewPokemon(ZAPDOS, MODEST, MoveNames{THUNDERBOLT}, &MAX_IV_STAT, &HC252_S4)
 	if err != nil {
 		panic(err)
 	}

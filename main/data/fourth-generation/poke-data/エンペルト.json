@@ -1,0 +1,21 @@
+{
+    "types": [
+        "みず",
+        "はがね"
+    ],
+    "baseHP": 84,
+    "baseAtk": 86,
+    "baseDef": 88,
+    "baseSpAtk": 111,
+    "baseSpDef": 101,
+    "baseSpeed": 60,
+    "abilities": [
+        "げきりゅう"
+    ],
+    "learnset": [
+        "ハイドロポンプ",
+        "なみのり",
+        "こごえるかぜ",
+        "まもる"
+    ]
+}

@@ -1,0 +1,22 @@
+{
+    "types": [
+        "はがね",
+        "エスパー"
+    ],
+    "baseHP": 67,
+    "baseAtk": 89,
+    "baseDef": 116,
+    "baseSpAtk": 79,
+    "baseSpDef": 116,
+    "baseSpeed": 33,
+    "abilities": [
+        "ふゆう"
+    ],
+    "learnset": [
+        "トリックルーム",
+        "サイコキネシス",
+        "さいみんじゅつ",
+        "だいばくはつ",
+        "ジャイロボール"
+    ]
+}

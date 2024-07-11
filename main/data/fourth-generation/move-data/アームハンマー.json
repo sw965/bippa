@@ -1,0 +1,11 @@
+{
+    "type":"かくとう",
+    "category":"物理",
+    "power":100,
+    "accuracy":90,
+    "basePP":10,
+    "isContact":true,
+    "priorityRank":0,
+    "criticalRank":0,
+    "target":"通常"
+}

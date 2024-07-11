@@ -1,0 +1,11 @@
+{
+    "type":"みず",
+    "category":"物理",
+    "power":80,
+    "accuracy":100,
+    "basePP":15,
+    "isContact":true,
+    "priorityRank":0,
+    "criticalRank":0,
+    "target":"通常"
+}

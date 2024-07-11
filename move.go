@@ -13,12 +13,9 @@ type MoveName int
 const (
 	EMPTY_MOVE_NAME MoveName = iota
 	THUNDERBOLT // 10まんボルト
+	HAMMER_ARM  //アームハンマー
 	STONE_EDGE  // ストーンエッジ
-	EMBER       // ひのこ
-	TACKLE      // たいあたり
-	VINE_WHIP   // みずでっぽう
 	SURF        // なみのり
-	WATER_GUN   // みずでっぽう
 	ICE_BEAM    // れいとうビーム
 	STRUGGLE    // わるあがき
 )

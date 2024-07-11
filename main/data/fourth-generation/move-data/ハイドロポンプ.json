@@ -1,0 +1,11 @@
+{
+    "type":"みず",
+    "category":"特殊",
+    "power":120,
+    "accuracy":80,
+    "basePP":5,
+    "isContact":false,
+    "priorityRank":0,
+    "criticalRank":0,
+    "target":"通常"
+}

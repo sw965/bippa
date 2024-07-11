@@ -103,13 +103,15 @@ func main() {
 				OpponentFighters:opponentFighters,
 				IsRealSelf:true,
 			}
-			
+
+			fmt.Println("initSelf", battle.ToEasyRead().SelfFighters)
+			fmt.Println("initOpponent", battle.ToEasyRead().OpponentFighters)
 			ui, err = single.NewObserverUI(&battle, 128)
 			if err != nil {
 				panic(err)
 			}
-			ui.SelfTrainerName = "ユウリ"
-			ui.OpponentTrainerName = "カトレア"
+			ui.RealSelfTrainerName = "ユウリ"
+			ui.RealOpponentTrainerName = "カトレア"
 
 			context := &single.Context{
 				DamageRandBonuses:dmgtools.RandBonuses{1.0},
@@ -123,6 +125,26 @@ func main() {
 			err := fmt.Errorf("どちらか一方のチームの情報しか渡されていません。両チームの情報は、同時に渡してください。")
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
+		} else if r.URL.Query().Get("need_current_battle") == "true" {
+			easyReadBattle := battle.ToEasyRead()
+			response, err := json.Marshal(&easyReadBattle)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			w.Write(response)
+			fmt.Println("currentBattle")
+			return
+		} else if r.URL.Query().Get("need_legal_separate_actions") == "true" {
+			fmt.Println("resposeActions", game.LegalSeparateActions(&battle).ToStringSlices())
+			response, err := json.Marshal(game.LegalSeparateActions(&battle).ToStringSlices())
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			w.Write(response)
+			fmt.Println("legalAction")
+			return	
 		}
 
 		rootNode := mctSearch.NewNode(&battle)
@@ -132,21 +154,13 @@ func main() {
 		}
 
 		jointAction := rootNode.SeparateUCBManager.JointActionByMaxTrial(rg)
-		jointAvg := rootNode.SeparateUCBManager.JointAverageValue()
-		fmt.Println("joint", jointAction[0].ToString(), jointAction[1].ToString(), jointAvg)
 
 		actionStr := r.URL.Query().Get("action")
-		fmt.Println("actionStr", actionStr)
 		action := stringToAction(actionStr, true)
-		fmt.Println("jointAction", action, jointAction[1])
-
+		fmt.Println("action", action.ToString())
 		battle, err = push(battle, single.Actions{action, jointAction[1]})
 		if err != nil {
 			panic(err)
-		}
-
-		for i, display := range ui.Displays {
-			fmt.Println(i, display)
 		}
 
 		if isEnd, _ := game.IsEnd(&battle); isEnd {
