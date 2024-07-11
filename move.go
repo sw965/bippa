@@ -11,27 +11,87 @@ import (
 type MoveName int
 
 const (
-	EMPTY_MOVE_NAME MoveName = iota
-	THUNDERBOLT // 10まんボルト
-	HAMMER_ARM  //アームハンマー
-	STONE_EDGE  // ストーンエッジ
-	SURF        // なみのり
-	ICE_BEAM    // れいとうビーム
-	STRUGGLE    // わるあがき
+    EMPTY_MOVE_NAME MoveName = iota
+    THUNDERBOLT    // 10まんボルト
+    HAMMER_ARM     // アームハンマー
+    STONE_EDGE     // ストーンエッジ
+    SURF           // なみのり
+    ICE_BEAM       // れいとうビーム
+    STRUGGLE       // わるあがき
+    RAIN_DANCE     // あまごい
+    ROCK_SLIDE     // いわなだれ
+    RETURN         // おんがえし
+    CRUNCH         // かみくだく
+    ENDEAVOR       // がむしゃら
+    ICY_WIND       // こごえるかぜ
+    FOLLOW_ME      // このゆびとまれ
+    HYPNOSIS       // さいみんじゅつ
+    RECOVER        // じこあんじ
+    EARTHQUAKE     // じしん
+    SELF_DESTRUCT  // じばく
+    WATERFALL      // たきのぼり
+    EXPLOSION      // だいばくはつ
+    TAUNT          // ちょうはつ
+    THUNDER_WAVE   // でんじは
+    FAKE_OUT       // ねこだまし
+    HEAT_WAVE      // ねっぷう
+    BELLY_DRUM     // はらだいこ
+    SUCKER_PUNCH   // ふいうち
+    FIRE_PUNCH     // ほのおのパンチ
+    PROTECT        // まもる
+    SUBSTITUTE     // みがわり
+    DRACO_METEOR   // りゅうせいぐん
+    CROSS_CHOP     // クロスチョップ
+    COMET_PUNCH    // コメットパンチ
+    PSYCHIC        // サイコキネシス
+    GYRO_BALL      // ジャイロボール
+    DARK_VOID      // ダークホール
+    TRICK_ROOM     // トリックルーム
+    HYDRO_PUMP     // ハイドロポンプ
+    BULLET_PUNCH   // バレットパンチ
 )
 
 var STRING_TO_MOVE_NAME = map[string]MoveName{
-	"":           EMPTY_MOVE_NAME,
-	"10まんボルト":THUNDERBOLT,
-	"ストーンエッジ":STONE_EDGE,
-	"ひのこ":     EMBER,
-	"たいあたり": TACKLE,
-	"つるのムチ":VINE_WHIP,
-	"なみのり":SURF,
-	"みずでっぽう": WATER_GUN,
-	"れいとうビーム":ICE_BEAM,
-	"わるあがき":STRUGGLE,
+    "":              EMPTY_MOVE_NAME,
+    "10まんボルト":   THUNDERBOLT,
+    "アームハンマー": HAMMER_ARM,
+    "ストーンエッジ": STONE_EDGE,
+    "なみのり":      SURF,
+    "れいとうビーム":  ICE_BEAM,
+    "わるあがき":    STRUGGLE,
+    "あまごい":      RAIN_DANCE,
+    "いわなだれ":    ROCK_SLIDE,
+    "おんがえし":    RETURN,
+    "かみくだく":    CRUNCH,
+    "がむしゃら":    ENDEAVOR,
+    "こごえるかぜ":  ICY_WIND,
+    "このゆびとまれ": FOLLOW_ME,
+    "さいみんじゅつ": HYPNOSIS,
+    "じこあんじ":    RECOVER,
+    "じしん":        EARTHQUAKE,
+    "じばく":        SELF_DESTRUCT,
+    "たきのぼり":    WATERFALL,
+    "だいばくはつ":  EXPLOSION,
+    "ちょうはつ":    TAUNT,
+    "でんじは":      THUNDER_WAVE,
+    "ねこだまし":    FAKE_OUT,
+    "ねっぷう":      HEAT_WAVE,
+    "はらだいこ":    BELLY_DRUM,
+    "ふいうち":      SUCKER_PUNCH,
+    "ほのおのパンチ": FIRE_PUNCH,
+    "まもる":        PROTECT,
+    "みがわり":      SUBSTITUTE,
+    "りゅうせいぐん": DRACO_METEOR,
+    "クロスチョップ": CROSS_CHOP,
+    "コメットパンチ": COMET_PUNCH,
+    "サイコキネシス": PSYCHIC,
+    "ジャイロボール": GYRO_BALL,
+    "ダークホール":  DARK_VOID,
+    "トリックルーム": TRICK_ROOM,
+    "ハイドロポンプ": HYDRO_PUMP,
+    "バレットパンチ": BULLET_PUNCH,
 }
+
 
 func StringToMoveName(s string) MoveName {
 	return STRING_TO_MOVE_NAME[s]

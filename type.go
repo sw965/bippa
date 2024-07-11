@@ -21,7 +21,7 @@ const (
 	POISON
 	GROUND
 	FLYING
-	PSYCHIC
+	PSYCHIC_TYPE
 	BUG
 	ROCK
 	GHOST
@@ -42,7 +42,7 @@ var STRING_TO_TYPE = map[string]Type{
 	"どく":POISON,
 	"じめん":GROUND,
 	"ひこう":FLYING,
-	"エスパー":PSYCHIC,
+	"エスパー":PSYCHIC_TYPE,
 	"むし":BUG,
 	"いわ":ROCK,
 	"ゴースト":GHOST,

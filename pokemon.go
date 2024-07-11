@@ -7,23 +7,29 @@ import (
 type PokeName int
 
 const (
-	EMPTY_POKE_NAME PokeName = iota
-	BULBASAUR
-	CHARMANDER
-	SQUIRTLE
-	ZAPDOS
-	SUICUNE
-	GARCHOMP
+    EMPTY_POKE_NAME PokeName = iota
+    GYARADOS   // ギャラドス
+    SNORLAX    // カビゴン
+    SMEARGLE   // ドーブル
+    SALAMENCE  // ボーマンダ
+    METAGROSS  // メタグロス
+    LATIOS     // ラティオス
+    EMPOLEON   // エンペルト
+    BRONZONG   // ドータクン
+    TOXICROAK  // ドクロッグ
 )
 
 var STRING_TO_POKE_NAME = map[string]PokeName{
-	"":EMPTY_POKE_NAME,
-	"フシギダネ":BULBASAUR,
-	"ヒトカゲ":CHARMANDER,
-	"ゼニガメ":SQUIRTLE,
-	"サンダー":ZAPDOS,
-	"スイクン":SUICUNE,
-	"ガブリアス":GARCHOMP,
+    "":          EMPTY_POKE_NAME,
+    "ギャラドス": GYARADOS,
+    "カビゴン":   SNORLAX,
+    "ドーブル":   SMEARGLE,
+    "ボーマンダ": SALAMENCE,
+    "メタグロス": METAGROSS,
+    "ラティオス": LATIOS,
+    "エンペルト": EMPOLEON,
+    "ドータクン": BRONZONG,
+    "ドクロッグ": TOXICROAK,
 }
 
 func StringToPokeName(s string) PokeName {
@@ -51,27 +57,30 @@ type PokeNamesSlice []PokeNames
 type Level int
 
 const (
-	DEFAULT_LEVEL Level = 50
+	MIN_LEVEL Level = 1
+	STANDARD_LEVEL Level = 50
+	MAX_LEVEL Level = 100
 )
 
 type StatCalculator struct {
-	Base int
-	IV IV
-	EV EV
+	BaseStat int
+	Level Level
+	Individual Individual
+	Effort Effort
 }
 
 func (c *StatCalculator) HP() int {
-	lvi := int(DEFAULT_LEVEL)
-	ivi := int(c.IV)
-	evi := int(c.EV)
-	return ((c.Base*2 + ivi + evi/4) * lvi / 100) + lvi + 10
+	lvi := int(c.Level)
+	ivi := int(c.Individual)
+	evi := int(c.Effort)
+	return ((c.BaseStat*2 + ivi + evi/4) * lvi / 100) + lvi + 10
 }
 
 func (c *StatCalculator) HPOther(bonus NatureBonus) int {
-	lvi := int(DEFAULT_LEVEL)
-	ivi := int(c.IV)
-	evi := int(c.EV)
-	stat := float64((c.Base*2 + ivi + evi/4) * lvi / 100 + 5)
+	lvi := int(c.Level)
+	ivi := int(c.Individual)
+	evi := int(c.Effort)
+	stat := float64((c.BaseStat*2 + ivi + evi/4) * lvi / 100 + 5)
 	return int(stat * float64(bonus))
 }
 
@@ -84,8 +93,8 @@ type Pokemon struct {
 	PointUps PointUps
 	Moveset Moveset
 
-	IVStat IVStat
-	EVStat EVStat
+	IndividualStat IndividualStat
+	EffortStat EffortStat
 
 	MaxHP int
 	CurrentHP int
@@ -96,16 +105,36 @@ type Pokemon struct {
 	Speed int
 }
 
-func NewPokemon(name PokeName, nature Nature, movesetNames MoveNames, ivStat *IVStat, evStat *EVStat) (Pokemon, error) {
-	pokeData := POKEDEX[name]
-	natureData := NATUREDEX[nature]
+func NewPokemon(name PokeName, lv Level, nature Nature, movesetNames MoveNames, pointUps PointUps, ivStat *IndividualStat, effortStat *EffortStat) (Pokemon, error) {
+	moveset, err := NewMoveset(name, movesetNames)
+	if err != nil {
+		return Pokemon{}, err
+	}
+	ret := Pokemon{
+		Name:name,
+		Level:lv,
+		Nature:nature,
+		IndividualStat:*ivStat,
+		EffortStat:*effortStat,
+		Moveset:moveset,
+	}
+	ret.UpdateStat()
+	return ret, nil
+}
 
-	hpCalc := StatCalculator{Base:pokeData.BaseHP, IV:ivStat.HP, EV:evStat.HP}
-	atkCalc := StatCalculator{Base:pokeData.BaseAtk, IV:ivStat.Atk, EV:evStat.Atk}
-	defCalc := StatCalculator{Base:pokeData.BaseDef, IV:ivStat.Def, EV:evStat.Def}
-	spAtkCalc := StatCalculator{Base:pokeData.BaseSpAtk, IV:ivStat.SpAtk, EV:evStat.SpAtk}
-	spDefCalc := StatCalculator{Base:pokeData.BaseSpDef, IV:ivStat.SpDef, EV:evStat.SpDef}
-	speedCalc := StatCalculator{Base:pokeData.BaseSpeed, IV:ivStat.Speed, EV:evStat.Speed}
+func (p *Pokemon) UpdateStat() {
+	pokeData := POKEDEX[p.Name]
+	lv := p.Level
+	natureData := NATUREDEX[p.Nature]
+	ivStat := p.IndividualStat
+	effortStat := p.EffortStat
+
+	hpCalc := StatCalculator{BaseStat:pokeData.BaseHP, Level:lv, Individual:ivStat.HP, Effort:effortStat.HP}
+	atkCalc := StatCalculator{BaseStat:pokeData.BaseAtk, Level:lv, Individual:ivStat.Atk, Effort:effortStat.Atk}
+	defCalc := StatCalculator{BaseStat:pokeData.BaseDef, Level:lv, Individual:ivStat.Def, Effort:effortStat.Def}
+	spAtkCalc := StatCalculator{BaseStat:pokeData.BaseSpAtk, Level:lv, Individual:ivStat.SpAtk, Effort:effortStat.SpAtk}
+	spDefCalc := StatCalculator{BaseStat:pokeData.BaseSpDef, Level:lv, Individual:ivStat.SpDef, Effort:effortStat.SpDef}
+	speedCalc := StatCalculator{BaseStat:pokeData.BaseSpeed, Level:lv, Individual:ivStat.Speed, Effort:effortStat.Speed}
 
 	hp := hpCalc.HP()
 	atk := atkCalc.HPOther(natureData.AtkBonus)
@@ -114,26 +143,13 @@ func NewPokemon(name PokeName, nature Nature, movesetNames MoveNames, ivStat *IV
 	spDef := spDefCalc.HPOther(natureData.SpDefBonus)
 	speed := speedCalc.HPOther(natureData.SpeedBonus)
 
-	moveset, err := NewMoveset(name, movesetNames)
-	if err != nil {
-		return Pokemon{}, err
-	}
-
-	return Pokemon{
-		Name:name,
-		Level:DEFAULT_LEVEL,
-		Nature:nature,
-		IVStat:*ivStat,
-		EVStat:*evStat,
-		MaxHP:hp,
-		CurrentHP:hp,
-		Atk:atk,
-		Def:def,
-		SpAtk:spAtk,
-		SpDef:spDef,
-		Speed:speed,
-		Moveset:moveset,
-	}, err
+	p.MaxHP = hp
+	p.CurrentHP = hp
+	p.Atk = atk
+	p.Def = def
+	p.SpAtk = spAtk
+	p.SpDef = spDef
+	p.Speed = speed
 }
 
 func (p *Pokemon) Equal(other *Pokemon) bool {
@@ -198,8 +214,8 @@ func (p *Pokemon) ToEasyRead() EasyReadPokemon {
 		PointUps:p.PointUps,
 		Moveset:p.Moveset.ToEasyRead(),
 
-		IVStat:p.IVStat,
-		EVStat:p.EVStat,
+		IndividualStat:p.IndividualStat,
+		EffortStat:p.EffortStat,
 
 		MaxHP:p.MaxHP,
 		CurrentHP:p.CurrentHP,
@@ -211,48 +227,14 @@ func (p *Pokemon) ToEasyRead() EasyReadPokemon {
 	}
 }
 
-func NewTemplateBulbasaur() Pokemon {
-	pokemon, err := NewPokemon(BULBASAUR, ADAMANT, MoveNames{TACKLE, VINE_WHIP}, &MAX_IV_STAT, &HA252_S4)
-	if err != nil {
-		panic(err)
-	}
-	return pokemon
-}
+func NewRomanStanGyarados() Pokemon {
+	pokemon, err := NewPokemon(
+		GYARADOS, STANDARD_LEVEL, ADAMANT,
+		MoveNames{WATERFALL, STONE_EDGE, THUNDER_WAVE, PROTECT},
+		PointUps{MAX_POINT_UP, MAX_POINT_UP, MAX_POINT_UP, MAX_POINT_UP},
+		&MAX_INDIVIDUAL_STAT, &EffortStat{HP:164, Atk:92, Speed:MAX_EFFORT},
 
-func NewTemplateCharmander() Pokemon {
-	pokemon, err := NewPokemon(CHARMANDER, MODEST, MoveNames{EMBER}, &MAX_IV_STAT, &HC252_S4)
-	if err != nil {
-		panic(err)
-	}
-	return pokemon
-}
-
-func NewTemplateZapdos() Pokemon {
-	pokemon, err := NewPokemon(ZAPDOS, MODEST, MoveNames{THUNDERBOLT}, &MAX_IV_STAT, &HC252_S4)
-	if err != nil {
-		panic(err)
-	}
-	return pokemon
-}
-
-func NewTemplateSquirtle() Pokemon {
-	pokemon, err := NewPokemon(SQUIRTLE, MODEST, MoveNames{WATER_GUN}, &MAX_IV_STAT, &HC252_S4)
-	if err != nil {
-		panic(err)
-	}
-	return pokemon
-}
-
-func NewTemplateSuicune() Pokemon {
-	pokemon, err := NewPokemon(SUICUNE, BOLD, MoveNames{SURF, ICE_BEAM}, &MAX_IV_STAT, &HB252_S4)
-	if err != nil {
-		panic(err)
-	}
-	return pokemon
-}
-
-func NewTemplateGarchomp() Pokemon {
-	pokemon, err := NewPokemon(GARCHOMP, JOLLY, MoveNames{STONE_EDGE}, &MAX_IV_STAT, &AS252_B4)
+	)
 	if err != nil {
 		panic(err)
 	}

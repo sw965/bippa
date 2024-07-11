@@ -49,8 +49,8 @@ type EasyReadPokemon struct {
 	PointUps PointUps
 	Moveset EasyReadMoveset
 
-	IVStat IVStat
-	EVStat EVStat
+	IndividualStat IndividualStat
+	EffortStat EffortStat
 
 	MaxHP int
 	CurrentHP int
@@ -71,8 +71,8 @@ func (p *EasyReadPokemon) From() Pokemon {
 		PointUps:p.PointUps,
 		Moveset:p.Moveset.From(),
 
-		IVStat:p.IVStat,
-		EVStat:p.EVStat,
+		IndividualStat:p.IndividualStat,
+		EffortStat:p.EffortStat,
 
 		MaxHP:p.MaxHP,
 		CurrentHP:p.CurrentHP,
