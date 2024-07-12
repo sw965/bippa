@@ -1,7 +1,9 @@
 package bippa
 
 import (
+	"fmt"
 	omwmaps "github.com/sw965/omw/maps"
+	"golang.org/x/exp/slices"
 )
 
 type PokeName int
@@ -30,10 +32,6 @@ var STRING_TO_POKE_NAME = map[string]PokeName{
     "エンペルト": EMPOLEON,
     "ドータクン": BRONZONG,
     "ドクロッグ": TOXICROAK,
-}
-
-func StringToPokeName(s string) PokeName {
-	return STRING_TO_POKE_NAME[s]
 }
 
 var POKE_NAME_TO_STRING = omwmaps.Invert[map[PokeName]string](STRING_TO_POKE_NAME)
@@ -87,7 +85,10 @@ func (c *StatCalculator) HPOther(bonus NatureBonus) int {
 type Pokemon struct {
 	Name PokeName
 	Level Level
+
 	Nature Nature
+	Ability Ability
+	Item Item
 
 	MoveNames MoveNames
 	PointUps PointUps
@@ -105,15 +106,31 @@ type Pokemon struct {
 	Speed int
 }
 
-func NewPokemon(name PokeName, lv Level, nature Nature, movesetNames MoveNames, pointUps PointUps, ivStat *IndividualStat, effortStat *EffortStat) (Pokemon, error) {
+func NewPokemon(name PokeName, lv Level, nature Nature, ability Ability, item Item, movesetNames MoveNames, pointUps PointUps, ivStat *IndividualStat, effortStat *EffortStat) (Pokemon, error) {
+	if name == EMPTY_POKE_NAME {
+		return Pokemon{}, fmt.Errorf("ポケモン名が空になっている。")
+	}
+
+	pokeData := POKEDEX[name]
+	if !slices.Contains(pokeData.Abilities, ability) {
+		msg := fmt.Sprintf("%s は 特性：%s を持つ事は出来ない", name.ToString(), ability.ToString())
+		return Pokemon{}, fmt.Errorf(msg)
+	}
+
 	moveset, err := NewMoveset(name, movesetNames)
 	if err != nil {
 		return Pokemon{}, err
 	}
+
+	if !effortStat.IsValidSum() {
+		return Pokemon{}, GetSumEffortError(name)
+	}
+
 	ret := Pokemon{
 		Name:name,
 		Level:lv,
 		Nature:nature,
+		Item:item,
 		IndividualStat:*ivStat,
 		EffortStat:*effortStat,
 		Moveset:moveset,
@@ -122,12 +139,20 @@ func NewPokemon(name PokeName, lv Level, nature Nature, movesetNames MoveNames, 
 	return ret, nil
 }
 
-func (p *Pokemon) UpdateStat() {
+func (p *Pokemon) UpdateStat() error {
+	effortStat := p.EffortStat
+	if !effortStat.IsValidSum() {
+		return GetSumEffortError(p.Name)
+	}
+
+	if p.Name == EMPTY_POKE_NAME {
+		return fmt.Errorf("ポケモン名が空になっている")
+	}
+
 	pokeData := POKEDEX[p.Name]
 	lv := p.Level
 	natureData := NATUREDEX[p.Nature]
 	ivStat := p.IndividualStat
-	effortStat := p.EffortStat
 
 	hpCalc := StatCalculator{BaseStat:pokeData.BaseHP, Level:lv, Individual:ivStat.HP, Effort:effortStat.HP}
 	atkCalc := StatCalculator{BaseStat:pokeData.BaseAtk, Level:lv, Individual:ivStat.Atk, Effort:effortStat.Atk}
@@ -150,6 +175,7 @@ func (p *Pokemon) UpdateStat() {
 	p.SpAtk = spAtk
 	p.SpDef = spDef
 	p.Speed = speed
+	return nil
 }
 
 func (p *Pokemon) Equal(other *Pokemon) bool {
@@ -225,20 +251,6 @@ func (p *Pokemon) ToEasyRead() EasyReadPokemon {
 		SpDef:p.SpDef,
 		Speed:p.Speed,
 	}
-}
-
-func NewRomanStanGyarados() Pokemon {
-	pokemon, err := NewPokemon(
-		GYARADOS, STANDARD_LEVEL, ADAMANT,
-		MoveNames{WATERFALL, STONE_EDGE, THUNDER_WAVE, PROTECT},
-		PointUps{MAX_POINT_UP, MAX_POINT_UP, MAX_POINT_UP, MAX_POINT_UP},
-		&MAX_INDIVIDUAL_STAT, &EffortStat{HP:164, Atk:92, Speed:MAX_EFFORT},
-
-	)
-	if err != nil {
-		panic(err)
-	}
-	return pokemon
 }
 
 type Pokemons []Pokemon

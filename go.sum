@@ -2,7 +2,7 @@ github.com/seehuhn/mt19937 v1.0.0 h1:r02DuVkQXfohssWZO8L/TeAlYOah7aNNubEHB/7Vtfs
 github.com/seehuhn/mt19937 v1.0.0/go.mod h1:RikyXajNu+1Gqxm4hOacc3ckyWRd0usF6IkE3gnEcAM=
 github.com/sw965/crow v0.0.0-20240622151709-6ffaeec71ce0 h1:z9bPMHVKNOd7ZhE0twnVMvTz7oRXXutUG1bfeaEh4/w=
 github.com/sw965/crow v0.0.0-20240622151709-6ffaeec71ce0/go.mod h1:eXJyi+mSBeZ8zkR4L6aNZ2H7Rn3MioYlkXU3hHGzDsE=
-github.com/sw965/omw v0.0.0-20240624074729-399861c35b6e h1:jkXb6VrjUXn9axSxFzi10M6AwgP2OROb3zRLU7yQjH8=
-github.com/sw965/omw v0.0.0-20240624074729-399861c35b6e/go.mod h1:HGNGKO3ydtwQLWNv4dlq/BloxiBZ5KH+sjTdx8ZACz8=
+github.com/sw965/omw v0.0.0-20240712072337-ff17605a8466 h1:SzZTOXJJbNuTbd9KxsQBunJFKyFJnR6w6D0Q9BIcNvo=
+github.com/sw965/omw v0.0.0-20240712072337-ff17605a8466/go.mod h1:HGNGKO3ydtwQLWNv4dlq/BloxiBZ5KH+sjTdx8ZACz8=
 golang.org/x/exp v0.0.0-20230118134722-a68e582fa157 h1:fiNkyhJPUvxbRPbCqY/D9qdjmPzfHcpK3P4bM4gioSY=
 golang.org/x/exp v0.0.0-20230118134722-a68e582fa157/go.mod h1:CxIveKay+FTh1D0yPZemJVgC/95VzuuOLq5Qi4xnoYc=

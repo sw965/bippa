@@ -1,16 +1,17 @@
 package bippa
 
 import (
+    "fmt"
     "github.com/sw965/omw/fn"
-    omwmath "github.com/sw965/omw/math"
 )
 
 type Effort int
 
 const (
-    EMPTY_EFFORT Effort = -1
+    EMPTY_EFFORT Effort = 256
 	MIN_EFFORT Effort = 0
 	MAX_EFFORT Effort = 252
+    MIN_SUM_EFFORT Effort = 0
     MAX_SUM_EFFORT Effort = 510
 )
 
@@ -119,13 +120,12 @@ var (
 )
 
 func (ev *EffortStat) Sum() Effort {
-    hp := omwmath.Max(ev.HP, 0)
-    atk := omwmath.Max(ev.Atk, 0)
-    def := omwmath.Max(ev.Def, 0)
-    spAtk := omwmath.Max(ev.SpAtk, 0)
-    spDef := omwmath.Max(ev.SpDef, 0)
-    speed := omwmath.Max(ev.Speed, 0)
-    return hp + atk + def + spAtk + spDef + speed
+    return ev.HP + ev.Atk + ev.Def + ev.SpAtk + ev.SpDef + ev.Speed
+}
+
+func (ev *EffortStat) IsValidSum() bool {
+    sum := ev.Sum()
+    return sum <= MAX_SUM_EFFORT && sum >= MIN_SUM_EFFORT
 }
 
 func (ev *EffortStat) IsAnyEmpty() bool {
@@ -153,4 +153,12 @@ func (ev *EffortStat) IsAnyEmpty() bool {
         return true
     }
     return false
+}
+
+func GetSumEffortErrorMessage(pokeName PokeName) string {
+    return fmt.Sprintf("%s の 合計努力値が %d～%dの範囲外になっている", pokeName.ToString(), MIN_SUM_EFFORT, MAX_SUM_EFFORT)
+}
+
+func GetSumEffortError(pokeName PokeName) error {
+    return fmt.Errorf(GetSumEffortErrorMessage(pokeName))
 }

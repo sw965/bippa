@@ -4,8 +4,7 @@ import (
 	"fmt"
 	"golang.org/x/exp/slices"
 	osliecs "github.com/sw965/omw/slices"
-	omaps "github.com/sw965/omw/maps"
-	"github.com/sw965/omw/fn"
+	omwmaps "github.com/sw965/omw/maps"
 )
 
 type MoveName int
@@ -92,22 +91,13 @@ var STRING_TO_MOVE_NAME = map[string]MoveName{
     "バレットパンチ": BULLET_PUNCH,
 }
 
-
-func StringToMoveName(s string) MoveName {
-	return STRING_TO_MOVE_NAME[s]
-}
-
-var MOVE_NAME_TO_STRING = omaps.Invert[map[MoveName]string](STRING_TO_MOVE_NAME)
+var MOVE_NAME_TO_STRING = omwmaps.Invert[map[MoveName]string](STRING_TO_MOVE_NAME)
 
 func (name MoveName) ToString() string {
 	return MOVE_NAME_TO_STRING[name]
 }
 
 type MoveNames []MoveName
-
-func StringsToMoveNames(ss []string) MoveNames {
-	return fn.Map[MoveNames](ss, StringToMoveName)
-}
 
 func (names MoveNames) ToStrings() []string {
 	ret := make([]string, len(names))
@@ -147,10 +137,36 @@ var STRING_TO_MOVE_CATEGORY = map[string]MoveCategory{
 	"変化":STATUS,
 }
 
-var MOVE_CATEGORY_TO_STRING = omaps.Invert[map[MoveCategory]string](STRING_TO_MOVE_CATEGORY)
+var MOVE_CATEGORY_TO_STRING = omwmaps.Invert[map[MoveCategory]string](STRING_TO_MOVE_CATEGORY)
 
 func (m MoveCategory) ToString() string {
 	return MOVE_CATEGORY_TO_STRING[m]
+}
+
+type TargetRange int
+
+const (
+    NORMAL_TARGET TargetRange = iota // 通常
+    OPPONENT_TWO_TARGET              // 相手2体
+    SELF_TARGET                      // 自分
+    OTHERS_TARGET                    // 自分以外
+    ALL_TARGET                       // 全体
+    OPPONENT_RANDOM_ONE_TARGET       // 相手ランダム1体
+)
+
+var STRING_TO_TARGET_RANGE = map[string]TargetRange{
+	"通常":NORMAL_TARGET,
+	"相手2体":OPPONENT_TWO_TARGET,
+	"自分":SELF_TARGET,
+	"自分以外":OTHERS_TARGET,
+	"全体":ALL_TARGET,
+	"相手ランダム1体":OPPONENT_RANDOM_ONE_TARGET,
+}
+
+var TARGET_RANGE_TO_STRING = omwmaps.Invert[map[TargetRange]string](STRING_TO_TARGET_RANGE)
+
+func (t TargetRange) ToString() string {
+	return TARGET_RANGE_TO_STRING[t]
 }
 
 type PointUp int
@@ -160,6 +176,10 @@ const (
 )
 
 type PointUps []PointUp
+
+var (
+	MAX_POINT_UPS = PointUps{MAX_POINT_UP, MAX_POINT_UP, MAX_POINT_UP, MAX_POINT_UP}
+)
 
 type PowerPoint struct {
 	Max int

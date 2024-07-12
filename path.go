@@ -28,4 +28,6 @@ var (
 	ALL_NATURE_PATH = DATA_PATH + "all-natures.json"
 	NATUREDEX_PATH = DATA_PATH + "naturedex.json"
 	ALL_NATURES_PATH = DATA_PATH + "all-natures.json"
+
+	ALL_ITEMS_PATH = DATA_PATH + "all-items.json"
 )

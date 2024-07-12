@@ -10,7 +10,8 @@
     "baseSpDef": 116,
     "baseSpeed": 33,
     "abilities": [
-        "ふゆう"
+        "ふゆう",
+        "たいねつ"
     ],
     "learnset": [
         "トリックルーム",

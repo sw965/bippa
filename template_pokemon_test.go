@@ -6,7 +6,7 @@ import (
 	bp "github.com/sw965/bippa"
 )
 
-func TestRomanStanGyarados(t *testing.T) {
-	pokemon := bp.NewRomanStanGyarados()
+func TestRomanStan2009Gyarados(t *testing.T) {
+	pokemon := bp.NewRomanStan2009Gyarados()
 	fmt.Println(pokemon)
 }

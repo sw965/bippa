@@ -10,11 +10,12 @@ var ALL_POKE_NAMES = func() PokeNames {
 	if err != nil {
 		panic(err)
 	}
-	names := make(PokeNames, len(buff))
-	for i := range names {
-		 names[i] = STRING_TO_POKE_NAME[buff[i]]
+
+	ret, err := StringsToPokeNames(buff)
+	if err != nil {
+		panic(err)
 	}
-	return names
+	return ret
 }()
 
 type PokeData struct {
@@ -25,6 +26,7 @@ type PokeData struct {
 	BaseSpAtk int
 	BaseSpDef int
 	BaseSpeed int
+	Abilities Abilities
 	Learnset MoveNames
 }
 
@@ -37,6 +39,7 @@ func (p *PokeData) ToEasyRead() EasyReadPokeData {
 		BaseSpAtk:p.BaseSpAtk,
 		BaseSpDef:p.BaseSpDef,
 		BaseSpeed:p.BaseSpeed,
+		Abilities:p.Abilities.ToStrings(),
 		Learnset:p.Learnset.ToStrings(),
 	}
 }
@@ -52,42 +55,21 @@ func LoadPokeData(pokeName PokeName) (PokeData, error) {
 	if err != nil {
 		return PokeData{}, err
 	}
-
-	types := make(Types, len(buff.Types))
-	for i := range types {
-		types[i] = STRING_TO_TYPE[buff.Types[i]]
-	}
-
-	learnset := make(MoveNames, len(buff.Learnset))
-	for i := range learnset {
-		learnset[i] = STRING_TO_MOVE_NAME[buff.Learnset[i]]
-	}
-
-	return PokeData{
-		Types:types,
-		BaseHP:buff.BaseHP,
-		BaseAtk:buff.BaseAtk,
-		BaseDef:buff.BaseDef,
-		BaseSpAtk:buff.BaseSpAtk,
-		BaseSpDef:buff.BaseSpDef,
-		BaseSpeed:buff.BaseSpeed,
-		Learnset:learnset,
-	}, nil
+	return buff.From()
 }
 
 type Pokedex map[PokeName]*PokeData
 
 var POKEDEX = func() Pokedex {
-	dex := Pokedex{}
-	for i := range ALL_POKE_NAMES {
-		name := ALL_POKE_NAMES[i]
+	ret := Pokedex{}
+	for _, name := range ALL_POKE_NAMES {
 		data, err := LoadPokeData(name)
 		if err != nil {
 			panic(err)
 		}
-		dex[name] = &data
+		ret[name] = &data
 	}
-	return dex
+	return ret
 }()
 
 func (p Pokedex) ToEasyRead() EasyReadPokedex {
@@ -103,11 +85,12 @@ var ALL_MOVE_NAMES = func() MoveNames {
 	if err != nil {
 		panic(err)
 	}
-	names := make(MoveNames, len(buff))
-	for i := range names {
-		names[i] = STRING_TO_MOVE_NAME[buff[i]]
+
+	ret, err := StringsToMoveNames(buff)
+	if err != nil {
+		panic(err)
 	}
-	return names
+	return ret
 }()
 
 type MoveData struct {
@@ -116,32 +99,19 @@ type MoveData struct {
 	Power int
 	Accuracy int
 	BasePP int
+	IsContact bool
+    PriorityRank int
+    CriticalRank int
+    Target TargetRange
 }
 
 func LoadMoveData(moveName MoveName) (MoveData, error) {
-	if _, ok := MOVE_NAME_TO_STRING[moveName]; !ok {
-		msg := fmt.Sprintf("%s が MOVE_NAME_TO_STRING の中に存在しない", moveName.ToString())
-		return MoveData{}, fmt.Errorf(msg)
-	}
-
 	path := MOVE_DATA_PATH + MOVE_NAME_TO_STRING[moveName] + omwjson.EXTENSION
 	buff, err := omwjson.Load[EasyReadMoveData](path)
 	if err != nil {
 		return MoveData{}, err
 	}
-	if buff.BasePP == 0 {
-		moveNameStr := MOVE_NAME_TO_STRING[moveName]
-		msg := fmt.Sprintf("%s の MoveDataのjsonファイルのbasePPが0になっている。", moveNameStr)
-		return MoveData{}, fmt.Errorf(msg)
-	}
-
-	return MoveData{
-		Type:STRING_TO_TYPE[buff.Type],
-		Category:STRING_TO_MOVE_CATEGORY[buff.Category],
-		Power:buff.Power,
-		Accuracy:buff.Accuracy,
-		BasePP:buff.BasePP,
-	}, nil
+	return buff.From()
 }
 
 func (m *MoveData) ToEasyRead() EasyReadMoveData {
@@ -151,28 +121,31 @@ func (m *MoveData) ToEasyRead() EasyReadMoveData {
 		Power:m.Power,
 		Accuracy:m.Accuracy,
 		BasePP:m.BasePP,
+		IsContact:m.IsContact,
+		PriorityRank:m.PriorityRank,
+		CriticalRank:m.CriticalRank,
+		Target:m.Target.ToString(),
 	}
 }
 
 type Movedex map[MoveName]*MoveData
 
 var MOVEDEX = func() Movedex {
-	dex := Movedex{}
-	for i := range ALL_MOVE_NAMES {
-		name := ALL_MOVE_NAMES[i]
+	ret := Movedex{}
+	for _, name := range ALL_MOVE_NAMES {
 		data, err := LoadMoveData(name)
 		if err != nil {
 			panic(err)
 		}
-		dex[name] = &data
+		ret[name] = &data
 	}
-	return dex
+	return ret
 }()
 
 func (m Movedex) ToEasyRead() EasyReadMovedex {
 	ret := EasyReadMovedex{}
-	for moveName, moveData := range m {
-		ret[moveName.ToString()] = moveData.ToEasyRead()
+	for name, data := range m {
+		ret[name.ToString()] = data.ToEasyRead()
 	}
 	return ret
 }
@@ -181,8 +154,8 @@ type DefTypeData map[Type]float64
 
 func (t DefTypeData) ToEasyRead() EasyReadDefTypeData {
 	ret := EasyReadDefTypeData{}
-	for k, v := range t {
-		ret[k.ToString()] = v
+	for t, data := range t {
+		ret[t.ToString()] = data
 	}
 	return ret
 }
@@ -194,22 +167,29 @@ var TYPEDEX = func() Typedex {
 	if err != nil {
 		panic(err)
 	}
-	typedex := Typedex{}
+
+	ret := Typedex{}
 	for atkTypeStr, defTypeData := range buff {
-		atkType := STRING_TO_TYPE[atkTypeStr]
-		typedex[atkType] = DefTypeData{}
+		atkType, err := StringToType(atkTypeStr)
+		if err != nil {
+			panic(err)
+		}
+		ret[atkType] = DefTypeData{}
 		for defTypeStr, effect := range defTypeData {
-			defType := STRING_TO_TYPE[defTypeStr]
-			typedex[atkType][defType] = effect
+			defType, err := StringToType(defTypeStr)
+			if err != nil {
+				panic(err)
+			}
+			ret[atkType][defType] = effect
 		}
 	}
-	return typedex
+	return ret
 }()
 
 func (t Typedex) ToEasyRead() EasyReadTypedex {
 	ret := EasyReadTypedex{}
-	for k, typeData := range t {
-		ret[k.ToString()] = typeData.ToEasyRead()
+	for k, v := range t {
+		ret[k.ToString()] = v.ToEasyRead()
 	}
 	return ret
 }
@@ -222,17 +202,21 @@ type NatureData struct {
 	SpeedBonus NatureBonus
 }
 
-type Naturedex map[Nature]NatureData
+type Naturedex map[Nature]*NatureData
 
 var NATUREDEX = func() Naturedex {
 	buff, err := omwjson.Load[EasyReadNaturedex](NATUREDEX_PATH)
 	if err != nil {
 		panic(err)
 	}
+
 	ret := Naturedex{}
-	for natureStr, data := range buff {
-		nature := STRING_TO_NATURE[natureStr]
-		ret[nature] = data
+	for k, v := range buff {
+		nature, err := StringToNature(k)
+		if err != nil {
+			panic(err)
+		}
+		ret[nature] = &v
 	}
 	return ret
 }()
@@ -240,7 +224,7 @@ var NATUREDEX = func() Naturedex {
 func (n Naturedex) ToEasyRead() EasyReadNaturedex {
 	ret := EasyReadNaturedex{}
 	for k, v := range n {
-		ret[k.ToString()] = v
+		ret[k.ToString()] = *v
 	}
 	return ret
 }
@@ -250,9 +234,23 @@ var ALL_NATURES = func() Natures {
 	if err != nil {
 		panic(err)
 	}
-	ret := make(Natures, len(buff))
-	for i, natureStr := range buff {
-		ret[i] = STRING_TO_NATURE[natureStr]
+
+	ret, err := StringsToNatures(buff)
+	if err != nil {
+		panic(err)
 	}
 	return ret
 }()
+
+var ALL_ITEMS = func() Items {
+	buff, err := omwjson.Load[[]string](ALL_ITEMS_PATH)
+	if err != nil {
+		panic(err)
+	}
+
+	ret, err := StringsToItems(buff)
+	if err != nil {
+		panic(err)
+	}
+	return ret
+}

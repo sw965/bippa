@@ -1,16 +1,16 @@
 package single
 
 import (
-	//bp "github.com/sw965/bippa"
+	bp "github.com/sw965/bippa"
 )
 
-// type Action struct {
-// 	MoveNames [2]bp.MoveName
-// 	OpponentLeadIndices [2]int
-// 	SelfBenchIndices [2]int
-// 	Speeds [2]int
-// 	IsSelf bool
-// }
+type Action struct {
+	MoveNames [2]bp.MoveName
+	OpponentLeadIndices [2]int
+	SelfBenchIndices [2]int
+	Speeds [2]int
+	IsSelf bool
+}
 
 // func (a *Action) IsMove() bool {
 // 	return a.MoveName != bp.EMPTY_MOVE_NAME
@@ -20,7 +20,7 @@ import (
 // 	return a.PokeName != bp.EMPTY_POKE_NAME
 // }
 
-// type Actions []Action
+type Actions []Action
 
 // func (as Actions) IsAllEmpty() bool {
 // 	for i := range as {
@@ -31,4 +31,4 @@ import (
 // 	return true
 // }
 
-// type ActionsSlice []Actions
+type ActionsSlice []Actions

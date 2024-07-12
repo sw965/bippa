@@ -3,7 +3,7 @@ package bippa
 type Individual int
 
 const (
-	EMPTY_INDIVIDUAL Individual = -1
+	EMPTY_INDIVIDUAL Individual = 32
 	MIN_INDIVIDUAL Individual = 0
 	MAX_INDIVIDUAL Individual = 31
 )
@@ -52,6 +52,21 @@ var MAX_INDIVIDUAL_STAT = IndividualStat{
 	SpAtk:MAX_INDIVIDUAL,
 	SpDef:MAX_INDIVIDUAL,
 	Speed:MAX_INDIVIDUAL,
+}
+
+func NewMaxIndividualStat() IndividualStat {
+	return MAX_INDIVIDUAL_STAT.Clone()
+}
+
+func (iv *IndividualStat) Clone() IndividualStat {
+	return IndividualStat{
+		HP:iv.HP,
+		Atk:iv.Atk,
+		Def:iv.Def,
+		SpAtk:iv.SpAtk,
+		SpDef:iv.SpDef,
+		Speed:iv.Speed,
+	}
 }
 
 func (iv *IndividualStat) IsAnyEmpty() bool {

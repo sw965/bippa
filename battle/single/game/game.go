@@ -1,11 +1,10 @@
 package game
 
-// import (
-//     "fmt"
-// 	"github.com/sw965/crow/game/simultaneous"
-// 	"github.com/sw965/bippa/battle/single"
-//     bp "github.com/sw965/bippa"
-// )
+import (
+	//"github.com/sw965/crow/game/simultaneous"
+	"github.com/sw965/bippa/battle/single"
+    //bp "github.com/sw965/bippa"
+)
 
 // func Equal(b1, b2 *single.Battle) bool {
 // 	return b1.SelfFighters.Equal(b2.SelfFighters) && b1.OpponentFighters.Equal(b2.OpponentFighters) && b1.Turn == b2.Turn
@@ -26,31 +25,9 @@ package game
 // 	}
 // }
 
-// func LegalSeparateActions(b *single.Battle) single.ActionSlices {
-
-
-// 	separateMoveNames := b.SeparateCommandableMoveNames()
-// 	separatePokeNames := b.SeparateSwitchablePokeNames()
-// 	ret := make(single.ActionSlices, single.PLAYER_NUM * single.LEAD_NUM)
-// 	isSelfs := []bool{true, false}
-// 	for playerI := range ret {
-// 		isSelf := isSelfs[playerI]
-// 		moveNames := separateMoveNames[playerI]
-// 		pokeNames := separatePokeNames[playerI]
-// 		actions := make(single.Actions, 0, len(moveNames) + len(pokeNames))
-// 		for _, name := range moveNames {
-// 			actions = append(actions, single.Action{CmdMoveName:name, IsSelf:isSelf})
-// 		}
-// 		for _, name := range pokeNames {
-// 			actions = append(actions, single.Action{SwitchPokeName:name, IsSelf:isSelf})
-// 		}
-// 		if len(actions) == 0 {
-// 			actions = append(actions, single.Action{IsSelf:isSelf})
-// 		}
-// 		ret[playerI] = actions
-// 	}
-// 	return ret
-// }
+func LegalSeparateActions(b *single.Battle) single.ActionsSlice {
+	return single.ActionsSlice{}
+}
 
 // func NewPushFunc(context *single.Context) func(single.Battle, single.Actions) (single.Battle, error) {
 // 	return func(battle single.Battle, actions single.Actions) (single.Battle, error) {

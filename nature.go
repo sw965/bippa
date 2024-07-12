@@ -74,10 +74,6 @@ var STRING_TO_NATURE = map[string]Nature{
     "まじめ":     SERIOUS,
 }
 
-func StringToNature(s string) Nature {
-    return STRING_TO_NATURE[s]
-}
-
 var NATURE_TO_STRING = omwmaps.Invert[map[Nature]string](STRING_TO_NATURE)
 
 func (n Nature) ToString() string {
