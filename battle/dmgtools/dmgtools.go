@@ -52,6 +52,7 @@ type Defender struct {
 type Calculator struct {
 	Attacker Attacker
 	Defender Defender
+	IsDoubleDamage bool
 }
 
 // https://latest.pokewiki.net/%E3%83%80%E3%83%A1%E3%83%BC%E3%82%B8%E8%A8%88%E7%AE%97%E5%BC%8F
@@ -100,6 +101,9 @@ func (c *Calculator) Calculation(moveName bp.MoveName, randBonus RandBonus) int 
 	dmg = RoundOverHalf(float64(dmg) * sameTypeAttackBonus)
 	dmg = int(float64(dmg) * effect)
 	dmg = int(float64(dmg) * float64(randBonus))
+	if c.IsDoubleDamage {
+		dmg = int(float64(dmg) * 0.75) 
+	}
 	return omwmath.Max(dmg, 1)
 }
 

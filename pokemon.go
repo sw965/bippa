@@ -306,3 +306,19 @@ func (ps Pokemons) ToEasyRead() EasyReadPokemons {
 	}
 	return ret
 }
+
+func (ps Pokemons) ToPointers() PokemonPointers {
+	ret := make(PokemonPointers, len(ps))
+	for i, p := range ps {
+		ret[i] = &p
+	}
+	return ret
+}
+
+type PokemonPointers []*Pokemon
+
+func (ps PokemonPointers) SortBySpeed() {
+	slices.SortFunc(ps, func(p1, p2 *Pokemon) bool {
+		return p2.Speed > p1.Speed
+	})
+}

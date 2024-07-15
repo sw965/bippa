@@ -2,7 +2,7 @@ module github.com/sw965/bippa
 
 go 1.19
 
-require github.com/sw965/omw v0.0.0-20240712072337-ff17605a8466
+require github.com/sw965/omw v0.0.0-20240715003227-a47ba2690090
 
 require (
 	github.com/seehuhn/mt19937 v1.0.0 // indirect
