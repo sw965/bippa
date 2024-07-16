@@ -4,6 +4,7 @@ import (
 	"fmt"
 	omwmaps "github.com/sw965/omw/maps"
 	"golang.org/x/exp/slices"
+	omwmath "github.com/sw965/omw/math"
 )
 
 type PokeName int
@@ -94,8 +95,8 @@ type Pokemon struct {
 	PointUps PointUps
 	Moveset Moveset
 
-	IndividualStat IndividualStat
-	EffortStat EffortStat
+	Individual IndividualStat
+	Effort EffortStat
 
 	MaxHP int
 	CurrentHP int
@@ -104,6 +105,9 @@ type Pokemon struct {
 	SpAtk int
 	SpDef int
 	Speed int
+
+	StatusAilment StatusAilment
+	Rank RankStat
 }
 
 func NewPokemon(name PokeName, lv Level, nature Nature, ability Ability, item Item, movesetNames MoveNames, pointUps PointUps, ivStat *IndividualStat, effortStat *EffortStat) (Pokemon, error) {
@@ -130,9 +134,10 @@ func NewPokemon(name PokeName, lv Level, nature Nature, ability Ability, item It
 		Name:name,
 		Level:lv,
 		Nature:nature,
+		Ability:ability,
 		Item:item,
-		IndividualStat:*ivStat,
-		EffortStat:*effortStat,
+		Individual:*ivStat,
+		Effort:*effortStat,
 		Moveset:moveset,
 	}
 	ret.UpdateStat()
@@ -140,7 +145,7 @@ func NewPokemon(name PokeName, lv Level, nature Nature, ability Ability, item It
 }
 
 func (p *Pokemon) UpdateStat() error {
-	effortStat := p.EffortStat
+	effortStat := p.Effort
 	if !effortStat.IsValidSum() {
 		return GetSumEffortError(p.Name)
 	}
@@ -152,7 +157,7 @@ func (p *Pokemon) UpdateStat() error {
 	pokeData := POKEDEX[p.Name]
 	lv := p.Level
 	natureData := NATUREDEX[p.Nature]
-	ivStat := p.IndividualStat
+	ivStat := p.Individual
 
 	hpCalc := StatCalculator{BaseStat:pokeData.BaseHP, Level:lv, Individual:ivStat.HP, Effort:effortStat.HP}
 	atkCalc := StatCalculator{BaseStat:pokeData.BaseAtk, Level:lv, Individual:ivStat.Atk, Effort:effortStat.Atk}
@@ -175,6 +180,22 @@ func (p *Pokemon) UpdateStat() error {
 	p.SpAtk = spAtk
 	p.SpDef = spDef
 	p.Speed = speed
+	return nil
+}
+
+func (p *Pokemon) AddCurrentHP(a int) error {
+	if a < 0 {
+		return fmt.Errorf("Pokemon.AddCurrentHPに渡す引数は、0以上でなければならない。")
+	}
+	p.CurrentHP += omwmath.Min(a, p.MaxHP-p.CurrentHP)
+	return nil
+}
+
+func (p *Pokemon) SubCurrentHP(a int) error {
+	if a < 0 {
+		return fmt.Errorf("Pokemon.SubCurrentHPに渡す引数は、0以上でなければならない。")
+	}
+	p.CurrentHP -= omwmath.Min(a, p.CurrentHP)
 	return nil
 }
 
@@ -226,6 +247,10 @@ func (p *Pokemon) HPPercentage() float64 {
 	return float64(p.CurrentHP) / float64(p.MaxHP)
 }
 
+func (p *Pokemon) IsFullHP() bool {
+	return p.MaxHP == p.CurrentHP
+}
+
 func (p *Pokemon) IsFainted() bool {
 	return p.CurrentHP <= 0
 }
@@ -240,8 +265,8 @@ func (p *Pokemon) ToEasyRead() EasyReadPokemon {
 		PointUps:p.PointUps,
 		Moveset:p.Moveset.ToEasyRead(),
 
-		IndividualStat:p.IndividualStat,
-		EffortStat:p.EffortStat,
+		Individual:p.Individual,
+		Effort:p.Effort,
 
 		MaxHP:p.MaxHP,
 		CurrentHP:p.CurrentHP,
@@ -309,8 +334,8 @@ func (ps Pokemons) ToEasyRead() EasyReadPokemons {
 
 func (ps Pokemons) ToPointers() PokemonPointers {
 	ret := make(PokemonPointers, len(ps))
-	for i, p := range ps {
-		ret[i] = &p
+	for i := range ps {
+		ret[i] = &ps[i]
 	}
 	return ret
 }
@@ -319,6 +344,18 @@ type PokemonPointers []*Pokemon
 
 func (ps PokemonPointers) SortBySpeed() {
 	slices.SortFunc(ps, func(p1, p2 *Pokemon) bool {
-		return p2.Speed > p1.Speed
+		return p1.Speed > p2.Speed
 	})
 }
+
+type StatusAilment int
+
+const (
+	EMPTY_STATUS_AILMENT StatusAilment = iota
+	BURN //やけど
+	FREEZE //こおり
+	PARALYSIS //まひ
+	NORMAL_POISON //どく
+	BAD_POISON //もうどく
+	SLEEP //ねむり
+)

@@ -1,19 +1,49 @@
 package dmgtools
 
 import (
+	"fmt"
 	"golang.org/x/exp/slices"
 	bp "github.com/sw965/bippa"
 	omwmath "github.com/sw965/omw/math"
-	"github.com/sw965/omw/fn"
+	"math/rand"
 )
 
-// 小数点以下が0.5より大きいならば、切り上げ
+// 小数点以下が0.5以下なら切り捨て、0.5よりも大きいなら切り上げ。
 func RoundOverHalf(x float64) int {
 	decimalPart := float64(x) - float64(int(x))
 	if decimalPart > 0.5 {
 		return int(x + 1)
 	}
 	return int(x)
+}
+
+func CriticalN(rank bp.CriticalRank) (int, error) {
+	if rank < 0 {
+		return 0, fmt.Errorf("急所ランクは0以上でなければならない")
+	}
+
+	var n int
+	switch rank {
+		case 0:
+			n = 16
+		case 1:
+			n = 8
+		case 2:
+			n = 4
+		case 3:
+			n = 3
+		default:
+			n = 2
+	}
+	return n, nil
+}
+
+func IsCritical(rank bp.CriticalRank, r *rand.Rand) (bool, error) {
+	n, err := CriticalN(rank)
+	if err != nil {
+		return false, err
+	}
+	return r.Intn(n) == 0, nil
 }
 
 func Effectiveness(atkType bp.Type, defTypes bp.Types) float64 {
@@ -39,20 +69,27 @@ type Attacker struct {
 	PokeName bp.PokeName
 	Level bp.Level
 	Atk int
+	AtkRank bp.Rank
 	SpAtk int
+	SpAtkRank bp.Rank
+	Ability bp.Ability
 }
 
 type Defender struct {
 	PokeName bp.PokeName
 	Level bp.Level
 	Def int
+	DefRank bp.Rank
 	SpDef int
+	SpDefRank bp.Rank
+	Ability bp.Ability
 }
 
 type Calculator struct {
 	Attacker Attacker
 	Defender Defender
-	IsDoubleDamage bool
+	IsCritical bool
+	IsSingleDamage bool
 }
 
 // https://latest.pokewiki.net/%E3%83%80%E3%83%A1%E3%83%BC%E3%82%B8%E8%A8%88%E7%AE%97%E5%BC%8F
@@ -61,16 +98,33 @@ func (c *Calculator) Calculation(moveName bp.MoveName, randBonus RandBonus) int 
 	defender := c.Defender
 	attackerPokeData := bp.POKEDEX[attacker.PokeName]
 	defenderPokeData := bp.POKEDEX[defender.PokeName]
-	moveData := bp.MOVEDEX[moveName]
 
 	var atkVal int
 	var defVal int
+
+	moveData := bp.MOVEDEX[moveName]
 	if moveData.Category == bp.PHYSICS {
-		atkVal = attacker.Atk
-		defVal = defender.Def
+		atkRank := c.Attacker.AtkRank
+		if c.IsCritical {
+			atkRank = omwmath.Max(atkRank, 0)
+		}
+		defRank := c.Defender.DefRank
+		if c.IsCritical {
+			defRank = omwmath.Min(defRank, 0)
+		}
+		atkVal = int(float64(attacker.Atk) * atkRank.Bonus())
+		defVal = int(float64(defender.Def) * defRank.Bonus())
 	} else {
-		atkVal = attacker.SpAtk
-		defVal = defender.SpDef
+		spAtkRank := c.Attacker.SpAtkRank
+		if c.IsCritical {
+			spAtkRank = omwmath.Max(spAtkRank, 0)
+		}
+		spDefRank := c.Defender.SpDefRank
+		if c.IsCritical {
+			spDefRank = omwmath.Min(spDefRank, 0)
+		}
+		atkVal = int(float64(attacker.SpAtk) * spAtkRank.Bonus())
+		defVal = int(float64(defender.SpDef) * spDefRank.Bonus())
 	}
 	power := moveData.Power
 
@@ -83,7 +137,7 @@ func (c *Calculator) Calculation(moveName bp.MoveName, randBonus RandBonus) int 
 	if moveName == bp.STRUGGLE {
 		sameTypeAttackBonus = 1.0
 	} else if slices.Contains(attackerPokeData.Types, moveData.Type) {
-		sameTypeAttackBonus = 6144.0/4096.0
+		sameTypeAttackBonus = 1.5
 	} else {
 		sameTypeAttackBonus = 1.0
 	}
@@ -98,12 +152,18 @@ func (c *Calculator) Calculation(moveName bp.MoveName, randBonus RandBonus) int 
 		}
 	}
 
+	if !c.IsSingleDamage {
+		dmg = RoundOverHalf(float64(dmg) * 0.75)
+	}
+
+	dmg = int(float64(dmg) * float64(randBonus))
+
+	if c.IsCritical {
+		dmg = RoundOverHalf(float64(dmg) * 2.0)
+	}
+
 	dmg = RoundOverHalf(float64(dmg) * sameTypeAttackBonus)
 	dmg = int(float64(dmg) * effect)
-	dmg = int(float64(dmg) * float64(randBonus))
-	if c.IsDoubleDamage {
-		dmg = int(float64(dmg) * 0.75) 
-	}
 	return omwmath.Max(dmg, 1)
 }
 
@@ -113,9 +173,4 @@ func (c *Calculator) Calculations(moveName bp.MoveName) []int {
 		dmgs[i] = c.Calculation(moveName, r)
 	}
 	return dmgs
-}
-
-func (c *Calculator) Expected(moveName bp.MoveName) float64 {
-	dmgs := fn.Map[[]float64](c.Calculations(moveName), fn.IntToFloat64[int, float64])
-	return omwmath.Mean(dmgs...)
 }

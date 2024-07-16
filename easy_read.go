@@ -55,7 +55,7 @@ type EasyReadMoveData struct {
     BasePP       int
 	IsContact    bool
 	PriorityRank int
-	CriticalRank int
+	CriticalRank CriticalRank
 	Target       string
 }
 
@@ -119,8 +119,8 @@ type EasyReadPokemon struct {
 	PointUps PointUps
 	Moveset EasyReadMoveset
 
-	IndividualStat IndividualStat
-	EffortStat EffortStat
+	Individual IndividualStat
+	Effort EffortStat
 
 	MaxHP int
 	CurrentHP int
@@ -129,6 +129,9 @@ type EasyReadPokemon struct {
 	SpAtk int
 	SpDef int
 	Speed int
+
+	StatusAilment StatusAilment
+	Rank RankStat
 }
 
 func (p *EasyReadPokemon) From() (Pokemon, error) {
@@ -161,8 +164,8 @@ func (p *EasyReadPokemon) From() (Pokemon, error) {
 		PointUps:p.PointUps,
 		Moveset:moveset,
 
-		IndividualStat:p.IndividualStat,
-		EffortStat:p.EffortStat,
+		Individual:p.Individual,
+		Effort:p.Effort,
 
 		MaxHP:p.MaxHP,
 		CurrentHP:p.CurrentHP,
@@ -171,6 +174,9 @@ func (p *EasyReadPokemon) From() (Pokemon, error) {
 		SpAtk:p.SpAtk,
 		SpDef:p.SpDef,
 		Speed:p.Speed,
+
+		StatusAilment:p.StatusAilment,
+		Rank:p.Rank,
 	}, nil
 }
 

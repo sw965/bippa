@@ -101,7 +101,7 @@ type MoveData struct {
 	BasePP int
 	IsContact bool
     PriorityRank int
-    CriticalRank int
+    CriticalRank CriticalRank
     Target TargetRange
 }
 
@@ -209,13 +209,14 @@ var NATUREDEX = func() Naturedex {
 	if err != nil {
 		panic(err)
 	}
-
+	
 	ret := Naturedex{}
-	for k, v := range buff {
+	for k := range buff {
 		nature, err := StringToNature(k)
 		if err != nil {
 			panic(err)
 		}
+		v := buff[k]
 		ret[nature] = &v
 	}
 	return ret
@@ -254,3 +255,5 @@ var ALL_ITEMS = func() Items {
 	}
 	return ret
 }
+
+type CriticalRank int
