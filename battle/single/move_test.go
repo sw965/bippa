@@ -10,6 +10,9 @@ import (
 	omwslices "github.com/sw965/omw/slices"
 )
 
+// 第4世代のダメージ計算は、このURLのツールと同じ結果になるかどうかをテストする。
+// https://pokemon-trainer.net/dp/dmjs4.html
+
 func Helper(battle single.Battle, action *single.SoloAction, testNum int, move func(*single.Battle, *single.SoloAction, *single.Context) error) ([]single.Battle, error) {
 	r := omwrand.NewMt19937()
 	context := single.Context{
@@ -148,10 +151,11 @@ func TestSurf(t *testing.T) {
 	}
 
 	currentHPCount := omwslices.CountFunc(results, func(b single.Battle) bool {
-		fmt.Println(b.SelfLeadPokemons[0].CurrentHP, b.OpponentLeadPokemons[0].CurrentHP, b.OpponentLeadPokemons[1].CurrentHP)
 		return b.SelfLeadPokemons[0].IsFullHP() &&
-		b.OpponentLeadPokemons[0].CurrentHP == (185-66) &&
-		b.OpponentLeadPokemons[1].CurrentHP == (155-33)
+			//現状ダメージが2ずれる。原因不明
+			b.OpponentLeadPokemons[0].CurrentHP == (185-66) &&
+			//現状ダメージが1ずれる。原因不明
+			b.OpponentLeadPokemons[1].CurrentHP == (155-33)
 	})
 
 	if currentHPCount != testNum {

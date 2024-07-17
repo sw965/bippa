@@ -240,7 +240,7 @@ func (b *Battle) LegalMoveSoloActions() SoloActions {
 
 // 	b.SelfLeadPokemons = b.SelfLeadPokemons.Clone()
 // 	b.OpponentLeadPokemons = b.OpponentLeadPokemons.Clone()
-
+//  ここに挑発時の時の処理をする。
 // 	b.SelfLeadPokemons[selfLeadIdx].Moveset[moveName].Current -= 1
 // 	context.Observer(&b, MOVE_USE_EVENT)
 

@@ -58,29 +58,6 @@ func (t Type) ToString() string {
 	return TYPE_TO_STRING[t]
 }
 
-func (t Type) EffectType(defTypes Types) EffectType {
-	typeData := TYPEDEX[t]
-	effect := 1.0
-	for _, defType := range defTypes {
-		effect *= typeData[defType]
-	}
-	switch effect {
-		case 4.0:
-			return SUPER_EFFECT
-		case 2.0:
-			return SUPER_EFFECT
-		case 1.0:
-			return NORMAL_EFFECT
-		case 0.5:
-			return BAD_EFFECT
-		case 0.25:
-			return BAD_EFFECT
-		case 0.0:
-			return NO_EFFECT 
-	}
-	return NORMAL_EFFECT
-}
-
 type Types []Type
 
 var ALL_TYPES = func() Types {
@@ -109,20 +86,11 @@ func (ts Types) Sort() Types {
 	return ret
 }
 
-type Typess []Types
+type TypesSlice []Types
 
-var ALL_TYPESS = func() Typess {
+var ALL_TWO_TYPESS = func() TypesSlice {
 	return omwslices.Concat(
-		fn.Map[Typess](ALL_TYPES, func(t Type) Types { return Types{t} }),
-		omwslices.Combination[Typess, Types](ALL_TYPES, 2),
+		fn.Map[TypesSlice](ALL_TYPES, func(t Type) Types { return Types{t} }),
+		omwslices.Combination[TypesSlice, Types](ALL_TYPES, 2),
 	)
 }()
-
-type EffectType int
-
-const (
-	SUPER_EFFECT EffectType = iota
-	NORMAL_EFFECT
-	BAD_EFFECT
-	NO_EFFECT
-)

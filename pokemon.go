@@ -108,6 +108,13 @@ type Pokemon struct {
 
 	StatusAilment StatusAilment
 	Rank RankStat
+
+	IsFlinch bool
+
+	ThisTurnCommandMoveName MoveName
+	IsThisTurnActed bool
+	
+	SubstituteHP int
 }
 
 func NewPokemon(name PokeName, lv Level, nature Nature, ability Ability, item Item, movesetNames MoveNames, pointUps PointUps, ivStat *IndividualStat, effortStat *EffortStat) (Pokemon, error) {
@@ -191,7 +198,7 @@ func (p *Pokemon) AddCurrentHP(a int) error {
 	return nil
 }
 
-func (p *Pokemon) SubCurrentHP(a int) error {
+func (p *Pokemon) SubCurrentHP(a int, isSubstituteHPPriority int ) error {
 	if a < 0 {
 		return fmt.Errorf("Pokemon.SubCurrentHPに渡す引数は、0以上でなければならない。")
 	}

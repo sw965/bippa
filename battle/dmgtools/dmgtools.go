@@ -10,12 +10,22 @@ import (
 
 // 小数点以下が0.5以下なら切り捨て、0.5よりも大きいなら切り上げ。
 func RoundOverHalf(x float64) int {
-	decimalPart := float64(x) - float64(int(x))
+	decimalPart := x - float64(int(x))
 	if decimalPart > 0.5 {
 		return int(x + 1)
 	}
 	return int(x)
 }
+
+const (
+	RANGE_ATTACK_BONUS = 3072.0
+	NO_RANGE_ATTACK_BONUS = 4096.0
+)
+
+const (
+	CRITICAL_BONUS = 6144.0
+	NO_CRITICAL_BONUS = 4096.0
+)
 
 func CriticalN(rank bp.CriticalRank) (int, error) {
 	if rank < 0 {
@@ -46,13 +56,10 @@ func IsCritical(rank bp.CriticalRank, r *rand.Rand) (bool, error) {
 	return r.Intn(n) == 0, nil
 }
 
-func Effectiveness(atkType bp.Type, defTypes bp.Types) float64 {
-	ret := 1.0
-	for _, defType := range defTypes {
-		ret *= bp.TYPEDEX[atkType][defType]
-	}
-	return ret
-}
+const (
+	SAME_TYPE_ATTACK_BONUS = 6144.0
+	NO_SAME_TYPE_ATTACK_BONUS = 4096.0
+)
 
 type RandBonus float64
 type RandBonuses []RandBonus
@@ -63,7 +70,13 @@ var RAND_BONUSES = RandBonuses{
 	0.96, 0.97, 0.98, 0.99, 1.0,
 }
 
-var MEAN_RAND_BONUS = omwmath.Mean(RAND_BONUSES...)
+func EffectivenessBonus(atkType bp.Type, defTypes bp.Types) float64 {
+	ret := 1.0
+	for _, defType := range defTypes {
+		ret *= bp.TYPEDEX[atkType][defType]
+	}
+	return ret
+}
 
 type Attacker struct {
 	PokeName bp.PokeName
@@ -98,11 +111,17 @@ func (c *Calculator) Calculation(moveName bp.MoveName, randBonus RandBonus) int 
 	defender := c.Defender
 	attackerPokeData := bp.POKEDEX[attacker.PokeName]
 	defenderPokeData := bp.POKEDEX[defender.PokeName]
+	moveData := bp.MOVEDEX[moveName]
+
+	//無効タイプならば、ダメージは0
+	for _, defType := range defenderPokeData.Types {
+		if bp.TYPEDEX[moveData.Type][defType] == 0.0 {
+			return 0
+		}
+	}
 
 	var atkVal int
 	var defVal int
-
-	moveData := bp.MOVEDEX[moveName]
 	if moveData.Category == bp.PHYSICS {
 		atkRank := c.Attacker.AtkRank
 		if c.IsCritical {
@@ -126,51 +145,55 @@ func (c *Calculator) Calculation(moveName bp.MoveName, randBonus RandBonus) int 
 		atkVal = int(float64(attacker.SpAtk) * spAtkRank.Bonus())
 		defVal = int(float64(defender.SpDef) * spDefRank.Bonus())
 	}
-	power := moveData.Power
 
+	//基礎ダメージ
+	power := moveData.Power
 	lv := int(attacker.Level)
 	dmg := (lv*2/5) + 2
 	dmg = dmg * power * atkVal / defVal
 	dmg = (dmg/50) + 2
 
-	var sameTypeAttackBonus float64
-	if moveName == bp.STRUGGLE {
-		sameTypeAttackBonus = 1.0
-	} else if slices.Contains(attackerPokeData.Types, moveData.Type) {
-		sameTypeAttackBonus = 1.5
+	//ダブルバトルの範囲攻撃
+	var rangeAttackBonus float64
+	if c.IsSingleDamage {
+		rangeAttackBonus = NO_RANGE_ATTACK_BONUS
 	} else {
-		sameTypeAttackBonus = 1.0
+		rangeAttackBonus = RANGE_ATTACK_BONUS
 	}
 
+	dmg = RoundOverHalf(float64(dmg) * rangeAttackBonus / NO_RANGE_ATTACK_BONUS)
+
+	//急所
+	var critBonus float64
+	if c.IsCritical {
+		critBonus = CRITICAL_BONUS
+	} else {
+		critBonus = NO_CRITICAL_BONUS
+	}
+	dmg = RoundOverHalf(float64(dmg) * critBonus / NO_CRITICAL_BONUS)
+
+	dmg = int(float64(dmg) * float64(randBonus))
+
+	//タイプ一致
+	var sameTypeAttackBonus float64
+	if moveName == bp.STRUGGLE {
+		sameTypeAttackBonus = NO_SAME_TYPE_ATTACK_BONUS
+	} else if slices.Contains(attackerPokeData.Types, moveData.Type) {
+		sameTypeAttackBonus = SAME_TYPE_ATTACK_BONUS
+	} else {
+		sameTypeAttackBonus = NO_SAME_TYPE_ATTACK_BONUS
+	}
+	dmg = RoundOverHalf(float64(dmg) * sameTypeAttackBonus / NO_SAME_TYPE_ATTACK_BONUS)
+
+	//タイプ相性
 	var effect float64
 	if moveName == bp.STRUGGLE {
 		effect = 1.0
 	} else {
-		effect = Effectiveness(moveData.Type, defenderPokeData.Types)
-		if effect == 0.0 {
-			return 0
-		}
+		effect = EffectivenessBonus(moveData.Type, defenderPokeData.Types)
 	}
-
-	if !c.IsSingleDamage {
-		dmg = RoundOverHalf(float64(dmg) * 0.75)
-	}
-
-	dmg = int(float64(dmg) * float64(randBonus))
-
-	if c.IsCritical {
-		dmg = RoundOverHalf(float64(dmg) * 2.0)
-	}
-
-	dmg = RoundOverHalf(float64(dmg) * sameTypeAttackBonus)
 	dmg = int(float64(dmg) * effect)
-	return omwmath.Max(dmg, 1)
-}
 
-func (c *Calculator) Calculations(moveName bp.MoveName) []int {
-	dmgs := make([]int, len(RAND_BONUSES))
-	for i, r := range RAND_BONUSES {
-		dmgs[i] = c.Calculation(moveName, r)
-	}
-	return dmgs
+	//ダメージが0ならば、1にする
+	return omwmath.Max(dmg, 1)
 }

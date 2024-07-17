@@ -7,5 +7,7 @@
     "isContact":false,
     "priorityRank":0,
     "criticalRank":0,
-    "target":"相手2体"
+    "target":"相手2体",
+    "piercingProtect":"非貫通",
+    "piercingSubstitute":"非貫通"
 }

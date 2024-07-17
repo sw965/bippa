@@ -7,5 +7,7 @@
     "isContact":false,
     "priorityRank":3,
     "criticalRank":0,
-    "target":"自分"
+    "target":"自分",
+    "piercingProtect":"",
+    "piercingSubstitute":""
 }
