@@ -1,8 +1,6 @@
 package bippa
 
 import (
-	"fmt"
-	"golang.org/x/exp/slices"
 	omwjson "github.com/sw965/omw/json"
 	omwmaps "github.com/sw965/omw/maps"
 )
@@ -183,44 +181,17 @@ type PowerPoint struct {
 }
 
 const (
-	MIN_MOVESET = 1
-	MAX_MOVESET = 4
+	MIN_MOVESET_LENGTH = 1
+	MAX_MOVESET_LENGTH = 4
 )
 
 func NewPowerPoint(base int, up PointUp) PowerPoint {
-    increment := int(float64(base) / 5.0)
-    max := base + (increment * int(up))
+    v := int(float64(base) / 5.0)
+    max := base + (v * int(up))
 	return PowerPoint{Max:max, Current:max}
 }
 
 type Moveset map[MoveName]*PowerPoint
-
-func NewMoveset(pokeName PokeName, moveNames MoveNames) (Moveset, error) {
-	if len(moveNames) == 0 {
-		msg := fmt.Sprintf("覚えさせる技が指定されていません。ポケモンには、少なくとも%dつ以上の技を覚えさせる必要があります。", MIN_MOVESET)
-		return Moveset{}, fmt.Errorf(msg)
-	}
-
-	if len(moveNames) > MAX_MOVESET {
-		msg := fmt.Sprintf("覚えさせる技の数が、限度を超えています。技は最大で%dつまで覚えさせることが出来ます。", MAX_MOVESET)
-		return Moveset{}, fmt.Errorf(msg)
-	}
-
-	learnset := POKEDEX[pokeName].Learnset
-	moveset := Moveset{}
-	for i := range moveNames {
-		moveName := moveNames[i]
-		if !slices.Contains(learnset, moveNames[i]) {
-			pokeNameStr := POKE_NAME_TO_STRING[pokeName]
-			moveNameStr := MOVE_NAME_TO_STRING[moveName]
-			msg := fmt.Sprintf("「%s」 は 「%s」 を覚えることができません。覚えられる技を選択してください。", pokeNameStr, moveNameStr)
-			return Moveset{}, fmt.Errorf(msg)
-		}
-		basePP := MOVEDEX[moveName].BasePP
-		moveset[moveName] = &PowerPoint{Max:basePP, Current:basePP}
-	}
-	return moveset, nil
-}
 
 func (m Moveset) Equal(other Moveset) bool {
 	for moveName, pp := range m {
@@ -250,3 +221,61 @@ func (m Moveset) ToEasyRead() EasyReadMoveset {
 	}
 	return ret
 }
+
+type EasyReadMoveset map[string]PowerPoint
+
+func (e EasyReadMoveset) From() (Moveset, error) {
+	m := Moveset{}
+	for k, v := range e {
+		n, err := StringToMoveName(k)
+		if err != nil {
+			return Moveset{}, err
+		}
+		pp := PowerPoint{Max:v.Max, Current:v.Current}
+		m[n] = &pp
+	}
+	return m, nil
+}
+
+type EasyReadMoveData struct {
+    Type         string
+    Category     string
+    Power        int
+    Accuracy     int
+    BasePP       int
+	IsContact    bool
+	PriorityRank int
+	CriticalRank CriticalRank
+	Target       string
+}
+
+func (m *EasyReadMoveData) From() (MoveData, error) {
+	t, err := StringToType(m.Type)
+	if err != nil {
+		return MoveData{}, err
+	}
+
+	category, err := StringToMoveCategory(m.Category)
+	if err != nil {
+		return MoveData{}, err
+	}
+
+	target, err := StringToTargetRange(m.Target)
+	if err != nil {
+		return MoveData{}, err
+	}
+
+	return MoveData{
+		Type:t,
+		Category:category,
+		Power:m.Power,
+		Accuracy:m.Accuracy,
+		BasePP:m.BasePP,
+		IsContact:m.IsContact,
+		PriorityRank:m.PriorityRank,
+		CriticalRank:m.CriticalRank,
+		Target:target,
+	}, nil
+}
+
+type EasyReadMovedex map[string]EasyReadMoveData

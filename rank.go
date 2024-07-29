@@ -1,9 +1,13 @@
 package bippa
 
+import (
+	omwmath "github.com/sw965/omw/math"
+)
+
+// https://wiki.xn--rckteqa2e.com/wiki/%E3%83%A9%E3%83%B3%E3%82%AF%E8%A3%9C%E6%AD%A3#%E6%80%A5%E6%89%80%E3%83%A9%E3%83%B3%E3%82%AF
 type CriticalRank int
 
 // https://wiki.xn--rckteqa2e.com/wiki/%E3%83%A9%E3%83%B3%E3%82%AF%E8%A3%9C%E6%AD%A3
-
 type Rank int
 
 func (r Rank) Bonus() float64 {
@@ -31,7 +35,7 @@ func (r RankStat) Clone() RankStat {
 	return r
 }
 
-func (r RankStat) Fluctuation(v *RankStat) RankStat {
+func (r *RankStat) Fluctuation(v *RankStat) {
 	if v.Atk > 0 {
 		r.Atk = omwmath.Min(r.Atk+v.Atk, MAX_RANK)
 	} else {
@@ -61,5 +65,4 @@ func (r RankStat) Fluctuation(v *RankStat) RankStat {
 	} else {
 		r.Speed = omwmath.Max(r.Speed+v.Speed, MIN_RANK)
 	}
-	return r
 }

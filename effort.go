@@ -21,14 +21,14 @@ const (
 type Efforts []Effort
 
 var ALL_EFFORTS = func() Efforts {
-    ret := make(Efforts, MAX_EFFORT+1)
+    evs := make(Efforts, MAX_EFFORT+1)
     for i := 0; i < int(MAX_EFFORT); i++ {
-        ret[i] = Effort(i)
+        evs[i] = Effort(i)
     }
-    return ret
+    return evs
 }()
 
-var EFFECTIVE_EFFORTS = fn.Filter[Efforts](ALL_EFFORTS, func(e Effort) bool { return e%4 == 0 })
+var EFFECTIVE_EFFORTS = fn.Filter[Efforts](ALL_EFFORTS, func(ev Effort) bool { return ev%4 == 0 })
 
 type EffortStat struct {
 	HP Effort

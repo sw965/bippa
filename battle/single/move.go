@@ -27,6 +27,18 @@ func EmptyAdditionalEffect(_ *bp.Pokemon) error {
 	return nil
 }
 
+type Move func()
+
+type MoveMaker struct {
+	Status Status
+	SelfAdditionalEffect AdditionalEffect
+	OpponentAdditionalEffect AdditionalEffect
+}
+
+func (m *Move) Move(battle *Battle, action *SoloAction, context *Context) error {
+
+}
+
 func moveHelper(
 	battle *Battle, action *SoloAction, context *Context,
 	status Status, self, opponent AdditionalEffect,
@@ -355,17 +367,7 @@ func FollowMe(battle *Battle, action *SoloAction, context *Context) error {
 	if action.MoveName != bp.FOLLOW_ME {
 		return fmt.Errorf("FollowMeに渡されたAction.MoveNameがbp.FOLLOW_MEではない。")
 	}
-
-	maxPriority := omwmath.Max(
-		omwmath.Max(battle.SelfLeadPokemons.FollowMePriorities()...),
-		omwmath.Max(battle.OpponentLeadPokemons.FollowMePriorities()...),
-	)
-
-	if maxPriority == 0 {
-		battle.SelfLeadPokemons[action.SrcIndex].FollowMePriority = bp.MAX_FOLLOW_ME_PRIORITY
-	} else {
-		battle.SelfLeadPokemons[action.SrcIndex].FollowMePriority = maxPriority - 1
-	}
+	battle.SelfFollowMePokemons = append(battle.SelfFollowMePokemons, &battle.SelfLeadPokemons[action.SrcIndex])
 	return nil
 }
 

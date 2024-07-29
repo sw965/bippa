@@ -54,10 +54,6 @@ var MAX_INDIVIDUAL_STAT = IndividualStat{
 	Speed:MAX_INDIVIDUAL,
 }
 
-func NewMaxIndividualStat() IndividualStat {
-	return MAX_INDIVIDUAL_STAT.Clone()
-}
-
 func (iv IndividualStat) Clone() IndividualStat {
 	return iv
 }

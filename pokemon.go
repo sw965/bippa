@@ -8,6 +8,7 @@ import (
 	"golang.org/x/exp/slices"
 	omwmath "github.com/sw965/omw/math"
 	omwrand "github.com/sw965/omw/math/rand"
+	omwslices "github.com/sw965/omw/slices"
 )
 
 type EasyReadPokemon struct {
@@ -22,13 +23,7 @@ type EasyReadPokemon struct {
 	Individual IndividualStat
 	Effort EffortStat
 
-	MaxHP int
-	CurrentHP int
-	Atk int
-	Def int
-	SpAtk int
-	SpDef int
-	Speed int
+	Stat PokemonStat
 
 	StatusAilment StatusAilment
 	Rank RankStat
@@ -67,13 +62,7 @@ func (p *EasyReadPokemon) From() (Pokemon, error) {
 		Individual:p.Individual,
 		Effort:p.Effort,
 
-		MaxHP:p.MaxHP,
-		CurrentHP:p.CurrentHP,
-		Atk:p.Atk,
-		Def:p.Def,
-		SpAtk:p.SpAtk,
-		SpDef:p.SpDef,
-		Speed:p.Speed,
+		Stat:p.Stat,
 
 		StatusAilment:p.StatusAilment,
 		Rank:p.Rank,
@@ -259,13 +248,7 @@ type Pokemon struct {
 	Effort EffortStat
 	Types Types
 
-	MaxHP int
-	CurrentHP int
-	Atk int
-	Def int
-	SpAtk int
-	SpDef int
-	Speed int
+	Stat PokemonStat
 
 	StatusAilment StatusAilment
 	Rank RankStat
@@ -279,40 +262,34 @@ func NewPokemon(name PokeName, level Level, nature Nature, ability Ability, item
 		return Pokemon{}, nil
 	}
 
-	p := Pokemon{
-		Name:name,
-		Nature:nature,
-		Item:item,
-		Individual:iv,
-		Effort:ev,
-		MoveNames:moveNames,
-		PointUps:PointUps,
+	moveNamesLen := len(moveNames)
+	if moveNamesLen == 0 {
+		return Pokemon{}, fmt.Errorf("最低でも、%d個の技は覚えさせる必要があります。", MIN_MOVESET_LENGTH)
 	}
 
+	if moveNamesLen != len(pointUps) {
+		return Pokemon{}, fmt.Errorf("覚えさせる技の数とポイントアップの数が一致しません。")
+	}
+
+	p := Pokemon{}
+	p.Name = name
+	p.Level = level
+	p.Nature = nature
 	err := p.SetAbility(ability)
 	if err != nil {
 		return Pokemon{}, err
 	}
-
-	moveset, err := NewMoveset(name, moveNames)
-	if err != nil {
-		return Pokemon{}, err
+	p.Item = item
+	for i, moveName := range moveNames {
+		err := p.SetInMoveset(moveName, pointUps[i])
+		if err != nil {
+			return Pokemon{}, err
+		}
 	}
-
-	p := Pokemon{
-		Name:name,
-		Level:lv,
-		Nature:nature,
-		Ability:ability,
-		Item:item,
-		Individual:*ivStat,
-		Effort:*effortStat,
-		MoveNames:moveNames,
-		PointUps:pointUps,
-		Moveset:moveset,
-		Types:pokeData.Types,
-	}
-	err := p.UpdateStat()
+	p.Individual = *iv
+	p.Effort = *ev
+	p.Types = POKEDEX[name].Types
+	err = p.UpdateStat()
 	return p, err
 }
 
@@ -323,12 +300,23 @@ func (p *Pokemon) SetAbility(a Ability) error {
 
 	if !slices.Contains(POKEDEX[p.Name].Abilities, a) {
 		m := fmt.Sprintf("特性：%s の % s は 不適です。", a.ToString(), p.Name.ToString())
-		return Pokemon{}, fmt.Errorf(m)
+		return fmt.Errorf(m)
 	}
 	return nil
 }
 
-func (p *Pokemon) Put
+func (p *Pokemon) SetInMoveset(k MoveName, up PointUp) error {
+	if !slices.Contains(POKEDEX[p.Name].Learnset, k) {
+		return fmt.Errorf("%s は %s を 覚えません。", p.Name.ToString(), k.ToString())
+	}
+	pp := NewPowerPoint(MOVEDEX[k].BasePP, up)
+	p.Moveset[k] = &pp
+
+	if len(p.Moveset) > MAX_MOVESET_LENGTH {
+		return fmt.Errorf("技は最大で%d個までしか覚えられません。", MAX_MOVESET_LENGTH)
+	}
+	return nil
+}
 
 func (p *Pokemon) UpdateStat() error {
 	ev := p.Effort
@@ -344,7 +332,7 @@ func (p *Pokemon) AddCurrentHP(a int) error {
 	if a < 0 {
 		return fmt.Errorf("Pokemon.AddCurrentHPに渡す引数は、0以上でなければならない。")
 	}
-	p.CurrentHP += omwmath.Min(a, p.MaxHP-p.CurrentHP)
+	p.Stat.CurrentHP += omwmath.Min(a, p.Stat.MaxHP-p.Stat.CurrentHP)
 	return nil
 }
 
@@ -352,7 +340,7 @@ func (p *Pokemon) SubCurrentHP(dmg int) error {
 	if dmg < 0 {
 		return fmt.Errorf("Pokemon.SubCurrentHPに渡す引数は、0以上でなければならない。")
 	}
-	p.CurrentHP -= omwmath.Min(dmg, p.CurrentHP)
+	p.Stat.CurrentHP -= omwmath.Min(dmg, p.Stat.CurrentHP)
 	return nil
 }
 
@@ -386,31 +374,7 @@ func (p *Pokemon) Equal(other *Pokemon) bool {
 		return false
 	}
 
-	if p.MaxHP != other.MaxHP {
-		return false
-	}
-
-	if p.CurrentHP != other.CurrentHP {
-		return false
-	}
-
-	if p.Atk != other.Atk {
-		return false
-	}
-
-	if p.Def != other.Def {
-		return false
-	}
-
-	if p.SpAtk != other.SpAtk {
-		return false
-	}
-
-	if p.SpDef != other.SpDef {
-		return false
-	}
-
-	if p.Speed != other.Speed {
+	if p.Stat != other.Stat {
 		return false
 	}
 	return p.Moveset.Equal(other.Moveset)
@@ -421,29 +385,25 @@ func (p Pokemon) Clone() Pokemon {
 	return p
 }
 
-func (p *Pokemon) HPPercentage() float64 {
-	return float64(p.CurrentHP) / float64(p.MaxHP)
-}
-
 func (p *Pokemon) IsFullHP() bool {
-	return p.MaxHP == p.CurrentHP
+	return p.Stat.IsFullHP()
 }
 
 func (p *Pokemon) IsFainted() bool {
-	return p.CurrentHP <= 0
+	return p.Stat.CurrentHP <= 0
 }
 
 func (p *Pokemon) IsSubstituteState() bool {
 	return p.SubstituteHP > 0
 }
 
-func (p *Pokemon) RankFluctuation(rank *RankStat, percentage int, isClearBodyValid bool, r *rand.Rand) error {
+func (p *Pokemon) RankFluctuation(fluctuation *RankStat, percentage int, isClearBodyValid bool, r *rand.Rand) error {
 	if isClearBodyValid && p.Ability == CLEAR_BODY {
 		return nil
 	}
 	ok, err := omwrand.IsPercentageMet(percentage, r)
 	if ok {
-		p.Rank = p.Rank.Fluctuation(rank)
+		p.Rank.Fluctuation(fluctuation)
 	}
 	return err
 }
@@ -454,6 +414,10 @@ func (p *Pokemon) SetIsFlinchState(percentage int, r *rand.Rand) error {
 		p.IsFlinchState = ok
 	}
 	return err
+}
+
+func (p *Pokemon) UsableMoveNames() MoveNames {
+	return fn.Filter[MoveNames](p.MoveNames, func(n MoveName) bool { return p.Moveset[n].Current > 0 })
 }
 
 func (p *Pokemon) ToEasyRead() EasyReadPokemon {
@@ -468,14 +432,7 @@ func (p *Pokemon) ToEasyRead() EasyReadPokemon {
 
 		Individual:p.Individual,
 		Effort:p.Effort,
-
-		MaxHP:p.MaxHP,
-		CurrentHP:p.CurrentHP,
-		Atk:p.Atk,
-		Def:p.Def,
-		SpAtk:p.SpAtk,
-		SpDef:p.SpDef,
-		Speed:p.Speed,
+		Stat:p.Stat,
 	}
 }
 
@@ -507,18 +464,9 @@ func (ps Pokemons) Equal(other Pokemons) bool {
 	return true
 }
 
-func (ps Pokemons) IndexByName(name PokeName) int {
-	for i, p := range ps {
-		if p.Name == name {
-			return i
-		}
-	}
-	return -1
-}
-
-func (ps Pokemons) IsAllFaint() bool {
+func (ps Pokemons) IsAllFainted() bool {
 	for _, p := range ps {
-		if p.CurrentHP > 0 {
+		if !p.IsFainted() {
 			return false
 		}
 	}
@@ -526,32 +474,24 @@ func (ps Pokemons) IsAllFaint() bool {
 }
 
 func (ps Pokemons) ToEasyRead() EasyReadPokemons {
-	ret := make(EasyReadPokemons, len(ps))
+	es := make(EasyReadPokemons, len(ps))
 	for i, p := range ps {
-		ret[i] = p.ToEasyRead()
+		es[i] = p.ToEasyRead()
 	}
-	return ret
+	return es
+}
+
+func (ps Pokemons) NotFaintedIndices() []int {
+	return omwslices.IndicesFunc(ps, func(p Pokemon) bool { return !p.IsFainted() })
 }
 
 type PokemonPointers []*Pokemon
 
 func (ps PokemonPointers) SortBySpeed() {
 	slices.SortFunc(ps, func(p1, p2 *Pokemon) bool {
-		return p1.Speed > p2.Speed
+		return p1.Stat.Speed > p2.Stat.Speed
 	})
 }
-
-type StatusAilment int
-
-const (
-	EMPTY_STATUS_AILMENT StatusAilment = iota
-	BURN //やけど
-	FREEZE //こおり
-	PARALYSIS //まひ
-	NORMAL_POISON //どく
-	BAD_POISON //もうどく
-	SLEEP //ねむり
-)
 
 type PokemonEachStatCalculator struct {
 	BaseStat int
@@ -568,10 +508,10 @@ func (c *PokemonEachStatCalculator) HP() int {
 }
 
 func (c *PokemonEachStatCalculator) HPOther(bonus NatureBonus) int {
-	lv := int(c.Level)
-	i := int(c.Individual)
-	e := int(c.Effort)
-	stat := float64((c.BaseStat*2 + i + e/4) * lv / 100 + 5)
+	level := int(c.Level)
+	iv := int(c.Individual)
+	ev := int(c.Effort)
+	stat := float64((c.BaseStat*2 + iv + ev/4) * level / 100 + 5)
 	return int(stat * float64(bonus))
 }
 
@@ -588,11 +528,276 @@ type PokemonStat struct {
 func NewPokemonStat(name PokeName, level Level, nature Nature, iv IndividualStat, ev EffortStat) PokemonStat {
 	p := POKEDEX[name]
 	n := NATUREDEX[nature]
-	hp := PokemonEachStatCalculator{BaseStat:p.BaseHP, Level:level, Individual:iv.HP, Effort:ev.HP}.HP()
-	atk := PokemonEachStatCalculator{BaseStat:p.BaseAtk, Level:level, Individual:iv.Atk, Effort:ev.Atk}.HPOther(n.AtkBonus)
-	def := PokemonEachStatCalculator{BaseStat:p.BaseDef, Level:level, Individual:iv.Def, Effort:ev.Def}.HPOther(n.DefBonus)
-	spAtk := PokemonEachStatCalculator{BaseStat:p.BaseSpAtk, Level:level, Individual:iv.SpAtk, Effort:ev.SpAtk}.HPOther(n.SpAtkBonus)
-	spDef := PokemonEachStatCalculator{BaseStat:p.BaseSpDef, Level:level, Individual:iv.SpDef, Effort:ev.SpDef}.HPOther(n.SpDefBonus)
-	speed := PokemonEachStatCalculator{BaseStat:p.BaseSpeed, Level:level, Individual:iv.Speed, Effort:ev.Speed}.HPOther(n.SpeedBonus)
+
+	hpCalc := PokemonEachStatCalculator{BaseStat:p.BaseHP, Level:level, Individual:iv.HP, Effort:ev.HP}
+	hp := hpCalc.HP()
+
+	atkCalc := PokemonEachStatCalculator{BaseStat:p.BaseAtk, Level:level, Individual:iv.Atk, Effort:ev.Atk}
+	atk := atkCalc.HPOther(n.AtkBonus)
+
+	defCalc := PokemonEachStatCalculator{BaseStat:p.BaseDef, Level:level, Individual:iv.Def, Effort:ev.Def}
+	def := defCalc.HPOther(n.DefBonus)
+
+	spAtkCalc := PokemonEachStatCalculator{BaseStat:p.BaseSpAtk, Level:level, Individual:iv.SpAtk, Effort:ev.SpAtk}
+	spAtk := spAtkCalc.HPOther(n.SpAtkBonus)
+
+	spDefCalc := PokemonEachStatCalculator{BaseStat:p.BaseSpDef, Level:level, Individual:iv.SpDef, Effort:ev.SpDef}
+	spDef := spDefCalc.HPOther(n.SpDefBonus)
+
+	speedCalc := PokemonEachStatCalculator{BaseStat:p.BaseSpeed, Level:level, Individual:iv.Speed, Effort:ev.Speed}
+	speed := speedCalc.HPOther(n.SpeedBonus)
+
 	return PokemonStat{MaxHP:hp, CurrentHP:hp, Atk:atk, Def:def, SpAtk:spAtk, SpDef:spDef, Speed:speed}
+}
+
+func (s *PokemonStat) HPPercentage() float64 {
+	return float64(s.CurrentHP) / float64(s.MaxHP)
+}
+
+func (s *PokemonStat) IsFullHP() bool {
+	return s.MaxHP == s.CurrentHP
+}
+
+//ギャラドス
+// https://matsu-1129.hatenadiary.org/entry/20090308/1236586122
+func NewRomanStan2009Gyarados() Pokemon {
+	p, err := NewPokemon(
+		GYARADOS, STANDARD_LEVEL, JOLLY, INTIMIDATE, WACAN_BERRY,
+		MoveNames{WATERFALL, STONE_EDGE, THUNDER_WAVE, PROTECT},
+		MAX_POINT_UPS,
+		&MAX_INDIVIDUAL_STAT,
+		&EffortStat{HP:164, Atk:92, Speed:MAX_EFFORT},
+	)
+	if err != nil {
+		panic(err)
+	}
+	return p
+}
+
+//カビゴン
+func NewMoruhu2007Snorlax() Pokemon {
+	iv := MAX_INDIVIDUAL_STAT.Clone()
+	iv.Speed = MAX_INDIVIDUAL
+	p, err := NewPokemon(
+		SNORLAX, STANDARD_LEVEL, RELAXED, THICK_FAT, SITRUS_BERRY,
+		MoveNames{RETURN, FIRE_PUNCH, BELLY_DRUM, SUBSTITUTE},
+		MAX_POINT_UPS,
+		&iv, &HB252_D4,
+	)
+	if err != nil {
+		panic(err)
+	}
+	return p
+}
+
+//カビゴン
+func NewMoruhu2008Snorlax() Pokemon {
+	iv := MAX_INDIVIDUAL_STAT.Clone()
+	iv.Speed = MIN_INDIVIDUAL
+	p, err := NewPokemon(
+		SNORLAX, STANDARD_LEVEL, RELAXED, THICK_FAT, SITRUS_BERRY,
+		MoveNames{RETURN, FIRE_PUNCH, BELLY_DRUM, PROTECT},
+		MAX_POINT_UPS,
+		&iv, &HB252_D4,
+	)
+	if err != nil {
+		panic(err)
+	}
+	return p
+}
+
+//カビゴン
+// https://matsu-1129.hatenadiary.org/entry/20090308/1236586122
+func NewRomanStan2009Snorlax() Pokemon {
+	iv := MAX_INDIVIDUAL_STAT.Clone()
+	iv.Speed = MIN_INDIVIDUAL
+	p, err := NewPokemon(
+		SNORLAX, STANDARD_LEVEL, BRAVE, THICK_FAT, SITRUS_BERRY,
+		MoveNames{RETURN, CRUNCH, SELF_DESTRUCT, PROTECT},
+		MAX_POINT_UPS,
+		&iv, &EffortStat{HP:204, Atk:52, Def:156, SpDef:96},
+	)
+	if err != nil {
+		panic(err)
+	}
+	return p
+}
+
+//カビゴン
+// https://detail.chiebukuro.yahoo.co.jp/qa/question_detail/q1267938327
+func NewKusanagi2009Snorlax() Pokemon {
+	p, err := NewPokemon(
+		SNORLAX, STANDARD_LEVEL, BRAVE, THICK_FAT, SITRUS_BERRY,
+		MoveNames{RETURN, CRUNCH, SELF_DESTRUCT, PROTECT},
+		MAX_POINT_UPS,
+		&MAX_INDIVIDUAL_STAT,
+		&EffortStat{HP:204, Atk:52, Def:156, SpDef:60, Speed:36},
+	)
+	if err != nil {
+		panic(err)
+	}
+	return p
+}
+
+//ドーブル
+func NewMoruhu2007Smeargle() Pokemon {
+	p, err := NewPokemon(
+		SMEARGLE, MIN_LEVEL, BRAVE, OWN_TEMPO, FOCUS_SASH,
+		MoveNames{FAKE_OUT, FOLLOW_ME, DARK_VOID, ENDEAVOR},
+		MAX_POINT_UPS,
+		&MIN_INDIVIDUAL_STAT, &EffortStat{},
+	)
+	if err != nil {
+		panic(err)
+	}
+	return p
+}
+
+//ドーブル
+func NewMoruhu2008Smeargle() Pokemon {
+	return NewMoruhu2007Smeargle()
+}
+
+//ボーマンダ
+// https://detail.chiebukuro.yahoo.co.jp/qa/question_detail/q1267938327
+func NewKusanagiSalamence2009() Pokemon {
+	p, err := NewPokemon(
+		SALAMENCE, STANDARD_LEVEL, MODEST, INTIMIDATE, SITRUS_BERRY,
+		MoveNames{DRACO_METEOR, HEAT_WAVE, RAIN_DANCE, PROTECT},
+		MAX_POINT_UPS,
+		&MAX_INDIVIDUAL_STAT, &EffortStat{HP:20, SpAtk:236, Speed:252},
+	)
+	if err != nil {
+		panic(err)
+	}
+	return p
+}
+
+//メタグロス
+func NewMoruhu2007Metagross() Pokemon {
+	iv := MAX_INDIVIDUAL_STAT.Clone()
+	iv.Speed = MIN_INDIVIDUAL
+	p, err := NewPokemon(
+		METAGROSS, STANDARD_LEVEL, BRAVE, CLEAR_BODY, LUM_BERRY,
+		MoveNames{EARTHQUAKE, BULLET_PUNCH, ROCK_SLIDE, RECOVER},
+		MAX_POINT_UPS,
+		&iv, &EffortStat{HP:MAX_EFFORT, Def:128, SpDef:128},
+	)
+	if err != nil {
+		panic(err)
+	}
+	return p
+}
+
+//メタグロス
+func NewMoruhu2008Metagross() Pokemon {
+	iv := MAX_INDIVIDUAL_STAT.Clone()
+	iv.Speed = MIN_INDIVIDUAL
+	p, err := NewPokemon(
+		METAGROSS, STANDARD_LEVEL, BRAVE, CLEAR_BODY, LUM_BERRY,
+		MoveNames{HAMMER_ARM, BULLET_PUNCH, ROCK_SLIDE, RECOVER},
+		MAX_POINT_UPS,
+		&iv, &EffortStat{HP:MAX_EFFORT, Def:128, SpDef:128},
+	)
+	if err != nil {
+		panic(err)
+	}
+	return p
+}
+
+//メタグロス
+// https://matsu-1129.hatenadiary.org/entry/20090308/1236586122
+func NewRomanStan2009Metagross() Pokemon {
+	p, err := NewPokemon(
+		METAGROSS, STANDARD_LEVEL, ADAMANT, CLEAR_BODY, LUM_BERRY,
+		MoveNames{COMET_PUNCH, BULLET_PUNCH, EARTHQUAKE, PROTECT},
+		MAX_POINT_UPS,
+		&MAX_INDIVIDUAL_STAT, &EffortStat{HP:236, Atk:36, Def:4, SpDef:172, Speed:60},
+	)
+	if err != nil {
+		panic(err)
+	}
+	return p
+}
+
+//ラティオス
+// https://matsu-1129.hatenadiary.org/entry/20090308/1236586122
+func NewRomanStan2009Latios() Pokemon {
+	iv := MAX_INDIVIDUAL_STAT.Clone()
+	iv.Atk = MIN_INDIVIDUAL
+	p, err := NewPokemon(
+		LATIOS, STANDARD_LEVEL, TIMID, LEVITATE, FOCUS_SASH,
+		MoveNames{DRACO_METEOR, THUNDERBOLT, RAIN_DANCE, PROTECT},
+		MAX_POINT_UPS,
+		&iv, &CS252_H4,
+	)
+	if err != nil {
+		panic(err)
+	}
+	return p
+}
+
+//エンペルト
+// https://detail.chiebukuro.yahoo.co.jp/qa/question_detail/q1267938327
+func NewKusanagi2009Empoleon() Pokemon {
+	iv := MAX_INDIVIDUAL_STAT.Clone()
+	iv.Atk = MIN_INDIVIDUAL
+	pokemon, err := NewPokemon(
+		EMPOLEON, STANDARD_LEVEL, MODEST, TORRENT, WACAN_BERRY,
+		MoveNames{HYDRO_PUMP, SURF, ICY_WIND, PROTECT},
+		MAX_POINT_UPS,
+		&iv, &EffortStat{HP:68, Def:12, SpAtk:252, SpDef:4, Speed:172},
+	)
+	if err != nil {
+		panic(err)
+	}
+	return pokemon
+}
+
+//ドータクン
+func NewMoruhu2007Bronzong() Pokemon {
+	iv := MAX_INDIVIDUAL_STAT.Clone()
+	iv.Speed = MIN_INDIVIDUAL
+	p, err := NewPokemon(
+		BRONZONG, STANDARD_LEVEL, SASSY, HEATPROOF, CHESTO_BERRY,
+		MoveNames{GYRO_BALL, EXPLOSION, TRICK_ROOM, HYPNOSIS},
+		MAX_POINT_UPS,
+		&iv, &HD252_B4,
+	)
+	if err != nil {
+		panic(err)
+	}
+	return p
+}
+
+//ドータクン
+func NewMoruhu2008Bronzong() Pokemon {
+	iv := MAX_INDIVIDUAL_STAT.Clone()
+	iv.Atk = MIN_INDIVIDUAL
+	iv.Speed = MIN_INDIVIDUAL
+	p, err := NewPokemon(
+		BRONZONG, STANDARD_LEVEL, SASSY, HEATPROOF, CHESTO_BERRY,
+		MoveNames{PSYCHIC, EXPLOSION, TRICK_ROOM, HYPNOSIS},
+		MAX_POINT_UPS,
+		&iv, &HD252_B4,
+	)
+	if err != nil {
+		panic(err)
+	}
+	return p
+}
+
+//ドクロッグ
+// https://detail.chiebukuro.yahoo.co.jp/qa/question_detail/q1267938327
+func NewKusanagi2009Toxicroak() Pokemon {
+	p, err := NewPokemon(
+		TOXICROAK, STANDARD_LEVEL, ADAMANT, DRY_SKIN, FOCUS_SASH,
+		MoveNames{CROSS_CHOP, SUCKER_PUNCH, FAKE_OUT, TAUNT},
+		MAX_POINT_UPS,
+		&MAX_INDIVIDUAL_STAT, &AS252_B4,
+	)
+	if err != nil {
+		panic(err)
+	}
+	return p
 }

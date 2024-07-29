@@ -25,12 +25,16 @@ type Battle struct {
 	SelfBenchPokemons  bp.Pokemons
 	OpponentLeadPokemons bp.Pokemons
 	OpponentBenchPokemons bp.Pokemons
-	Turn int
-	IsPlayer1 bool
 
 	Weather Weather
 	RemainingTurnWeather int
+
+	SelfFollowMePokemons PokemonPointers
+	OpponentFollowMePokemons PokemonPointers
+
 	IsSingle bool
+	Turn int
+	IsPlayer1 bool
 }
 
 func (b Battle) Clone() Battle {
@@ -87,29 +91,6 @@ func (b *Battle) CalculateDamage(action *SoloAction, defender *bp.Pokemon, isSin
 	}
 	dmg, isNoEffect := calculator.Calculation(action.MoveName)
 	return dmg, isNoEffect, nil
-}
-
-func (b *Battle) FollowMeStateOpponentLeadPokemonsIndices() []int {
-	if b.IsSingle {
-		return []int{0}
-	} else {
-		first := b.OpponentLeadPokemons[0]
-		second := b.OpponentLeadPokemons[1]
-		isFirstFollowMe := first.IsFollowMeState()
-		isSecondFollowMe := second.IsFollowMeState()
-
-		if isFirstFollowMe && isSecondFollowMe {
-			if first.FollowMePriority > second.FollowMePriority {
-				return []int{0}
-			} else {
-				return []int{1}
-			}
-		} else if isFirstFollowMe {
-			return []int{0}
-		} else {
-			return []int{1}
-		}
-	}
 }
 
 //攻撃する側のポケモンは瀕死ではない事が前提で呼び出す関数
@@ -246,27 +227,23 @@ func (b *Battle) SelfLegalMoveSoloActions() SoloActions {
 	selfLeadN := len(b.SelfLeadPokemons)
 	opponentLeadN := len(b.OpponentLeadPokemons)
 	actions := make(SoloActions, 0, (selfLeadN * opponentLeadN * bp.MAX_MOVESET) +  (selfLeadN * selfLeadN * bp.MAX_MOVESET))
-	for i, selfPokemon := range b.SelfLeadPokemons {
-		if selfPokemon.IsFainted() {
-			continue
-		}
-		speed := selfPokemon.Speed
-		moveset := selfPokemon.Moveset
-		for _, moveName := range selfPokemon.MoveNames {
-			if moveset[moveName].Current <= 0 {
-				continue
-			}
-			moveData := bp.MOVEDEX[moveName]
 
-			for j, selfTargetPokemon := range b.SelfLeadPokemons {
-				if selfTargetPokemon.IsFainted() {
-					continue
-				}
-				//場に出ている味方への対象指定
-			    actions = append(actions, SoloAction{
+	selfNotFaintedIdxs := b.SelfLeadPokemons.NotFaintedIndices()
+	for _, srcI := range selfBotFaintedIdxs {
+		src := b.SelfLeadPokemons[idx]
+		speed := src.Speed
+		moveset := src.Moveset
+
+		for _, usableMoveName := range src.UsableMoveNames() {
+			moveData := bp.MOVEDEX[usableMoveName]
+
+			//対象を指定して味方への攻撃や変化技を繰り出す場合
+			for _, targetI := range notFaintedIdxs {
+				target := b.SelfLeadPokemons[targetI]
+				actions = append(actions, SoloAction{
 				    MoveName:moveName,
-			        SrcIndex:i,
-				    TargetIndex:j,
+			        SrcIndex:srcI,
+				    TargetIndex:targetI,
 				    Speed:speed,
 				    IsSelfLeadTarget:true,
 				    MoveTarget:moveData.Target,
@@ -274,20 +251,18 @@ func (b *Battle) SelfLegalMoveSoloActions() SoloActions {
 				})
 			}
 
-			for j, opponentPokemon := range b.OpponentLeadPokemons {
-				if opponentPokemon.IsFainted() {
-					continue
-				}
-				//場に出ている敵への対象指定
+			opponentNotFaintedIdxs := b.OpponentLeadPokemons.NotFaintedIndices()
+			//対象を指定して相手への攻撃や変化技を繰り出す場合
+			for _, targetI := range opponentNotFaintedIdxs {
 				actions = append(actions, SoloAction{
 					MoveName:moveName,
-					SrcIndex:i,
-					TargetIndex:j,
+					SrcIndex:srcI,
+					TargetIndex:targetI,
 					Speed:speed,
 					IsSelfLeadTarget:false,
 					MoveTarget:moveData.Target,
 					IsSelfView:true,
-				})
+				})				
 			}
 
 			//対象指定なし
@@ -299,30 +274,28 @@ func (b *Battle) SelfLegalMoveSoloActions() SoloActions {
 				MoveTarget:moveData.Target,
 				IsSelfView:true,
 			})
-		}
 	}
-	
-	return fn.Filter(actions, func(action SoloAction) bool {
-		switch action.MoveTarget {
+
+	return fn.Filter(actions, func(a SoloAction) bool {
+		switch a.MoveTarget {
 			case bp.NORMAL_TARGET:
-				if action.TargetIndex == -1 {
+				if a.TargetIndex == -1 {
 					return false
-				}
-				if action.IsSelfLeadTarget {
-					return action.SrcIndex != action.TargetIndex
+				} else if a.IsSelfLeadTarget {
+					return a.SrcIndex != a.TargetIndex
 				} else {
 					return true
 				}
 			case bp.OPPONENT_TWO_TARGET:
-				return action.TargetIndex == -1
+				return a.TargetIndex == -1
 			case bp.SELF_TARGET:
-				return action.IsSelfLeadTarget && action.SrcIndex == action.TargetIndex
+				return a.IsSelfLeadTarget && a.SrcIndex == a.TargetIndex
 			case bp.OTHERS_TARGET:
-				return action.TargetIndex == -1
+				return a.TargetIndex == -1
 			case bp.ALL_TARGET:
-				return action.TargetIndex == -1
+				return a.TargetIndex == -1
 			case bp.OPPONENT_RANDOM_ONE_TARGET:
-				return action.TargetIndex == -1
+				return a.TargetIndex == -1
 			default:
 				return true
 		}
