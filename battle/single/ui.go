@@ -1,22 +1,22 @@
 package single
 
-// import (
+import (
 // 	"fmt"
-// 	bp "github.com/sw965/bippa"
-// 	bt "github.com/sw965/bippa/battle"
+ 	bp "github.com/sw965/bippa"
+ 	bt "github.com/sw965/bippa/battle"
 // 	omwslices "github.com/sw965/omw/slices"
-// )
+)
 
 type EventType int
 
-// const (
-// 	MOVE_USE_EVENT EventType = iota
-// 	ATTACK_MOVE_DAMAGE_EVENT
-// 	SWITCH_EVENT
-// 	SELF_FAINT_EVENT
-// 	OPPONENT_FAINT_EVENT
-// 	RECOIL_EVENT
-// )
+const (
+	MOVE_USE_EVENT EventType = iota
+	ATTACK_MOVE_DAMAGE_EVENT
+	SWITCH_EVENT
+	SELF_FAINT_EVENT
+	OPPONENT_FAINT_EVENT
+	RECOIL_EVENT
+)
 
 // type DisplayUI struct {
 // 	RealSelfPokeName string
@@ -283,3 +283,17 @@ type EventType int
 // 		ui.LastOpponentViewBattle = battle.Clone()
 // 	}
 // }
+
+type DisplayUI struct {
+	RealSelfLeadPokeNames []string
+	RealSelfLevels []bp.Level
+	RealSelfMaxHPs []int
+	RealSelfCurrentHPs []int
+
+	RealOpponentPokeNames []string
+	RealOpponentLevels []bp.Level
+	RealOpponentMaxHPs []int
+	RealOpponentCurrentHPs []int
+
+	Message bt.Message
+}

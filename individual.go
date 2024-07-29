@@ -3,7 +3,7 @@ package bippa
 type Individual int
 
 const (
-	EMPTY_INDIVIDUAL Individual = 32
+	EMPTY_INDIVIDUAL Individual = -1
 	MIN_INDIVIDUAL Individual = 0
 	MAX_INDIVIDUAL Individual = 31
 )
@@ -11,11 +11,11 @@ const (
 type Individuals []Individual
 
 var ALL_INDIVIDUALS = func() Individuals {
-	ret := make(Individuals, int(MAX_INDIVIDUAL + 1))
-	for i := range ret {
-		ret[i] = Individual(i)
+	ivs := make(Individuals, int(MAX_INDIVIDUAL + 1))
+	for i := range ivs {
+		ivs[i] = Individual(i)
 	}
-	return ret
+	return ivs
 }()
 
 type IndividualStat struct {
@@ -58,40 +58,6 @@ func NewMaxIndividualStat() IndividualStat {
 	return MAX_INDIVIDUAL_STAT.Clone()
 }
 
-func (iv *IndividualStat) Clone() IndividualStat {
-	return IndividualStat{
-		HP:iv.HP,
-		Atk:iv.Atk,
-		Def:iv.Def,
-		SpAtk:iv.SpAtk,
-		SpDef:iv.SpDef,
-		Speed:iv.Speed,
-	}
-}
-
-func (iv *IndividualStat) IsAnyEmpty() bool {
-	if iv.HP == EMPTY_INDIVIDUAL {
-		return true
-	}
-
-	if iv.Atk == EMPTY_INDIVIDUAL {
-		return true
-	}
-
-	if iv.Def == EMPTY_INDIVIDUAL {
-		return true
-	}
-
-	if iv.SpAtk == EMPTY_INDIVIDUAL {
-		return true
-	}
-
-	if iv.SpDef == EMPTY_INDIVIDUAL {
-		return true
-	}
-
-	if iv.Speed == EMPTY_INDIVIDUAL {
-		return true
-	}
-	return false
+func (iv IndividualStat) Clone() IndividualStat {
+	return iv
 }

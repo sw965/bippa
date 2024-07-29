@@ -1,9 +1,5 @@
 package bippa
 
-import (
-	omwmaps "github.com/sw965/omw/maps"
-)
-
 type Ability int
 
 const (
@@ -20,22 +16,6 @@ const (
     CLEAR_BODY             // クリアボディ
 )
 
-var STRING_TO_ABILITY = map[string]Ability{
-    "げきりゅう":TORRENT,
-    "めんえき": IMMUNITY,
-    "あついしぼう": THICK_FAT,
-    "いかく": INTIMIDATE,
-    "ふゆう": LEVITATE,
-	"たいねつ":HEATPROOF,
-    "マイペース": OWN_TEMPO,
-    "テクニシャン": TECHNICIAN,
-    "きけんよち": ANTICIPATION,
-    "かんそうはだ": DRY_SKIN,
-    "クリアボディ": CLEAR_BODY,
-}
-
-var ABILITY_TO_STRING = omwmaps.Invert[map[Ability]string](STRING_TO_ABILITY)
-
 func (a Ability) ToString() string {
 	return ABILITY_TO_STRING[a]
 }
@@ -43,9 +23,9 @@ func (a Ability) ToString() string {
 type Abilities []Ability
 
 func (as Abilities) ToStrings() []string {
-	ret := make([]string, len(as))
+	ss := make([]string, len(as))
 	for i, a := range as {
-		ret[i] = a.ToString()
+		ss[i] = a.ToString()
 	}
-	return ret
+	return ss
 }

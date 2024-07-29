@@ -11,7 +11,7 @@ type Observer func(*Battle, EventType)
 func EmptyObserver(_ *Battle, _ EventType) {}
 
 type Context struct {
-	DamageRandBonuses dmgtools.RandBonuses
+	DamageRandBonuses []float64
 	Rand *rand.Rand
 	Observer Observer
 }
@@ -24,6 +24,6 @@ func NewContext(r *rand.Rand) Context {
 	}
 }
 
-func (c *Context) DamageRandBonus() dmgtools.RandBonus {
+func (c *Context) DamageRandBonus() float64 {
 	return omwrand.Choice(c.DamageRandBonuses, c.Rand)
 }

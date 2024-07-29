@@ -1,48 +1,33 @@
 package single_test
 
-// import (
-// 	"testing"
-// 	"fmt"
-// 	"github.com/sw965/bippa/battle/single"
-// 	bp "github.com/sw965/bippa"
-// 	"github.com/sw965/bippa/battle/single/game"
-// 	omwrand "github.com/sw965/omw/math/rand"
-// )
+import (
+	"testing"
+	omwrand "github.com/sw965/omw/math/rand"
+	"github.com/sw965/bippa/battle/single"
+	bp "github.com/sw965/bippa"
+)
 
-// func TestUI(t *testing.T) {
-// 	battle := single.Battle{
-// 		SelfFighters:bp.Pokemons{
-// 			bp.NewTemplateGarchomp(),
-// 			bp.NewTemplateCharmander(),
-// 			bp.NewTemplateBulbasaur(),
-// 		},
-// 		OpponentFighters:bp.Pokemons{
-// 			bp.NewTemplateSuicune(),
-// 			bp.NewTemplateBulbasaur(),
-// 			bp.NewTemplateGarchomp(),
-// 		},
-// 		IsRealSelf:true,
-// 	}
+func Test(t *testing.T) {
+	battle := single.Battle{
+		SelfLeadPokemons:bp.Pokemons{
+			bp.NewRomanStan2009Metagross(),
+			bp.NewRomanStan2009Latios(),
+		},
 
-// 	ui, err := single.NewObserverUI(&battle, 128)
-// 	ui.RealSelfTrainerName = "ヒカリ"
-// 	ui.RealOpponentTrainerName = "カトレア"
-	
-// 	rg := omwrand.NewMt19937()
-// 	context := single.NewContext(rg)
-// 	context.Observer = ui.Observer
+		OpponentLeadPokemons:bp.Pokemons{
+			bp.NewKusanagi2009Toxicroak(),
+			bp.NewKusanagi2009Empoleon(),
+		},
+	}
 
-// 	push := game.NewPushFunc(&context)
-// 	actions := single.Actions{
-// 		single.Action{CmdMoveName:bp.STONE_EDGE, IsSelf:true},
-// 		single.Action{SwitchPokeName:bp.BULBASAUR, IsSelf:false},
-// 	}
-// 	battle, err = push(battle, actions)
-// 	if err != nil {
-// 		t.Errorf(fmt.Sprintf("%v", err))
-// 	}
+	action := single.SoloAction{
+		MoveName:bp.COMET_PUNCH,
+		SrcIndex:0,
+		TargetIndex:0,
+		IsOpponentLeadTarget:true,
+	}
 
-// 	for _, display := range ui.Displays {
-// 		fmt.Println(display)
-// 	}
-// }
+	r := omwrand.NewMt19937()
+	context := single.NewContext(r)
+	battle.MoveUse(&action, &context)
+}

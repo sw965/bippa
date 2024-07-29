@@ -1,8 +1,6 @@
 package bippa
 
-import (
-	omwmath "github.com/sw965/omw/math"
-)
+type CriticalRank int
 
 // https://wiki.xn--rckteqa2e.com/wiki/%E3%83%A9%E3%83%B3%E3%82%AF%E8%A3%9C%E6%AD%A3
 
@@ -27,6 +25,10 @@ type RankStat struct {
 	SpAtk Rank
 	SpDef Rank
 	Speed Rank
+}
+
+func (r RankStat) Clone() RankStat {
+	return r
 }
 
 func (r RankStat) Fluctuation(v *RankStat) RankStat {

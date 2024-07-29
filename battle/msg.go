@@ -27,18 +27,6 @@ func NewMoveUseMessage(pokeName bp.PokeName, moveName bp.MoveName, isSelf bool) 
 	return Message(fmt.Sprintf(m + "%s の " + "%s！", pokeName.ToString(), moveName.ToString()))
 }
 
-func NewEffectMessage(effectType bp.EffectType) Message {
-	switch effectType {
-		case bp.SUPER_EFFECT:
-			return Message("効果はバツグンだ！")
-		case bp.BAD_EFFECT:
-			return Message("効果はいまひとつのようだ...")
-		case bp.NO_EFFECT:
-			return Message("しかし効果はないようだ...")
-	}
-	return Message("")
-}
-
 func NewRecoilMessage(trainerName bp.TrainerName, pokeName bp.PokeName) Message {
 	return Message(fmt.Sprintf("%sの %sは 攻撃の 反動を 受けた", trainerName, pokeName.ToString()))
 }

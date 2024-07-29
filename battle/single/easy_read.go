@@ -5,8 +5,15 @@ import (
 )
 
 type EasyReadBattle struct {
-	SelfFighters bp.EasyReadPokemons
-	OpponentFighters bp.EasyReadPokemons
+	SelfLeadPokemons bp.EasyReadPokemons
+	SelfBenchPokemons bp.EasyReadPokemons
+
+	OpponentLeadPokemons bp.EasyReadPokemons
+	OpponentBenchPokemons bp.EasyReadPokemons
+
 	Turn int
-	IsRealSelf bool
+	IsPlayer1 bool
+
+	Weather string
+	RemainingTurnWeather int
 }

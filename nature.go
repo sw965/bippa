@@ -1,8 +1,38 @@
 package bippa
 
 import (
-    omwmaps "github.com/sw965/omw/maps"
+	omwjson "github.com/sw965/omw/json"
 )
+
+type NatureData struct {
+	AtkBonus NatureBonus
+	DefBonus NatureBonus
+	SpAtkBonus NatureBonus
+	SpDefBonus NatureBonus
+	SpeedBonus NatureBonus
+}
+
+type Naturedex map[Nature]*NatureData
+
+var NATUREDEX = func() Naturedex {
+	e, err := omwjson.Load[EasyReadNaturedex](NATUREDEX_PATH)
+	if err != nil {
+		panic(err)
+	}
+	d, err := e.From()
+	if err != nil {
+		panic(err)
+	}
+	return d
+}()
+
+func (n Naturedex) ToEasyRead() EasyReadNaturedex {
+	e := EasyReadNaturedex{}
+	for k, v := range n {
+		e[k.ToString()] = *v
+	}
+	return e
+}
 
 type Nature int
 
@@ -40,47 +70,24 @@ const (
     SERIOUS              // まじめ
 )
 
-var STRING_TO_NATURE = map[string]Nature{
-    ""         : EMPTY_NATURE,
-    "さみしがり": LONELY,
-    "いじっぱり": ADAMANT,
-    "やんちゃ":   NAUGHTY,
-    "ゆうかん":   BRAVE,
-
-    "ずぶとい":   BOLD,
-    "わんぱく":   IMPISH,
-    "のうてんき": LAX,
-    "のんき":     RELAXED,
-
-    "ひかえめ":   MODEST,
-    "おっとり":   MILD,
-    "うっかりや": RASH,
-    "れいせい":   QUIET,
-
-    "おだやか":   CALM,
-    "おとなしい": GENTLE,
-    "しんちょう": CAREFUL,
-    "なまいき":   SASSY,
-
-    "おくびょう": TIMID,
-    "せっかち":   HASTY,
-    "ようき":     JOLLY,
-    "むじゃき":   NAIVE,
-
-    "てれや":     BASHFUL,
-    "がんばりや": HARDY,
-    "すなお":     DOCILE,
-    "きまぐれ":   QUIRKY,
-    "まじめ":     SERIOUS,
-}
-
-var NATURE_TO_STRING = omwmaps.Invert[map[Nature]string](STRING_TO_NATURE)
-
 func (n Nature) ToString() string {
     return NATURE_TO_STRING[n]
 }
 
 type Natures []Nature
+
+var ALL_NATURES = func() Natures {
+	ss, err := omwjson.Load[[]string](ALL_NATURES_PATH)
+	if err != nil {
+		panic(err)
+	}
+
+	ns, err := StringsToNatures(ss)
+	if err != nil {
+		panic(err)
+	}
+	return ns
+}()
 
 func (ns Natures) ToStrings() []string {
     ret := make([]string, len(ns))

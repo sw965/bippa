@@ -1,23 +1,22 @@
 package bippa
 
 import (
-    "fmt"
-    "github.com/sw965/omw/fn"
+	"fmt"
+	"github.com/sw965/omw/fn"
 )
 
 type Effort int
 
 const (
-    EMPTY_EFFORT Effort = 256
-	MIN_EFFORT Effort = 0
-	MAX_EFFORT Effort = 252
+	EMPTY_EFFORT = -1
+	MIN_EFFORT = 0
+	MAX_EFFORT = 252
+)
+
+const (
     MIN_SUM_EFFORT Effort = 0
     MAX_SUM_EFFORT Effort = 510
 )
-
-func IsEffectiveEffort(ev Effort) bool {
-    return ev%4 == 0
-}
 
 type Efforts []Effort
 
@@ -29,7 +28,7 @@ var ALL_EFFORTS = func() Efforts {
     return ret
 }()
 
-var EFFECTIVE_EFFORTS = fn.Filter[Efforts](ALL_EFFORTS, IsEffectiveEffort)
+var EFFECTIVE_EFFORTS = fn.Filter[Efforts](ALL_EFFORTS, func(e Effort) bool { return e%4 == 0 })
 
 type EffortStat struct {
 	HP Effort
@@ -123,42 +122,10 @@ func (ev *EffortStat) Sum() Effort {
     return ev.HP + ev.Atk + ev.Def + ev.SpAtk + ev.SpDef + ev.Speed
 }
 
-func (ev *EffortStat) IsValidSum() bool {
-    sum := ev.Sum()
-    return sum <= MAX_SUM_EFFORT && sum >= MIN_SUM_EFFORT
-}
-
-func (ev *EffortStat) IsAnyEmpty() bool {
-    if ev.HP == EMPTY_EFFORT {
-        return true
-    }
-
-    if ev.Atk == EMPTY_EFFORT {
-        return true
-    }
-
-    if ev.Def == EMPTY_EFFORT {
-        return true
-    }
-
-    if ev.SpAtk == EMPTY_EFFORT {
-        return true
-    }
-
-    if ev.SpDef == EMPTY_EFFORT {
-        return true
-    }
-
-    if ev.Speed == EMPTY_EFFORT {
-        return true
-    }
-    return false
-}
-
-func GetSumEffortErrorMessage(pokeName PokeName) string {
-    return fmt.Sprintf("%s の 合計努力値が %d～%dの範囲外になっている", pokeName.ToString(), MIN_SUM_EFFORT, MAX_SUM_EFFORT)
-}
-
-func GetSumEffortError(pokeName PokeName) error {
-    return fmt.Errorf(GetSumEffortErrorMessage(pokeName))
+func (ev *EffortStat) SumError() error {
+	if ev.Sum() > MAX_SUM_EFFORT {
+		m := fmt.Sprintf("努力値の合計が%dを超えている", MAX_SUM_EFFORT)
+		return fmt.Errorf(m)
+	}
+	return nil
 }

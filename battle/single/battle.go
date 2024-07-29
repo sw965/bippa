@@ -2,14 +2,14 @@ package single
 
 import (
 	"fmt"
-	//"math"
-	"math/rand"
+	"math"
 	bp "github.com/sw965/bippa"
 	omwrand "github.com/sw965/omw/math/rand"
-	//omwmath "github.com/sw965/omw/math"
+	omwmath "github.com/sw965/omw/math"
 	omwslices "github.com/sw965/omw/slices"
 	"github.com/sw965/bippa/battle/dmgtools"
 	"github.com/sw965/omw/fn"
+	"golang.org/x/exp/slices"
 )
 
 const (
@@ -17,6 +17,7 @@ const (
 	LEAD_NUM = 1
 	BENCH_NUM = 2
 	FIGHTERS_NUM = LEAD_NUM + BENCH_NUM
+	DOUBLE = 2
 )
 
 type Battle struct {
@@ -25,7 +26,11 @@ type Battle struct {
 	OpponentLeadPokemons bp.Pokemons
 	OpponentBenchPokemons bp.Pokemons
 	Turn int
-	IsRealSelfView bool
+	IsPlayer1 bool
+
+	Weather Weather
+	RemainingTurnWeather int
+	IsSingle bool
 }
 
 func (b Battle) Clone() Battle {
@@ -35,112 +40,209 @@ func (b Battle) Clone() Battle {
 		OpponentLeadPokemons:b.OpponentLeadPokemons.Clone(),
 		OpponentBenchPokemons:b.OpponentBenchPokemons.Clone(),
 		Turn:b.Turn,
-		IsRealSelfView:b.IsRealSelfView,
+		Weather:b.Weather,
+		RemainingTurnWeather:b.RemainingTurnWeather,
+		IsPlayer1:b.IsPlayer1,
+		IsSingle:b.IsSingle,
 	}
 }
 
-func (b Battle) SwapView() Battle {
+func (b *Battle) SwapView() {
 	b.SelfLeadPokemons, b.SelfBenchPokemons, b.OpponentLeadPokemons, b.OpponentBenchPokemons =
 		b.OpponentLeadPokemons, b.OpponentBenchPokemons, b.SelfLeadPokemons, b.SelfBenchPokemons
-	b.IsRealSelfView = !b.IsRealSelfView
-	return b
+	b.IsPlayer1 = !b.IsPlayer1
 }
 
-func (b *Battle) TargetPokemonPointers(action *SoloAction, r *rand.Rand) (bp.PokemonPointers, error) {
-	isNotFainted := func(pokemon *bp.Pokemon) bool {
-		return !pokemon.IsFainted()
-	}
-
-	selfLeadN := len(b.SelfLeadPokemons)
-	opponentLeadN := len(b.OpponentLeadPokemons)
-	selfLeadPokemons := b.SelfLeadPokemons.ToPointers()
-	opponentLeadPokemons := b.OpponentLeadPokemons.ToPointers()
-	var targetPokemons bp.PokemonPointers
-
-	switch action.Target {
-		case bp.NORMAL_TARGET:
-			f := func(ps bp.PokemonPointers, n int) {
-				if ps[action.TargetIndex].IsFainted() {
-					if n == 1 {
-						return
-					} else {
-						targetIdx := map[int]int{0:1, 1:0}[action.TargetIndex]
-						targetPokemons = bp.PokemonPointers{ps[targetIdx]}
-					}
-				} else {
-					targetPokemons = bp.PokemonPointers{ps[action.TargetIndex]}
-				}
-			}
-
-			if action.IsSelfLeadTarget {
-				f(selfLeadPokemons, selfLeadN)
-			} else if action.IsOpponentLeadTarget {
-				f(opponentLeadPokemons, opponentLeadN)
-			} else {
-				return targetPokemons, fmt.Errorf("SoloAction.Target == NORMAL_TARGET である場合、SoloAction.IsOpponentLeadTarget || SoloAction.IsSelfLeadTarget でなければならない。")
-			}
-			targetPokemons = fn.Filter(targetPokemons, isNotFainted)
-		case bp.OPPONENT_TWO_TARGET:
-			targetPokemons = opponentLeadPokemons
-			targetPokemons = fn.Filter(targetPokemons, isNotFainted)
-		case bp.SELF_TARGET:
-			targetPokemons = bp.PokemonPointers{selfLeadPokemons[action.TargetIndex]}
-			targetPokemons = fn.Filter(targetPokemons, isNotFainted)
-		case bp.OTHERS_TARGET:
-			var allyPokemons bp.PokemonPointers
-			if len(b.SelfLeadPokemons) == 1 {
-				allyPokemons = bp.PokemonPointers{}
-			} else {
-				targetIdx := map[int]int{0:1, 1:0}[action.SrcIndex]
-				allyPokemons = bp.PokemonPointers{selfLeadPokemons[targetIdx]}
-			}
-			targetPokemons = omwslices.Concat(allyPokemons, opponentLeadPokemons)
-			targetPokemons = fn.Filter(targetPokemons, isNotFainted)
-		case bp.ALL_TARGET:
-			targetPokemons = omwslices.Concat(selfLeadPokemons, opponentLeadPokemons)
-			targetPokemons = fn.Filter(targetPokemons, isNotFainted)
-		case bp.OPPONENT_RANDOM_ONE_TARGET:
-			targetPokemons = fn.Filter(opponentLeadPokemons, isNotFainted)
-			if len(targetPokemons) != 0 {
-				targetPokemons = bp.PokemonPointers{omwrand.Choice(targetPokemons, r)}
-			}
-	}
-	targetPokemons.SortBySpeed()
-	return targetPokemons, nil
-}
-
-func (b *Battle) CalcDamage(action *SoloAction, defender *bp.Pokemon, isCrit, isSingleDmg bool, context *Context) (int, error) {
+func (b *Battle) CalculateDamage(action *SoloAction, defender *bp.Pokemon, isSingleDmg bool, context *Context) (int, bool, error) {
 	attacker := b.SelfLeadPokemons[action.SrcIndex]
 	if _, ok := attacker.Moveset[action.MoveName]; !ok {
-		msg := fmt.Sprintf("%s は 覚えていないのに、%sを繰り出そうとした", attacker.Name.ToString(), action.MoveName.ToString())
-		return 0, fmt.Errorf(msg)
+		msg := fmt.Sprintf("%sは %sを 繰り出そうとしたが、覚えていない", attacker.Name.ToString(), action.MoveName.ToString())
+ 		return 0, false, fmt.Errorf(msg)
+	}
+
+	switch action.MoveName {
+		case bp.ENDEAVOR:
+			if slices.Contains(defender.Types, bp.GHOST) {
+				return 0, true, nil
+			} else {
+				dmg := int(math.Abs(float64(defender.CurrentHP) - float64(attacker.CurrentHP)))
+				isNoEffect := dmg <= 0
+				return omwmath.Max(dmg, 0), isNoEffect, nil
+			}
+	}
+
+	moveData := bp.MOVEDEX[action.MoveName]
+	critRank := moveData.CriticalRank
+	isCrit, err := dmgtools.IsCritical(critRank, context.Rand)
+	if err != nil {
+		return 0, false, err
 	}
 
 	calculator := dmgtools.Calculator{
-		Attacker:dmgtools.Attacker{
-			PokeName:attacker.Name,
-			Level:attacker.Level,
-			Atk:attacker.Atk,
-			AtkRank:attacker.Rank.Atk,
-			SpAtk:attacker.SpAtk,
-			SpAtkRank:attacker.Rank.SpAtk,
-		},
-
-		Defender:dmgtools.Defender{
-			PokeName:defender.Name,
-			Level:defender.Level,
-			Def:defender.Def,
-			DefRank:defender.Rank.Def,
-			SpDef:defender.SpDef,
-			SpDefRank:defender.Rank.SpDef,
-		},
-		IsCritical:isCrit,
+		Attacker:dmgtools.NewAttacker(&attacker),
+		Defender:dmgtools.NewDefender(defender),
 		IsSingleDamage:isSingleDmg,
+		IsCritical:isCrit,
+		RandBonus:context.DamageRandBonus(),
 	}
-	return calculator.Calculation(action.MoveName, context.DamageRandBonus()), nil
+	dmg, isNoEffect := calculator.Calculation(action.MoveName)
+	return dmg, isNoEffect, nil
 }
 
-func (b *Battle) LegalMoveSoloActions() SoloActions {
+func (b *Battle) FollowMeStateOpponentLeadPokemonsIndices() []int {
+	if b.IsSingle {
+		return []int{0}
+	} else {
+		first := b.OpponentLeadPokemons[0]
+		second := b.OpponentLeadPokemons[1]
+		isFirstFollowMe := first.IsFollowMeState()
+		isSecondFollowMe := second.IsFollowMeState()
+
+		if isFirstFollowMe && isSecondFollowMe {
+			if first.FollowMePriority > second.FollowMePriority {
+				return []int{0}
+			} else {
+				return []int{1}
+			}
+		} else if isFirstFollowMe {
+			return []int{0}
+		} else {
+			return []int{1}
+		}
+	}
+}
+
+//攻撃する側のポケモンは瀕死ではない事が前提で呼び出す関数
+func (b *Battle) TargetPokemonsIndices(action *SoloAction, context *Context) ([]int, []int) {
+	isNotFainted := func(p bp.Pokemon) bool {
+		return !p.IsFainted()
+	}
+
+	switch action.MoveTarget {
+		case bp.NORMAL_TARGET:
+			opponentIdxs := b.FollowMeStateOpponentLeadPokemonsIndices()
+			if len(opponentIdxs) != 0 {
+				return []int{}, opponentIdxs
+			}
+
+			if b.IsSingle {
+				target := b.OpponentLeadPokemons[action.TargetIndex]
+				if target.IsFainted() {
+					return []int{}, []int{}
+				} else {
+					return []int{}, []int{action.TargetIndex}
+				}
+			} else {
+				//味方への攻撃の場合
+				if action.IsSelfLeadTarget {
+					ally := b.SelfLeadPokemons[action.TargetIndex]
+					//攻撃対象の味方のポケモンが瀕死ならば
+					if ally.IsFainted() {
+						//攻撃対象が相手のポケモンになる。
+						notFaintedIdxs := omwslices.IndicesFunc[bp.Pokemons](b.OpponentLeadPokemons, isNotFainted)
+						if len(notFaintedIdxs) == 0 {
+							return []int{}, []int{}
+						} else {
+							//攻撃対象になる相手のポケモンはランダム
+							return []int{}, omwrand.Sample(notFaintedIdxs, 1, context.Rand)
+						}
+					} else {
+						return []int{action.TargetIndex}, []int{}
+					}
+				} else {
+					target := b.OpponentLeadPokemons[action.TargetIndex]
+					if target.IsFainted() {
+						otherIdx := map[int]int{0:1, 1:0}[action.TargetIndex]
+						other := b.OpponentLeadPokemons[otherIdx]
+						if other.IsFainted() {
+							return []int{}, []int{}
+						} else {
+							return []int{}, []int{otherIdx}
+						}
+					} else {
+						return []int{}, []int{action.TargetIndex}
+					}
+				}
+			}
+		case bp.OPPONENT_TWO_TARGET:
+			if b.IsSingle {
+				target := b.OpponentLeadPokemons[0]
+				if target.IsFainted() {
+					return []int{}, []int{}
+				} else {
+					return []int{0}, []int{}
+				}
+			} else {
+				idxs := omwslices.IndicesFunc[bp.Pokemons](b.OpponentLeadPokemons, isNotFainted)
+				return []int{}, idxs
+			}
+		case bp.SELF_TARGET:
+			return []int{action.TargetIndex}, []int{}
+		case bp.OTHERS_TARGET:
+			if b.IsSingle {
+				target := b.OpponentLeadPokemons[0]
+				if target.IsFainted() {
+					return []int{}, []int{}
+				} else {
+					return []int{0}, []int{}
+				}
+			} else {
+				allyIdx := map[int]int{0:1, 1:0}[action.SrcIndex]
+				ally := b.SelfLeadPokemons[allyIdx]
+				var allyIdxs []int
+				if ally.IsFainted() {
+					allyIdxs = []int{}					
+				} else {
+					allyIdxs = []int{allyIdx}
+				}
+				opponentIdxs := omwslices.IndicesFunc[bp.Pokemons](b.OpponentLeadPokemons, isNotFainted)
+				return allyIdxs, opponentIdxs
+			}
+		case bp.ALL_TARGET:
+			return []int{}, []int{}
+		case bp.OPPONENT_RANDOM_ONE_TARGET:
+			opponentIdxs := b.FollowMeStateOpponentLeadPokemonsIndices()
+			if len(opponentIdxs) != 0 {
+				return []int{}, opponentIdxs
+			}
+
+			if b.IsSingle {
+				target := b.OpponentLeadPokemons[0]
+				if target.IsFainted() {
+					return []int{}, []int{}
+				} else {
+					return []int{0}, []int{}
+				}
+			} else {
+				idxs := omwslices.IndicesFunc[bp.Pokemons](b.OpponentBenchPokemons, isNotFainted)
+				if len(idxs) == 0 {
+					return []int{}, []int{}
+				} else {
+					return []int{}, omwrand.Sample(idxs, 1, context.Rand)
+				}
+			}
+		default:
+			return []int{}, []int{}
+	}
+}
+
+func (b *Battle) TargetPokemonPointers(action *SoloAction, context *Context) bp.PokemonPointers {
+	selfIdxs, opponentIdxs := b.TargetPokemonsIndices(action, context)
+
+	self := make(bp.PokemonPointers, len(selfIdxs))
+	for i, idx := range selfIdxs {
+		self[i] = &b.SelfLeadPokemons[idx]
+	}
+
+	opponent := make(bp.PokemonPointers, len(opponentIdxs))
+	for i, idx := range opponentIdxs {
+		opponent[i] = &b.OpponentLeadPokemons[idx]
+	}
+	
+	return omwslices.Concat(self, opponent)
+}
+
+func (b *Battle) SelfLegalMoveSoloActions() SoloActions {
 	selfLeadN := len(b.SelfLeadPokemons)
 	opponentLeadN := len(b.OpponentLeadPokemons)
 	actions := make(SoloActions, 0, (selfLeadN * opponentLeadN * bp.MAX_MOVESET) +  (selfLeadN * selfLeadN * bp.MAX_MOVESET))
@@ -150,26 +252,11 @@ func (b *Battle) LegalMoveSoloActions() SoloActions {
 		}
 		speed := selfPokemon.Speed
 		moveset := selfPokemon.Moveset
-		for moveName, pp := range moveset {
-			if pp.Current <= 0 {
+		for _, moveName := range selfPokemon.MoveNames {
+			if moveset[moveName].Current <= 0 {
 				continue
 			}
 			moveData := bp.MOVEDEX[moveName]
-
-			for j, opponentPokemon := range b.OpponentLeadPokemons {
-				if opponentPokemon.IsFainted() {
-					continue
-				}
-				//場に出ている敵への対象指定
-				actions = append(actions, SoloAction{
-					MoveName:moveName,
-					SrcIndex:i,
-					TargetIndex:j,
-					Speed:speed,
-					IsOpponentLeadTarget:true,
-					Target:moveData.Target,
-				})
-			}
 
 			for j, selfTargetPokemon := range b.SelfLeadPokemons {
 				if selfTargetPokemon.IsFainted() {
@@ -182,7 +269,24 @@ func (b *Battle) LegalMoveSoloActions() SoloActions {
 				    TargetIndex:j,
 				    Speed:speed,
 				    IsSelfLeadTarget:true,
-				    Target:moveData.Target,
+				    MoveTarget:moveData.Target,
+					IsSelfView:true,
+				})
+			}
+
+			for j, opponentPokemon := range b.OpponentLeadPokemons {
+				if opponentPokemon.IsFainted() {
+					continue
+				}
+				//場に出ている敵への対象指定
+				actions = append(actions, SoloAction{
+					MoveName:moveName,
+					SrcIndex:i,
+					TargetIndex:j,
+					Speed:speed,
+					IsSelfLeadTarget:false,
+					MoveTarget:moveData.Target,
+					IsSelfView:true,
 				})
 			}
 
@@ -192,20 +296,22 @@ func (b *Battle) LegalMoveSoloActions() SoloActions {
 				SrcIndex:i,
 				TargetIndex:-1,
 				Speed:speed,
-				Target:moveData.Target,
+				MoveTarget:moveData.Target,
+				IsSelfView:true,
 			})
 		}
 	}
 	
 	return fn.Filter(actions, func(action SoloAction) bool {
-		switch action.Target {
+		switch action.MoveTarget {
 			case bp.NORMAL_TARGET:
-				if action.IsOpponentLeadTarget {
-					return true
-				} else if action.IsSelfLeadTarget {
+				if action.TargetIndex == -1 {
+					return false
+				}
+				if action.IsSelfLeadTarget {
 					return action.SrcIndex != action.TargetIndex
 				} else {
-					return false
+					return true
 				}
 			case bp.OPPONENT_TWO_TARGET:
 				return action.TargetIndex == -1
@@ -217,61 +323,41 @@ func (b *Battle) LegalMoveSoloActions() SoloActions {
 				return action.TargetIndex == -1
 			case bp.OPPONENT_RANDOM_ONE_TARGET:
 				return action.TargetIndex == -1
+			default:
+				return true
 		}
-		return true
 	})
 }
 
-// func (b Battle) UseMove(action *SoloAction, context *Context) (Battle, error) {
-// 	pp, ok := b.SelfLeadPokemons[action.SrcIndex].Moveset[moveName]
-// 	if !ok {
-// 		msg := fmt.Sprintf("%sは %sを 繰り出そうとしたが、覚えていない", b.SelfLeadPokemons[action.SrcIndex].Name.ToString(), moveName.ToString())
-// 		return b, fmt.Errorf(msg)
-// 	}
+func (b *Battle) OpponentLegalMoveSoloActions() SoloActions {
+	b.SwapView()
+	ret := b.SelfLegalMoveSoloActions()
+	ret.ToggleIsSelf()
+	b.SwapView()
+	return ret
+}
 
-// 	if pp.Current <= 0 {
-// 		msg := fmt.Sprintf("%sは %sを 繰り出そうとしたが、PPが0", b.SelfLeadPokemons[action.SrcIndex].Name.ToString(), moveName.ToString())
-// 		return b, fmt.Errorf(msg)
-// 	}
+func (b *Battle) LegalSeparateMoveSoloActionsSlice() SoloActionsSlice {
+	self := b.SelfLegalMoveSoloActions()
+	opponent := b.OpponentLegalMoveSoloActions()
+	return SoloActionsSlice{self, opponent}
+}
 
-// 	if b.SelfLeadPokemons[action.SrcIndex].IsFainted() {
-// 		return b, nil
-// 	}
+func (b *Battle) MoveUse(action *SoloAction, context *Context) error {
+	pp, ok := b.SelfLeadPokemons[action.SrcIndex].Moveset[action.MoveName]
+	if !ok {
+		msg := fmt.Sprintf("%sは %sを 繰り出そうとしたが、覚えていない", b.SelfLeadPokemons[action.SrcIndex].Name.ToString(), action.MoveName.ToString())
+		return fmt.Errorf(msg)
+	}
 
-// 	b.SelfLeadPokemons = b.SelfLeadPokemons.Clone()
-// 	b.OpponentLeadPokemons = b.OpponentLeadPokemons.Clone()
-//  ここに挑発時の時の処理をする。
-// 	b.SelfLeadPokemons[selfLeadIdx].Moveset[moveName].Current -= 1
-// 	context.Observer(&b, MOVE_USE_EVENT)
+	if pp.Current <= 0 {
+		msg := fmt.Sprintf("%sは %sを 繰り出そうとしたが、PPが0", b.SelfLeadPokemons[action.SrcIndex].Name.ToString(), action.MoveName.ToString())
+		return fmt.Errorf(msg)
+	}
 
-// 	attack := func(attacker, defender *bp.Pokemon, isDoubleDamage bool) {
-// 		dmg := calcDmg(attacker, defender isDoubleDamage, context)
-// 		dmg = omwmath.Min(dmg, defender.CurrentHP)
-// 		defender.CurrentHP = dmg
-// 	}
-
-// 	attacker := &b.SelfLeadPokemons[action.SrcIndex]
-// 	normalTarget := func() {
-// 		attack(attacker, b.OpponentLeadPokemons[action.TargetIndex])
-// 	}
-
-// 	opponentTwoTarget := func() {
-// 		defenders := b.OpponentBenchPokemons.SortBySpeed()
-// 		for _, defender := range defenders {
-// 			attack(attacker, defender, isDoubleDamage)
-// 		}
-// 	}
-
-// 	selfTarget := func() {
-// 	}
-
-// 	if moveName == bp.STRUGGLE {
-// 		dmg := int(math.Round(float64(b.SelfLeadPokemons[0].CurrentHP) * 0.25))
-// 		b.SelfLeadPokemons[0].CurrentHP -= dmg
-// 		context.Observer(&b, RECOIL_EVENT)
-// 	}
-// 	return b, nil
-// }
+	b.SelfLeadPokemons[action.SrcIndex].Moveset[action.MoveName].Current -= 1
+	return GetMoveFunc(action.MoveName)(b, action, context)
+}
 
 func (b *Battle) LegalSwitchSoloActions() SoloActions {
 	actions := make(SoloActions, 0, len(b.SelfLeadPokemons) * len(b.SelfBenchPokemons))
@@ -282,7 +368,7 @@ func (b *Battle) LegalSwitchSoloActions() SoloActions {
 				SrcIndex:i,
 				TargetIndex:j,
 				Speed:leadPokemon.Speed,
-				IsSelfBenchTarget:true,
+				IsSelfView:true,
 			})
 		}
 	}
@@ -291,66 +377,37 @@ func (b *Battle) LegalSwitchSoloActions() SoloActions {
 	})
 }
 
-// func (b Battle) Switch(leadIdx, benchIdx int, context *Context) (Battle, error) {
-// ランクをリセットする。
-// 	if b.SelfBenchPokemons[benchIdx].IsFainted() {
-// 		name := b.SelfBenchPokemons[benchIdx].Name
-// 		msg := fmt.Sprintf("%d番目の %sに 交代しようとしたが、瀕死状態である為、交代出来ません。", benchIdx, name)
-// 		return b, fmt.Errorf(msg)
-// 	}
+func (b *Battle) Switch(leadIdx, benchIdx int, context *Context) error {
+	if b.SelfBenchPokemons[benchIdx].IsFainted() {
+		name := b.SelfBenchPokemons[benchIdx].Name
+		msg := fmt.Sprintf("%d番目の %sに 交代しようとしたが、瀕死状態である為、交代出来ません。", benchIdx, name.ToString())
+		return fmt.Errorf(msg)
+	}
 
-// 	selfLeadPokemons := b.SelfLeadPokemons.Clone()
-// 	selfBenchPokemons := b.SelfBenchPokemons.Clone()
+	b.SelfLeadPokemons[leadIdx], b.SelfBenchPokemons[benchIdx] = b.SelfBenchPokemons[benchIdx], b.SelfLeadPokemons[leadIdx]
+	context.Observer(b, SWITCH_EVENT)
+	return nil
+}
 
-// 	selfLeadPokemons[leadIdx], selfBenchPokemons[benchIdx] = selfBenchPokemons[benchIdx], selfLeadPokemons[leadIdx]
-// 	b.SelfLeadPokemons = selfLeadPokemons
-// 	b.SelfBenchPokemons = selfBenchPokemons
-// 	context.Observer(&b, SWITCH_EVENT)
-// 	return b, nil
-// }
+func (b *Battle) SoloAction(action *SoloAction, context *Context) error {
+	if action.IsMove() {
+		return b.MoveUse(action, context)
+	} else {
+		return b.Switch(action.SrcIndex, action.TargetIndex, context)
+	}
+}
 
-// func (b *Battle) Action(action Action, context *Context) (Battle, error) {
-// 	if action.IsCommandMove() {
-// 		return b.CommandMove(action.CmdMoveName, context)
-// 	} else {
-// 		return b.Switch(action.SwitchPokeName, context)
-// 	}
-// }
+func (b *Battle) ToEasyRead() EasyReadBattle {
+	return EasyReadBattle{
+		SelfLeadPokemons:b.SelfLeadPokemons.ToEasyRead(),
+		SelfBenchPokemons:b.SelfBenchPokemons.ToEasyRead(),
 
-// func (b *Battle) SortActionsByOrder(actions Actions, r *rand.Rand) Actions {
-// 	actions = actions.Clone()
-// 	slices.SortFunc(actions, func(a1, a2 Action) {
-// 		a1Priority := a1.Priority()
-// 		a2Priority := a2.Priority()
+		OpponentLeadPokemons:b.OpponentLeadPokemons.ToEasyRead(),
+		OpponentBenchPokemons:b.OpponentBenchPokemons.ToEasyRead(),
 
-// 		if a1Priority > a2Priority {
-// 			return 1
-// 		} else if a1Priority < a2Priority {
-// 			return -1
-// 		} else {
-// 			a1Speed := a1.Speed
-// 			a2Speed := a2.Speed
-// 			if a1.Speed > a2.Speed {
-// 				return 1
-// 			} else if a1.Speed < a2.Speed {
-// 				return 1
-// 			} else {
-// 				return omwrand.Choice([]int{-1, 1})
-// 			}
-// 		}
-// 	})
-// 	return actions
-// }
-
-// func (b *Battle) ToEasyRead() EasyReadBattle {
-// 	return EasyReadBattle{
-// 		SelfLeadPokemons:b.SelfLeadPokemons.ToEasyRead(),
-// 		SelfBenchPokemons:b.SelfBenchPokemons.ToEasyRead(),
-
-// 		OpponentLeadPokemons:b.OpponentFighters.ToEasyRead(),
-// 		OpponentBenchPokemons:b.OpponentBenchPokemons.ToEasyRead(),
-
-// 		Turn:b.Turn,
-// 		IsRealSelfView:b.IsRealSelfView,
-// 	}
-// }
+		Turn:b.Turn,
+		IsPlayer1:b.IsPlayer1,
+		Weather:b.Weather.ToString(),
+		RemainingTurnWeather:b.RemainingTurnWeather,
+	}
+}

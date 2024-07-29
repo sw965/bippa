@@ -3,9 +3,44 @@ package bippa
 import (
 	"fmt"
 	"golang.org/x/exp/slices"
-	osliecs "github.com/sw965/omw/slices"
+	omwjson "github.com/sw965/omw/json"
 	omwmaps "github.com/sw965/omw/maps"
 )
+
+type MoveData struct {
+	Type Type
+	Category MoveCategory
+	Power int
+	Accuracy int
+	BasePP int
+	IsContact bool
+    PriorityRank int
+    CriticalRank CriticalRank
+    Target MoveTarget
+}
+
+func LoadMoveData(moveName MoveName) (MoveData, error) {
+	path := MOVE_DATA_PATH + MOVE_NAME_TO_STRING[moveName] + omwjson.EXTENSION
+	buff, err := omwjson.Load[EasyReadMoveData](path)
+	if err != nil {
+		return MoveData{}, err
+	}
+	return buff.From()
+}
+
+func (m *MoveData) ToEasyRead() EasyReadMoveData {
+	return EasyReadMoveData{
+		Type:m.Type.ToString(),
+		Category:m.Category.ToString(),
+		Power:m.Power,
+		Accuracy:m.Accuracy,
+		BasePP:m.BasePP,
+		IsContact:m.IsContact,
+		PriorityRank:m.PriorityRank,
+		CriticalRank:m.CriticalRank,
+		Target:m.Target.ToString(),
+	}
+}
 
 type MoveName int
 
@@ -50,78 +85,34 @@ const (
     BULLET_PUNCH   // バレットパンチ
 )
 
-var STRING_TO_MOVE_NAME = map[string]MoveName{
-    "":              EMPTY_MOVE_NAME,
-    "10まんボルト":   THUNDERBOLT,
-    "アームハンマー": HAMMER_ARM,
-    "ストーンエッジ": STONE_EDGE,
-    "なみのり":      SURF,
-    "れいとうビーム":  ICE_BEAM,
-    "わるあがき":    STRUGGLE,
-    "あまごい":      RAIN_DANCE,
-    "いわなだれ":    ROCK_SLIDE,
-    "おんがえし":    RETURN,
-    "かみくだく":    CRUNCH,
-    "がむしゃら":    ENDEAVOR,
-    "こごえるかぜ":  ICY_WIND,
-    "このゆびとまれ": FOLLOW_ME,
-    "さいみんじゅつ": HYPNOSIS,
-    "じこあんじ":    RECOVER,
-    "じしん":        EARTHQUAKE,
-    "じばく":        SELF_DESTRUCT,
-    "たきのぼり":    WATERFALL,
-    "だいばくはつ":  EXPLOSION,
-    "ちょうはつ":    TAUNT,
-    "でんじは":      THUNDER_WAVE,
-    "ねこだまし":    FAKE_OUT,
-    "ねっぷう":      HEAT_WAVE,
-    "はらだいこ":    BELLY_DRUM,
-    "ふいうち":      SUCKER_PUNCH,
-    "ほのおのパンチ": FIRE_PUNCH,
-    "まもる":        PROTECT,
-    "みがわり":      SUBSTITUTE,
-    "りゅうせいぐん": DRACO_METEOR,
-    "クロスチョップ": CROSS_CHOP,
-    "コメットパンチ": COMET_PUNCH,
-    "サイコキネシス": PSYCHIC,
-    "ジャイロボール": GYRO_BALL,
-    "ダークホール":  DARK_VOID,
-    "トリックルーム": TRICK_ROOM,
-    "ハイドロポンプ": HYDRO_PUMP,
-    "バレットパンチ": BULLET_PUNCH,
-}
-
-var MOVE_NAME_TO_STRING = omwmaps.Invert[map[MoveName]string](STRING_TO_MOVE_NAME)
-
 func (name MoveName) ToString() string {
 	return MOVE_NAME_TO_STRING[name]
 }
 
 type MoveNames []MoveName
 
-func (names MoveNames) ToStrings() []string {
-	ret := make([]string, len(names))
-	for i, name := range names {
-		ret[i] = name.ToString()
+var ALL_MOVE_NAMES = func() MoveNames {
+	buff, err := omwjson.Load[[]string](ALL_MOVE_NAMES_PATH)
+	if err != nil {
+		panic(err)
+	}
+
+	ret, err := StringsToMoveNames(buff)
+	if err != nil {
+		panic(err)
 	}
 	return ret
+}()
+
+func (ns MoveNames) ToStrings() []string {
+	ss := make([]string, len(ns))
+	for i, n := range ns {
+		ss[i] = n.ToString()
+	}
+	return ss
 }
 
-func (names MoveNames) Sort() MoveNames {
-	ret := make(MoveNames, len(names))
-	for i := 0; i < osliecs.Count(names, EMPTY_MOVE_NAME); i++ {
-		ret = append(ret, EMPTY_MOVE_NAME)
-	}
-
-	for _, name := range ALL_MOVE_NAMES {
-		if slices.Contains(names, name) {
-			ret = append(ret, name)
-		}
-	}
-	return ret
-}
-
-type MoveNamess []MoveNames
+type MoveNamesSlice []MoveNames
 
 type MoveCategory int
 
@@ -131,22 +122,14 @@ const (
 	STATUS
 )
 
-var STRING_TO_MOVE_CATEGORY = map[string]MoveCategory{
-	"物理":PHYSICS,
-	"特殊":SPECIAL,
-	"変化":STATUS,
-}
-
-var MOVE_CATEGORY_TO_STRING = omwmaps.Invert[map[MoveCategory]string](STRING_TO_MOVE_CATEGORY)
-
 func (m MoveCategory) ToString() string {
 	return MOVE_CATEGORY_TO_STRING[m]
 }
 
-type TargetRange int
+type MoveTarget int
 
 const (
-    NORMAL_TARGET TargetRange = iota // 通常
+    NORMAL_TARGET MoveTarget = iota // 通常
     OPPONENT_TWO_TARGET              // 相手2体
     SELF_TARGET                      // 自分
     OTHERS_TARGET                    // 自分以外
@@ -154,18 +137,9 @@ const (
     OPPONENT_RANDOM_ONE_TARGET       // 相手ランダム1体
 )
 
-var STRING_TO_TARGET_RANGE = map[string]TargetRange{
-	"通常":NORMAL_TARGET,
-	"相手2体":OPPONENT_TWO_TARGET,
-	"自分":SELF_TARGET,
-	"自分以外":OTHERS_TARGET,
-	"全体":ALL_TARGET,
-	"相手ランダム1体":OPPONENT_RANDOM_ONE_TARGET,
-}
+var TARGET_RANGE_TO_STRING = omwmaps.Invert[map[MoveTarget]string](STRING_TO_TARGET_RANGE)
 
-var TARGET_RANGE_TO_STRING = omwmaps.Invert[map[TargetRange]string](STRING_TO_TARGET_RANGE)
-
-func (t TargetRange) ToString() string {
+func (t MoveTarget) ToString() string {
 	return TARGET_RANGE_TO_STRING[t]
 }
 
@@ -180,6 +154,28 @@ type PointUps []PointUp
 var (
 	MAX_POINT_UPS = PointUps{MAX_POINT_UP, MAX_POINT_UP, MAX_POINT_UP, MAX_POINT_UP}
 )
+
+type Movedex map[MoveName]*MoveData
+
+var MOVEDEX = func() Movedex {
+	ret := Movedex{}
+	for _, name := range ALL_MOVE_NAMES {
+		data, err := LoadMoveData(name)
+		if err != nil {
+			panic(err)
+		}
+		ret[name] = &data
+	}
+	return ret
+}()
+
+func (m Movedex) ToEasyRead() EasyReadMovedex {
+	ret := EasyReadMovedex{}
+	for name, data := range m {
+		ret[name.ToString()] = data.ToEasyRead()
+	}
+	return ret
+}
 
 type PowerPoint struct {
 	Max int

@@ -1,10 +1,5 @@
 package bippa
 
-import (
-	//"os"
-	//"path/filepath"
-)
-
 var (
 	DATA_PATH = "C:/Go/project/bippa/main/data/fourth-generation/"
 	// DATA_PATH = func() string {

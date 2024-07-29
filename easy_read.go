@@ -1,51 +1,33 @@
 package bippa
 
-import (
-	"github.com/sw965/omw/fn"
-)
+type EasyReadNaturedex map[string]NatureData
 
-type EasyReadPokeData struct {
-	Types []string
-	BaseHP int
-	BaseAtk int
-	BaseDef int
-	BaseSpAtk int
-	BaseSpDef int
-	BaseSpeed int
-	Abilities []string
-	Learnset []string
+func (e EasyReadNaturedex) From() (Naturedex, error) {
+	d := Naturedex{}
+	for k, v := range e {
+		n, err := StringToNature(k)
+		if err != nil {
+			return Naturedex{}, err
+		}
+		d[n] = &v
+	}
+	return d, nil
 }
 
-func (p *EasyReadPokeData) From() (PokeData, error) {
-	types, err := StringsToTypes(p.Types)
-	if err != nil {
-		return PokeData{}, err
-	}
+type EasyReadMoveset map[string]PowerPoint
 
-	abilities, err := StringsToAbilities(p.Abilities)
-	if err != nil {
-		return PokeData{}, err
+func (e EasyReadMoveset) From() (Moveset, error) {
+	m := Moveset{}
+	for k, v := range e {
+		n, err := StringToMoveName(k)
+		if err != nil {
+			return Moveset{}, err
+		}
+		pp := PowerPoint{Max:v.Max, Current:v.Current}
+		m[n] = &pp
 	}
-
-	learnset, err := StringsToMoveNames(p.Learnset)
-	if err != nil {
-		return PokeData{}, err
-	}
-
-	return PokeData{
-		Types:types,
-		BaseHP:p.BaseHP,
-		BaseAtk:p.BaseAtk,
-		BaseDef:p.BaseDef,
-		BaseSpAtk:p.BaseSpAtk,
-		BaseSpDef:p.BaseSpDef,
-		BaseSpeed:p.BaseSpeed,
-		Abilities:abilities,
-		Learnset:learnset,
-	}, nil
+	return m, nil
 }
-
-type EasyReadPokedex map[string]EasyReadPokeData
 
 type EasyReadMoveData struct {
     Type         string
@@ -89,107 +71,3 @@ func (m *EasyReadMoveData) From() (MoveData, error) {
 }
 
 type EasyReadMovedex map[string]EasyReadMoveData
-
-type EasyReadDefTypeData map[string]float64
-type EasyReadTypedex map[string]EasyReadDefTypeData
-
-type EasyReadNaturedex map[string]NatureData
-
-type EasyReadMoveset map[string]PowerPoint
-
-func (m EasyReadMoveset) From() (Moveset, error) {
-	ret := Moveset{}
-	for k, v := range m {
-		moveName, err := StringToMoveName(k)
-		if err != nil {
-			return Moveset{}, err
-		}
-		pp := PowerPoint{Max:v.Max, Current:v.Current}
-		ret[moveName] = &pp
-	}
-	return ret, nil
-}
-
-type EasyReadPokemon struct {
-	Name string
-	Level Level
-	Nature string
-
-	MoveNames []string
-	PointUps PointUps
-	Moveset EasyReadMoveset
-
-	Individual IndividualStat
-	Effort EffortStat
-
-	MaxHP int
-	CurrentHP int
-	Atk int
-	Def int
-	SpAtk int
-	SpDef int
-	Speed int
-
-	StatusAilment StatusAilment
-	Rank RankStat
-}
-
-func (p *EasyReadPokemon) From() (Pokemon, error) {
-	pokeName, err := StringToPokeName(p.Name)
-	if err != nil {
-		return Pokemon{}, err
-	}
-
-	nature, err := StringToNature(p.Nature)
-	if err != nil {
-		return Pokemon{}, err
-	}
-
-	moveNames, err := fn.MapWithError[MoveNames](p.MoveNames, StringToMoveName)
-	if err != nil {
-		return Pokemon{}, err
-	}
-
-	moveset, err := p.Moveset.From()
-	if err != nil {
-		return Pokemon{}, err
-	}
-
-	return Pokemon{
-		Name:pokeName,
-		Level:p.Level,
-		Nature:nature,
-
-		MoveNames:moveNames,
-		PointUps:p.PointUps,
-		Moveset:moveset,
-
-		Individual:p.Individual,
-		Effort:p.Effort,
-
-		MaxHP:p.MaxHP,
-		CurrentHP:p.CurrentHP,
-		Atk:p.Atk,
-		Def:p.Def,
-		SpAtk:p.SpAtk,
-		SpDef:p.SpDef,
-		Speed:p.Speed,
-
-		StatusAilment:p.StatusAilment,
-		Rank:p.Rank,
-	}, nil
-}
-
-type EasyReadPokemons []EasyReadPokemon
-
-func (ps EasyReadPokemons) From() (Pokemons, error) {
-	ret := make(Pokemons, len(ps))
-	for i, p := range ps {
-		easy, err := p.From()
-		if err != nil {
-			return Pokemons{}, err
-		}
-		ret[i] = easy
-	}
-	return ret, nil
-}

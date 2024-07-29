@@ -2,47 +2,50 @@ package single
 
 import (
 	"fmt"
-	omwmath "github.com/sw965/omw/math"
 	bp "github.com/sw965/bippa"
 	omwrand "github.com/sw965/omw/math/rand"
-	"github.com/sw965/bippa/battle/dmgtools"
+	//"github.com/sw965/bippa/battle/dmgtools"
+	omwmath "github.com/sw965/omw/math"
 )
 
-func Move(battle *Battle, action *SoloAction, context *Context) (bp.PokemonPointers, error) {
-	attacker := &battle.SelfLeadPokemons[action.SrcIndex]
-	if attacker.IsFlinch {
-		return bp.PokemonPointers{}, nil
+/*
+	第4世代の技データ
+	(あ行～た行) https://yakkun.com/dp/waza_list.htm#k
+	(な行～わ行) https://yakkun.com/dp/waza_list2.htm
+*/
+
+type Status func(*Battle, *bp.Pokemon, *bp.Pokemon, *Context) error
+
+func EmptyStatus(_ *Battle, _, _ *bp.Pokemon, _ *Context) error {
+	return nil
+}
+
+// https://wiki.xn--rckteqa2e.com/wiki/%E8%BF%BD%E5%8A%A0%E5%8A%B9%E6%9E%9C
+type AdditionalEffect func(*bp.Pokemon) error
+
+func EmptyAdditionalEffect(_ *bp.Pokemon) error {
+	return nil
+}
+
+func moveHelper(
+	battle *Battle, action *SoloAction, context *Context,
+	status Status, self, opponent AdditionalEffect,
+	) error {
+	src := &battle.SelfLeadPokemons[action.SrcIndex]
+
+	if src.IsFainted() {
+		return nil
 	}
 
-	switch action.MoveName {
-		//あまごい
-		case RAIN_DANCE:
-			battle.Weather = RAIN
-			battle.WeatherRemainingTurn = 5
-			return bp.PokemonPointers{}, nil
-		//このゆびとまれ
-		case FOLLOW_ME:
-			attacker.IsFollowMe = true
-			return bp.PokemonPointers{}, err
-		//じばく
-		case SELF_DESTRUCT:
-			attacker.CurrentHP = 0
-		//だいばくはつ
-		case EXPLOSION:
-			attacker.CurrentHP = 0
-		//はらだいこ
-		case BELLY_DRUM:
-			attacker.Rank.Atk = MAX_RANK
+	if src.IsFlinchState {
+		return nil
 	}
 
-	targetPokemons, err := battle.TargetPokemonPointers(action, context.Rand)
-	if err != nil {
-		return bp.PokemonPointers{}, err
-	}
+	moveData := bp.MOVEDEX[action.MoveName]
+
+	targetPokemons := battle.TargetPokemonPointers(action, context)
+	targetPokemons.SortBySpeed()
 	targetN := len(targetPokemons)
-	if targetN == 0 {
-		return bp.PokemonPointers{}, err
-	}
 
 	var isSingleDmg bool
 	if action.MoveName == bp.SELF_DESTRUCT || action.MoveName == bp.EXPLOSION {
@@ -51,375 +54,417 @@ func Move(battle *Battle, action *SoloAction, context *Context) (bp.PokemonPoint
 		isSingleDmg = targetN == 1
 	}
 
-	moveData := bp.MOVEDEX[action.MoveName]
-	moveHitHistory := make([]bool, len(targetPokemons)) 
+	var isBodyAttack bool
+	var isTargetFainted bool
+	var isContinue bool
 	faintedCount := 0
 
-	for i, defender := range targetPokemons {
-		switch action.MoveName {
-			// じこあんじ
-			case RECOVER:
-				attacker.Rank = defender.Rank
-				break
-		}
+	if action.MoveName == bp.SELF_DESTRUCT || action.MoveName == bp.EXPLOSION {
+		src.CurrentHP = 0
+	}
 
-		if defender.IsProtect {
-			continue
-		}
+	fs := []func(*bp.Pokemon , *bp.Pokemon) error {
+		//命中
+		func(_, _ *bp.Pokemon) error {
+			isHit, err := omwrand.IsPercentageMet(moveData.Accuracy, context.Rand)
+			isContinue = isHit
+			return err
+		},
 
-		isHit, err := omwrand.IsPercentageMet(moveData.Accuracy, context.Rand)
-		if err != nil {
-			return bp.PokemonPointers{}, err
-		}
-
-		if !isHit {
-			continue
-		}
-
-		switch action.MoveName {
-			// がむしゃら
-			case bp.ENDEAVOR:
-				defender.CurrentHP = attacker.CurrentHP
-				break
-			// さいみんじゅつ
-			case bp.HYPNOSIS:
-				defender.StatusAilment = SLEEP
-				break
-			//ちょうはつ
-			case TAUNT:
-				defender.IsTaunt = true
-				break
-			//でんじは
-			case THUNDER_WAVE:
-				if !omwslices.Contains(defender.Types, GROUND) {
-					defender.StatusAilment = PARALYSIS
+		//かんそうはだ
+		func(_, target *bp.Pokemon) error {
+			if moveData.Type == bp.WATER && target.Ability == bp.DRY_SKIN {
+				err := target.AddCurrentHP(int(float64(target.CurrentHP) * 0.25))
+				if err != nil {
+					return err
 				}
-				break
-		}
+				isContinue = true
+			}
+			return nil
+		},
 
-		if i == (targetN-1) {
-			isSingleDmg = isSingleDmg || (faintedCount == i)
-		}
+		//変化技
+		func(src, target *bp.Pokemon) error {
+			isStatus := moveData.Category == bp.STATUS
+			if moveData.Category == bp.STATUS {
+				if target.IsSubstituteState() {
+					if moveData.PiercingSubstitute != bp.NO_PIERCING_SUBSTITUTE {
+						status(battle, src, target, context)
+					}
+				} else {
+					status(battle, src, target, context)
+				}
+			}
+			isContinue = isStatus
+			return nil
+		},
 
-		if moveData.Type == bp.WATER && defender.Ability == bp.DRY_SKIN {
-			err := defender.AddCurrentHP(int(float64(defender.CurrentHP) * 0.25))
+		//物理・特殊
+		func(src, target *bp.Pokemon) error {
+			dmg, isNoEffect, err := battle.CalculateDamage(action, target, isSingleDmg || (faintedCount-1) == targetN, context)
 			if err != nil {
-				return bp.PokemonPointers{}, err
-			}
-			continue
-		}
-
-		//ふいうち
-		if action.MoveName == SUCKER_PUNCH {
-			//相手が行動を終えていたら、失敗
-			if defender.IsThisTurnActed {
-				break
+				return err
 			}
 
-			if data, ok := bp.MOVEDEX[defender.ThisTurnCommandMoveName]; !ok {
-				msg := fmt.Sprintf(
-					"%s の ThisTurnCommandMoveNameが %s になっているが、bp.MOVEDEXに含まれてない",
-					defender.Name.ToString(), defender.ThisTurnCommandMoveName.ToString())
-				return bp.PokemonPointers{}, fmt.Errorf("%v")
+			if isNoEffect {
+				isContinue = isNoEffect
+				return nil
+			}
+
+			if target.IsSubstituteState() {
+				if moveData.PiercingSubstitute == bp.NO_PIERCING_SUBSTITUTE {
+					err = target.SubSubstituteHP(dmg)
+				} else {
+					err = target.SubCurrentHP(dmg)
+					isBodyAttack = true
+				}
 			} else {
-				//相手が変化技を選択していたならば、失敗
-				if data.Category.IsStatus() {
-					break
-				}
+				err = target.SubCurrentHP(dmg)
+				isBodyAttack = true
+			}
+			return err
+		},
+
+		//攻撃された側の瀕死のカウント
+		func(_, target *bp.Pokemon) error {
+			isTargetFainted := target.IsFainted()
+			if isTargetFainted {
+				faintedCount += 1
+			}
+			return nil
+		},
+
+		//自分への追加効果
+		func(src, target *bp.Pokemon) error {
+			return self(src)
+		},
+
+		//相手への追加効果
+		func(_, target *bp.Pokemon) error {
+			if isBodyAttack && !isTargetFainted {
+				return opponent(target)
+			} else {
+				return nil
+			}
+		},
+	}
+
+	for _, target := range targetPokemons {
+		isBodyAttack = false
+		isTargetFainted = false
+		isContinue = false
+
+		for _, f := range fs {
+			err := f(src, target)
+			if err != nil {
+				return err
+			}
+			if isContinue {
+				continue
 			}
 		}
-
-		//命中が確定
-		hitHistory[i] = true
-
-		critRank := moveData.CriticalRank
-		isCrit, err := dmgtools.IsCritical(critRank, context.Rand)
-		if err != nil {
-			return bp.PokemonPointers{} , err
-		}
-		dmg, err := battle.CalcDamage(action, defender, isCrit, isSingleDmg, context)
-		if err != nil {
-			return bp.PokemonPointers{}, err
-		}
-
-		dmg = omwmath.Min(dmg, defender.CurrentHP)
-		err = defender.SubCurrentHP(dmg)
-		if err != nil {
-			return bp.PokemonPointers{}, err
-		}
-
-		if defender.IsFainted() {
-			faintedCount += 1 
-		}
 	}
+	return nil
+}
 
-	switch action.MoveName {
-		//アームハンマー
-		case HAMMER_ARM:
-			attacker.Rank = attacker.Rank.Fluctuation(&RankStat{Speed:-1})
-	}
+type Move func(*Battle, *SoloAction, *Context) error
 
-	for i, pokemon := range targetPokemons {
-		if pokemon.IsFainted() {
-			continue
-		}
-
-		if !moveHitHistory[i] {
-			continue
-		}
-
-		switch action.MoveName {
-			//10まんボルト
-			case THUNDERBOLT:
-				if omwrand.IsPercentageMet(10, context.Rand) {
-					pokemon.StatusAilment = bp.PARALYSIS
-				}
-			//れいとうビーム
-			case ICE_BEAM:
-				if omwrand.IsPercentageMet(10, context.Rand) {
-					pokemon.StatusAilment = bp.FREEZE
-				}
-			//かみくだく
-			case CRUNCH:
-				if ok, err := omwrand.IsPercentageMet(20, context.Rand); err {
-					return bp.PokemonPointers{}, err
-				} else {
-					if ok {
-						pokemon.Rank = pokemon.Rank.Fluctuation(&RankStat{Def:-1})
-					}
-				}
-			//こごえるかぜ
-			case ICY_WIND:
-				pokemon.Rank = pokemon.Rank.Fluctuation(&RankStat{Speed:-1}) 
-			//たきのぼり
-			case WATERFALL:
-				if ok, err := omwrand.IsPercentageMet(20, context.Rand); err {
-					return bp.PokemonPointers{}, err
-				} else {
-					pokemon.IsFlinch = ok
-				}
-			//ねこだまし
-			case FAKE_OUT:
-				pokemon.IsFaint = true
-			//ねっぷう
-			case HEAT_WAVE:
-				if ok, err := omwrand.IsPercentageMet(10, context.Rand); err {
-					return bp.PokemonPointers{}, err
-				} else {
-					if ok {
-						pokemon.StatusAilment = BURN
-					}
-				}
-			//ほのおのパンチ
-			case FIRE_PUNCH:
-				if ok, err := omwrand.IsPercentageMet(10, context.Rand); err {
-					return bp.PokemonPointers{}, err
-				} else {
-					if ok {
-						pokemon.StatusAilment = BURN
-					}
-				}
-		}
-	}
-	return targetPokemons, nil
+func EmptyMove(_ *Battle, _ *SoloAction, _ *Context) error {
+	return nil
 }
 
 //10まんボルト
 func Thunderbolt(battle *Battle, action *SoloAction, context *Context) error {
 	if action.MoveName != bp.THUNDERBOLT {
-		return fmt.Errorf("HammerArmに渡されたAction.MoveNameがTHUNDERBOLTではない。")
+		return fmt.Errorf("Thunderboltに渡されたAction.MoveNameがTHUNDERBOLTではない。")
 	}
-	targetPokemons, err := AttackMove(battle, action, context)
-	if err != nil {
-		return err
-	}
-
-	if len(targetPokemons) == 0 {
-		return nil
-	}
-
-	if len(targetPokemons) != 1 {
-		return fmt.Errorf("ライブラリのバグなので報告して。bp.Thunderbolt")
-	}
-
-	targetPokemon := targetPokemons[0]
-	if targetPokemon.IsFainted() {
-		return nil
-	}
-
-	ok, err := omwrand.IsPercentageMet(10, context.Rand)
-	if ok {
-		targetPokemon.StatusAilment = bp.PARALYSIS
-	}
-	return err
+	return moveHelper(
+		battle, action, context,
+		EmptyStatus,
+		EmptyAdditionalEffect,
+		func(target *bp.Pokemon) error {
+			return target.SetStatusAilment(bp.PARALYSIS, 10, context.Rand)
+		},
+	)
 }
 
 //アームハンマー
 func HammerArm(battle *Battle, action *SoloAction, context *Context) error {
 	if action.MoveName != bp.HAMMER_ARM {
-		return fmt.Errorf("HammerArmに渡されたAction.MoveNameがHAMMER_ARMではない。")
+		return fmt.Errorf("HammerArmに渡されたAction.MoveNameがbp.HammerArmではない。")
 	}
-	targetPokemons, err := AttackMove(battle, action, context)
-	if err != nil {
-		return err
-	}
-
-	if len(targetPokemons) == 0 {
-		return nil
-	}
-
-	if len(targetPokemons) != 1 {
-		return fmt.Errorf("ライブラリのバグなので報告して。bp.HammerArm")
-	}
-
-	targetPokemon := targetPokemons[0]
-	if targetPokemon.IsFainted() {
-		return nil
-	}
-
-	attacker := &battle.SelfLeadPokemons[action.SrcIndex]
-	attacker.Rank = attacker.Rank.Fluctuation(&bp.RankStat{Speed:-1})
-	return nil
+	return moveHelper(
+		battle, action, context,
+		EmptyStatus,
+		func(src *bp.Pokemon) error {
+			isClearBodyValid := false
+			return src.RankFluctuation(&bp.RankStat{Speed:-1}, 100, isClearBodyValid, context.Rand)
+		},
+		EmptyAdditionalEffect,
+	)
 }
 
 //ストーンエッジ
 func StoneEdge(battle *Battle, action *SoloAction, context *Context) error {
 	if action.MoveName != bp.STONE_EDGE {
-		return fmt.Errorf("StoneEdgeに渡されたAction.MoveNameがSTONE_EDGEではない。")
+		return fmt.Errorf("StoneEdgeに渡されたAction.MoveNameがbp.STONE_EDGEではない。")
 	}
-
-	targetPokemons, err := AttackMove(battle, action, context)
-	if err != nil {
-		return err
-	}
-
-	if len(targetPokemons) == 0 {
-		return nil
-	}
-
-	if len(targetPokemons) != 1 {
-		return fmt.Errorf("ライブラリのバグなので報告して。bp.StoneEdge")
-	}
-	return nil
+	return moveHelper(
+		battle, action, context,
+		EmptyStatus,
+		EmptyAdditionalEffect,
+		EmptyAdditionalEffect,
+	)
 }
 
 //なみのり
 func Surf(battle *Battle, action *SoloAction, context *Context) error {
 	if action.MoveName != bp.SURF {
-		return fmt.Errorf("Surfに渡されたAction.MoveNameがSURFではない。")
+		return fmt.Errorf("Surfに渡されたAction.MoveNameがbp.SURFではない。")
 	}
-
-	targetPokemons, err := AttackMove(battle, action, context)
-	if err != nil {
-		panic(err)
-	}
-
-	if len(targetPokemons) == 0 {
-		return nil
-	}
-	return nil
+	return moveHelper(
+		battle, action, context,
+		EmptyStatus,
+		EmptyAdditionalEffect,
+		EmptyAdditionalEffect,
+	)
 }
 
 //れいとうビーム
 func IceBeam(battle *Battle, action *SoloAction, context *Context) error {
 	if action.MoveName != bp.ICE_BEAM {
-		return fmt.Errorf("IceBeamに渡されたAction.MoveNameがICE_BEAMではない")
+		return fmt.Errorf("IceBeamに渡されたAction.MoveNameがbp.ICE_BEAMではない。")
 	}
+	return moveHelper(
+		battle, action, context,
+		EmptyStatus,
+		EmptyAdditionalEffect,
+		func(target *bp.Pokemon) error {
+			return target.SetStatusAilment(bp.FREEZE, 10, context.Rand)
+		},
+	)
+}
 
-	targetPokemons, err := AttackMove(battle, action, context)
-	if err != nil {
-		return err
+//わるあがき
+func Struggle(battle *Battle, action *SoloAction, context *Context) error {
+	if action.MoveName != bp.STRUGGLE {
+		return fmt.Errorf("Struggleに渡されたAction.MoveNameがbp.STRUGGLEではない。")
 	}
-
-	if len(targetPokemons) == 0 {
-		return nil
-	}
-
-	if len(targetPokemons) != 1 {
-		return fmt.Errorf("ライブラリのバグなので報告して。IceBeam")
-	}
-
-	if omwrand.IsPercentageMet(10, context.Rand) {
-		targetPokemons[0].StatusAilment = FREEZE
-	}
-	return nil
+	return moveHelper(
+		battle, action, context,
+		EmptyStatus,
+		func(src *bp.Pokemon) error {
+			dmg := int(float64(src.CurrentHP) / 4.0)
+			return src.SubCurrentHP(dmg)
+		},
+		EmptyAdditionalEffect,
+	)
 }
 
 //あまごい
 func RainDance(battle *Battle, action *SoloAction, context *Context) error {
+	if action.MoveName != bp.RAIN_DANCE {
+		return fmt.Errorf("RainDanceに渡されたAction.MoveNameがbp.RAIN_DANCEではない。")
+	}
 	battle.Weather = RAIN
-	battle.WeatherRemainingTurn = 5
+	battle.RemainingTurnWeather = 5
+	return nil
 }
 
 //いわなだれ
 func RockSlide(battle *Battle, action *SoloAction, context *Context) error {
-	if action.MoveName != bp.ICE_BEAM {
-		return fmt.Errorf("RockSlideに渡されたAction.MoveNameがbp.ICE_BEAMではない")
+	if action.MoveName != bp.ROCK_SLIDE {
+		return fmt.Errorf("RockSlideに渡されたAction.MoveNameがbp.ROCK_SLIDEではない。")
 	}
 
-	targetPokemons, err := AttackMove(battle, action, context)
-	if err != nil {
-		return err
-	}
-
-	if len(targetPokemons) == 0 {
-		return nil
-	}
-
-	for _, pokemon := range targetPokemons {
-		if !pokemon.IsFainted() && omwrand.IsPercentageMet(30, context.Rand) {
-			pokemon.IsFlinch = true
-		}
-	}
-	return nil
+	return moveHelper(
+		battle, action, context,
+		EmptyStatus,
+		EmptyAdditionalEffect,
+		func(target *bp.Pokemon) error {
+			return target.SetIsFlinchState(30, context.Rand)
+		},
+	)
 }
 
 //おんがえし
 func Return(battle *Battle, action *SoloAction, context *Context) error {
 	if action.MoveName != bp.RETURN {
-		return fmt.Errorf("Returnに渡されたAction.MoveNameがbp.RETURNではない")
+		return fmt.Errorf("Returnに渡されたAction.MoveNameがbp.RETURNではない。")
 	}
-
-	targetPokemons, err := AttackMove(battle, action, context)
-	if err != nil {
-		return err
-	}
-
-	if len(targetPokemons) == 0 {
-		return nil
-	}
-
-	if len(targetPokemons) != 1 {
-		return fmt.Errorf("ライブラリのバグなので報告して。Return")
-	}
-	return nil
+	return moveHelper(
+		battle, action, context,
+		EmptyStatus,
+		EmptyAdditionalEffect,
+		EmptyAdditionalEffect,
+	)
 }
 
-//かみくだく
+/*
+	第4世代のデータ
+	かみくだく	あく	ぶつり	80	100	15	○	○	×
+	通常	20%の確率で相手の『ぼうぎょ』ランクを1段階下げる。
+*/
 func Crunch(battle *Battle, action *SoloAction, context *Context) error {
 	if action.MoveName != bp.CRUNCH {
-		return fmt.Errorf("Crunchに渡されたAction.MoveNameがbp.CRUNCHではない")
+		return fmt.Errorf("Crunchに渡されたAction.MoveNameがbp.CRUNCHではない。")
+	}
+	return moveHelper(
+		battle, action, context,
+		EmptyStatus,
+		EmptyAdditionalEffect,
+		func(target *bp.Pokemon) error {
+			isClearBodyValid := true
+			return target.RankFluctuation(&bp.RankStat{Def:-1}, 20, isClearBodyValid, context.Rand)
+		},
+	)
+}
+
+//がむしゃら
+func Endeavor(battle *Battle, action *SoloAction, context *Context) error {
+	if action.MoveName != bp.ENDEAVOR {
+		return fmt.Errorf("Endeavorに渡されたAction.MoveNameがbp.ENDEAVORではない。")
+	}
+	err := moveHelper(
+		battle, action, context,
+		EmptyStatus,
+		EmptyAdditionalEffect,
+		EmptyAdditionalEffect,
+	)
+	return err
+}
+
+//こごえるかぜ
+func IcyWind(battle *Battle, action *SoloAction, context *Context) error {
+	if action.MoveName != bp.ICY_WIND {
+		return fmt.Errorf("IcyWindに渡されたAction.MoveNameがbp.ICY_WINDではない。")
+	}
+	return moveHelper(
+		battle, action, context,
+		EmptyStatus,
+		EmptyAdditionalEffect,
+		func(targetPokemon *bp.Pokemon) error {
+			isClearBodyValid := true
+			return targetPokemon.RankFluctuation(&bp.RankStat{Speed:-1}, 100, isClearBodyValid, context.Rand)
+		},
+	)
+}
+
+//このゆびとまれ
+func FollowMe(battle *Battle, action *SoloAction, context *Context) error {
+	if action.MoveName != bp.FOLLOW_ME {
+		return fmt.Errorf("FollowMeに渡されたAction.MoveNameがbp.FOLLOW_MEではない。")
 	}
 
-	targetPokemons, err := AttackMove(battle, action, context)
-	if err != nil {
-		return err
-	}
+	maxPriority := omwmath.Max(
+		omwmath.Max(battle.SelfLeadPokemons.FollowMePriorities()...),
+		omwmath.Max(battle.OpponentLeadPokemons.FollowMePriorities()...),
+	)
 
-	if len(targetPokemons) == 0 {
-		return nil
-	}
-
-	if len(targetPokemons) != 1 {
-		return fmt.Errorf("ライブラリのバグなので報告して。Crunch")
-	}
-
-	targetPokemon := targetPokemons[0]
-	if targetPokemon.IsFainted() && omwrand.IsPercentageMet(20, r) {
-		targetPokemon.Rank.Def = targetPokemon.Rank.Fluctuation(&RankStat{Def:-1})
+	if maxPriority == 0 {
+		battle.SelfLeadPokemons[action.SrcIndex].FollowMePriority = bp.MAX_FOLLOW_ME_PRIORITY
+	} else {
+		battle.SelfLeadPokemons[action.SrcIndex].FollowMePriority = maxPriority - 1
 	}
 	return nil
 }
 
+//さいみんじゅつ
+func Hypnosis(battle *Battle, action *SoloAction, context *Context) error {
+	if action.MoveName != bp.HYPNOSIS {
+		return fmt.Errorf("Hypnosisに渡されたAction.MoveNameがbp.HYPNOSISではない。")
+	}
+	return moveHelper(
+		battle, action, context,
+		func(_ *Battle, _, target *bp.Pokemon, context *Context) error {
+			//命中が確定している
+			target.SetStatusAilment(bp.SLEEP, 100, context.Rand)
+			return nil
+		},
+		EmptyAdditionalEffect,
+		EmptyAdditionalEffect,
+	)
+}
 
+//じこあんじ
+func Recover(battle *Battle, action *SoloAction, context *Context) error {
+	if action.MoveName != bp.RECOVER {
+		return fmt.Errorf("Recoverに渡されたAction.MoveNameがbp.RECOVERではない。")
+	}
+	return moveHelper(
+		battle, action, context,
+		func(_ *Battle, src, target *bp.Pokemon, _ *Context) error {
+			src.Rank = target.Rank.Clone()
+			return nil
+		},
+		EmptyAdditionalEffect,
+		EmptyAdditionalEffect,
+	)
+}
 
+//じしん
+func Earthquake(battle *Battle, action *SoloAction, context *Context) error {
+	if action.MoveName != bp.EARTHQUAKE {
+		return fmt.Errorf("Earthquakeに渡されたAction.MoveNameがbp.EARTHQUAKEではない。")
+	}
+	return moveHelper(
+		battle, action, context,
+		EmptyStatus,
+		EmptyAdditionalEffect,
+		EmptyAdditionalEffect,
+	)
+}
+
+//じばく
+func SelfDestruct(battle *Battle, action *SoloAction, context *Context) error {
+	if action.MoveName != bp.SELF_DESTRUCT {
+		return fmt.Errorf("SelfDestructに渡されたAction.MoveNameがbp.SELF_DESTRUCTではない。")
+	}
+
+	return moveHelper(
+		battle, action, context,
+		EmptyStatus,
+		EmptyAdditionalEffect,
+		EmptyAdditionalEffect,
+	)
+}
+
+func GetMoveFunc(moveName bp.MoveName) Move {
+	switch moveName {
+		case bp.THUNDERBOLT:
+			return Thunderbolt
+		case bp.HAMMER_ARM:
+			return HammerArm
+		case bp.STONE_EDGE:
+			return StoneEdge
+		case bp.SURF:
+			return Surf
+		case bp.ICE_BEAM:
+			return IceBeam
+		case bp.STRUGGLE:
+			return Struggle
+		case bp.RAIN_DANCE:
+			return RainDance
+		case bp.ROCK_SLIDE:
+			return RockSlide
+		case bp.RETURN:
+			return Return
+		case bp.CRUNCH:
+			return Crunch
+		case bp.ENDEAVOR:
+			return Endeavor
+		case bp.ICY_WIND:
+			return IcyWind
+		case bp.FOLLOW_ME:
+			return FollowMe
+		case bp.HYPNOSIS:
+			return Hypnosis
+		case bp.RECOVER:
+			return Recover
+		case bp.EARTHQUAKE:
+			return Earthquake
+		case bp.SELF_DESTRUCT:
+			return SelfDestruct
+	}
+	return EmptyMove
+}

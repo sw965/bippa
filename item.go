@@ -1,7 +1,7 @@
 package bippa
 
 import (
-	omwmaps "github.com/sw965/omw/maps"
+	omwjson "github.com/sw965/omw/json"
 )
 
 type Item int
@@ -16,15 +16,17 @@ const (
     LUM_BERRY    // ラムのみ
 )
 
-var STRING_TO_ITEM = map[string]Item{
-	"イバンのみ":IAPAPA_BERRY,
-	"オボンのみ":SITRUS_BERRY,
-	"カゴのみ":CHESTO_BERRY,
-	"きあいのタスキ":FOCUS_SASH,
-	"ソクノのみ":WACAN_BERRY,
-	"ラムのみ":LUM_BERRY,
-}
-
-var ITEM_TO_STRING = omwmaps.Invert[map[Item]string](STRING_TO_ITEM)
-
 type Items []Item
+
+var ALL_ITEMS = func() Items {
+	ss, err := omwjson.Load[[]string](ALL_ITEMS_PATH)
+	if err != nil {
+		panic(err)
+	}
+
+	is, err := StringsToItems(ss)
+	if err != nil {
+		panic(err)
+	}
+	return is
+}

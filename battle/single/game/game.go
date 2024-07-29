@@ -1,6 +1,7 @@
 package game
 
 import (
+	//"fmt"
 	//"github.com/sw965/crow/game/simultaneous"
 	"github.com/sw965/bippa/battle/single"
     //bp "github.com/sw965/bippa"
@@ -25,56 +26,31 @@ import (
 // 	}
 // }
 
-func LegalSeparateActions(b *single.Battle) single.ActionsSlice {
-	return single.ActionsSlice{}
+func LegalSeparateActionsSlice(b *single.Battle) single.ActionsSlice {
+	moveSoloActionsSlice := b.LegalSeparateMoveSoloActionsSlice()
+	ret := make(single.ActionsSlice, len(moveSoloActionsSlice))
+	for i, action := range moveSoloActionsSlice {
+		ret[i] = action.ToActions()
+	}
+	return ret
 }
 
-// func NewPushFunc(context *single.Context) func(single.Battle, single.Actions) (single.Battle, error) {
-// 	return func(battle single.Battle, actions single.Actions) (single.Battle, error) {
-// 		if len(actions) != 2 {
-// 			return single.Battle{}, fmt.Errorf("len(actions) != 2 (NewPushFunc)")
-// 		}
-
-// 		for actions[0].IsSelf == actions[1].IsSelf {
-// 			return single.Battle{}, fmt.Errorf("プレイヤー1もしくはプレイヤー2が連続で行動しようとした。(actions[0].IsSelf == actions[1].IsSelf)")
-// 		}
-// 		if actions.IsAllEmpty() {
-// 			fmt.Println("エラー前battle", battle.ToEasyRead())
-// 			return single.Battle{}, fmt.Errorf("両プレイヤーのActionがEmptyになっているため、Pushできません。Emptyじゃないようにするには、Action.CmdMoveNameかAction.SwitchPokeNameのいずれかは、ゼロ値以外の値である必要があります。")
-// 		}
-
-// 		var err error
-// 		sorted := battle.SortActionsByOrder(&actions[0], &actions[1], context.Rand)
-// 		for i := range sorted {
-// 			action := sorted[i]
-// 			if action.CmdMoveName == bp.EMPTY_MOVE_NAME && action.SwitchPokeName == bp.EMPTY_POKE_NAME {
-// 				continue
-// 			}
-
-// 			if action.IsSelf {
-// 				battle, err = battle.Action(action, context)
-// 			} else {
-// 				battle = battle.SwapView()
-// 				battle, err = battle.Action(action, context)
-// 				battle = battle.SwapView()
-// 			}
-
-// 			if err != nil {
-// 				return single.Battle{}, err
-// 			}
-
-// 			if battle.SelfFighters[0].IsFaint() {
-// 				context.Observer(&battle, single.SELF_FAINT_EVENT)
-// 			}
-
-// 			if battle.OpponentFighters[0].IsFaint() {
-// 				context.Observer(&battle, single.OPPONENT_FAINT_EVENT)
-// 			}
-// 		}
-// 		battle.Turn += 1
-// 		return battle, nil
-// 	}
-// }
+func NewPushFunc(context *single.Context) func(single.Battle, single.Actions) (single.Battle, error) {
+	return func(battle single.Battle, actions single.Actions) (single.Battle, error) {
+		battle = battle.Clone()
+		for _, soloAction := range actions.ToSoloActions() {
+			if soloAction.IsSelfView {
+				battle.SoloAction(&soloAction, context)
+			} else {
+				battle.SwapView()
+				battle.SoloAction(&soloAction, context)
+				battle.SwapView()
+			}
+		}
+		battle.Turn += 1
+		return battle, nil
+	}
+}
 
 // func New(context *single.Context) simultaneous.Game[single.Battle, single.ActionSlices, single.Actions, single.Action] {
 //     gm := simultaneous.Game[single.Battle, single.ActionSlices, single.Actions, single.Action]{
