@@ -1,4 +1,4 @@
-package single
+package battle
 
 import (
 	bp "github.com/sw965/bippa"
@@ -14,9 +14,8 @@ type SoloAction struct {
 	MoveName bp.MoveName
 	SrcIndex int
 	TargetIndex int
-	Speed int
 	IsSelfLeadTarget bool
-	MoveTarget bp.MoveTarget
+	Speed int
 	IsSelfView bool
 }
 
@@ -33,51 +32,16 @@ func (a *SoloAction) Priority() int {
 	}
 }
 
-func (a *SoloAction) SrcPokemon(battle *Battle) bp.Pokemon {
-	if a.IsSelfView {
-		return battle.SelfLeadPokemons[a.SrcIndex]
-	} else {
-		return battle.OpponentLeadPokemons[a.SrcIndex]
-	}
-}
-
-func (a *SoloAction) TargetPokemon(battle *Battle) bp.Pokemon {
-	if !a.IsSelfView {
-		battle.SwapView()
-	}
-
-	var ret bp.Pokemon
-	if a.IsSelfLeadTarget {
-		if a.TargetIndex == -1 {
-			ret = bp.Pokemon{}
-		} else {
-			ret = battle.SelfLeadPokemons[a.TargetIndex]
-		}
-	} else {
-		if a.TargetIndex == -1 {
-			ret = bp.Pokemon{}
-		} else {
-			ret = battle.OpponentLeadPokemons[a.TargetIndex]
-		}
-	}
-	if !a.IsSelfView {
-		battle.SwapView()
-	}
-	return ret
-}
-
 func (a *SoloAction) ToggleIsSelf() {
 	a.IsSelfView = !a.IsSelfView
 }
 
 type SoloActions []SoloAction
 
-func (as SoloActions) SortByOrder(actions SoloActions, r *rand.Rand) SoloActions {
-	as = slices.Clone(as)
+func (as SoloActions) SortByOrder(r *rand.Rand) {
 	slices.SortFunc(as, func(a1, a2 SoloAction) bool {
 		a1Priority := a1.Priority()
 		a2Priority := a2.Priority()
-
 		if a1Priority > a2Priority {
 			return true
 		} else if a1Priority < a2Priority {
@@ -94,7 +58,6 @@ func (as SoloActions) SortByOrder(actions SoloActions, r *rand.Rand) SoloActions
 			}
 		}
 	})
-	return as
 }
 
 func (as SoloActions) ToggleIsSelf() {

@@ -8,6 +8,6 @@
     "priorityRank":0,
     "criticalRank":0,
     "target":"相手ランダム1体",
-    "piercingProtect":"非貫通",
-    "piercingSubstitute":"非貫通"
+    "canProtect":true,
+    "canSubstitute":true
 }

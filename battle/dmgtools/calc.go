@@ -22,6 +22,7 @@ type Attacker struct {
 	AtkRank bp.Rank
 	SpAtk int
 	SpAtkRank bp.Rank
+	Speed int
 	Ability bp.Ability
 }
 
@@ -30,10 +31,11 @@ func NewAttacker(p *bp.Pokemon) Attacker {
 		PokeName:p.Name,
 		Level:p.Level,
 		Types:p.Types,
-		Atk:p.Atk,
+		Atk:p.Stat.Atk,
 		AtkRank:p.Rank.Atk,
-		SpAtk:p.SpAtk,
+		SpAtk:p.Stat.SpAtk,
 		SpAtkRank:p.Rank.SpAtk,
+		Speed:p.Stat.Speed,
 		Ability:p.Ability,
 	}
 }
@@ -46,6 +48,7 @@ type Defender struct {
 	DefRank bp.Rank
 	SpDef int
 	SpDefRank bp.Rank
+	Speed int
 	Ability bp.Ability
 }
 
@@ -54,10 +57,11 @@ func NewDefender(p *bp.Pokemon) Defender {
 		PokeName:p.Name,
 		Level:p.Level,
 		Types:p.Types,
-		Def:p.Def,
+		Def:p.Stat.Def,
 		DefRank:p.Rank.Def,
-		SpDef:p.SpDef,
+		SpDef:p.Stat.SpDef,
 		SpDefRank:p.Rank.SpDef,
+		Speed:p.Stat.Speed,
 		Ability:p.Ability,
 	}
 }
@@ -136,7 +140,16 @@ func (c *Calculator) Calculation(moveName bp.MoveName) (int, bool) {
 	}
 
 	//基礎ダメージ
-	power := moveData.Power
+
+	var power int
+	if moveName == bp.GYRO_BALL {
+		// https://wiki.xn--rckteqa2e.com/wiki/%E3%82%B8%E3%83%A3%E3%82%A4%E3%83%AD%E3%83%9C%E3%83%BC%E3%83%AB
+		power = int(25.0 * float64(defender.Speed) / float64(attacker.Speed))+1
+		power = omwmath.Min(power, 150)
+	} else {
+		power = moveData.Power
+	}
+
 	lv := int(attacker.Level)
 	dmg := (lv*2/5) + 2
 	dmg = dmg * power * atkVal / defVal

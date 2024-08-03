@@ -1,4 +1,4 @@
-package single
+package battle
 
 type Weather int
 
@@ -8,7 +8,6 @@ const (
 )
 
 func (w Weather) ToString() string {
-	//Weatherは疑似Enumなので、wは正しい値である前提。
 	switch w {
 		case RAIN:
 			return "雨"

@@ -255,6 +255,13 @@ type Pokemon struct {
 
 	IsFlinchState bool
 	SubstituteHP int
+	IsProtectState bool
+	ProtectConsecutiveSuccess int
+
+	RemainingTurnTauntState int
+
+	LastPlannedUseMoveName MoveName
+	Turn int
 }
 
 func NewPokemon(name PokeName, level Level, nature Nature, ability Ability, item Item, moveNames MoveNames, pointUps PointUps, iv *IndividualStat, ev *EffortStat) (Pokemon, error) {
@@ -271,7 +278,10 @@ func NewPokemon(name PokeName, level Level, nature Nature, ability Ability, item
 		return Pokemon{}, fmt.Errorf("覚えさせる技の数とポイントアップの数が一致しません。")
 	}
 
-	p := Pokemon{}
+	p := Pokemon{
+		MoveNames:make(MoveNames, 0, MAX_MOVESET_LENGTH),
+		PointUps:make(PointUps, 0, MAX_MOVESET_LENGTH),
+	}
 	p.Name = name
 	p.Level = level
 	p.Nature = nature
@@ -280,6 +290,7 @@ func NewPokemon(name PokeName, level Level, nature Nature, ability Ability, item
 		return Pokemon{}, err
 	}
 	p.Item = item
+	p.Moveset = Moveset{}
 	for i, moveName := range moveNames {
 		err := p.SetInMoveset(moveName, pointUps[i])
 		if err != nil {
@@ -309,6 +320,8 @@ func (p *Pokemon) SetInMoveset(k MoveName, up PointUp) error {
 	if !slices.Contains(POKEDEX[p.Name].Learnset, k) {
 		return fmt.Errorf("%s は %s を 覚えません。", p.Name.ToString(), k.ToString())
 	}
+	p.MoveNames = append(p.MoveNames, k)
+	p.PointUps = append(p.PointUps, up)
 	pp := NewPowerPoint(MOVEDEX[k].BasePP, up)
 	p.Moveset[k] = &pp
 
@@ -353,11 +366,20 @@ func (p *Pokemon) SubSubstituteHP(dmg int) error {
 }
 
 func (p *Pokemon) SetStatusAilment(status StatusAilment, percentage int, r *rand.Rand) error {
+	if p.StatusAilment != EMPTY_STATUS_AILMENT {
+		return nil
+	}
+	
 	//https://wiki.xn--rckteqa2e.com/wiki/%E3%81%93%E3%81%8A%E3%82%8A_(%E7%8A%B6%E6%85%8B%E7%95%B0%E5%B8%B8)
 	if status == FREEZE && slices.Contains(p.Types, ICE) {
 		return nil
 	}
 
+	// https://wiki.xn--rckteqa2e.com/wiki/%E3%82%84%E3%81%91%E3%81%A9
+	if status == BURN && slices.Contains(p.Types, FIRE) {
+		return nil
+	}
+	
 	ok, err := omwrand.IsPercentageMet(percentage, r)
 	if ok {
 		p.StatusAilment = status
@@ -397,13 +419,11 @@ func (p *Pokemon) IsSubstituteState() bool {
 	return p.SubstituteHP > 0
 }
 
-func (p *Pokemon) RankFluctuation(fluctuation *RankStat, percentage int, isClearBodyValid bool, r *rand.Rand) error {
-	if isClearBodyValid && p.Ability == CLEAR_BODY {
-		return nil
-	}
+func (p *Pokemon) RankFluctuation(v *RankStat, percentage int, isClearBodyValid bool, r *rand.Rand) error {
 	ok, err := omwrand.IsPercentageMet(percentage, r)
+	isClearBody := isClearBodyValid && p.Ability == CLEAR_BODY
 	if ok {
-		p.Rank.Fluctuation(fluctuation)
+		p.Rank.Fluctuation(v, isClearBody)
 	}
 	return err
 }
@@ -416,8 +436,26 @@ func (p *Pokemon) SetIsFlinchState(percentage int, r *rand.Rand) error {
 	return err
 }
 
+func (p *Pokemon) IsTauntState() bool {
+	return p.RemainingTurnTauntState > 0
+}
+
 func (p *Pokemon) UsableMoveNames() MoveNames {
-	return fn.Filter[MoveNames](p.MoveNames, func(n MoveName) bool { return p.Moveset[n].Current > 0 })
+	ns := fn.Filter[MoveNames](p.MoveNames, func(n MoveName) bool { return p.Moveset[n].Current > 0 })
+	if p.IsTauntState() {
+		ns = fn.Filter[MoveNames](p.MoveNames, func(n MoveName) bool {
+			moveData := MOVEDEX[n]
+			return moveData.Category != STATUS
+		})
+	}
+	if len(ns) == 0 {
+		ns = MoveNames{STRUGGLE}
+	}
+	return ns
+}
+
+func (p *Pokemon) SetRemainingTurnTauntState(r *rand.Rand) {
+	p.RemainingTurnTauntState = omwrand.IntUniform(2, 5, r)
 }
 
 func (p *Pokemon) ToEasyRead() EasyReadPokemon {
@@ -444,6 +482,30 @@ func (ps Pokemons) Names() PokeNames {
 		ret[i] = p.Name
 	}
 	return ret
+}
+
+func (ps Pokemons) Levels() Levels {
+	lvs := make(Levels, len(ps))
+	for i, p := range ps {
+		lvs[i] = p.Level
+	}
+	return lvs
+}
+
+func (ps Pokemons) MaxHPs() []int {
+	hps := make([]int, len(ps))
+	for i, p := range ps {
+		hps[i] = p.Stat.MaxHP
+	}
+	return hps
+}
+
+func (ps Pokemons) CurrentHPs() []int {
+	hps := make([]int, len(ps))
+	for i, p := range ps {
+		hps[i] = p.Stat.CurrentHP
+	}
+	return hps
 }
 
 func (ps Pokemons) Clone() Pokemons {
@@ -485,12 +547,24 @@ func (ps Pokemons) NotFaintedIndices() []int {
 	return omwslices.IndicesFunc(ps, func(p Pokemon) bool { return !p.IsFainted() })
 }
 
+func (ps Pokemons) ToPointers() PokemonPointers {
+	pps := make(PokemonPointers, len(ps))
+	for i := range ps {
+		pps[i] = &ps[i]
+	}
+	return pps
+}
+
 type PokemonPointers []*Pokemon
 
 func (ps PokemonPointers) SortBySpeed() {
 	slices.SortFunc(ps, func(p1, p2 *Pokemon) bool {
 		return p1.Stat.Speed > p2.Stat.Speed
 	})
+}
+
+func (ps PokemonPointers) NotFainted() PokemonPointers {
+	return fn.Filter(ps, func(p *Pokemon) bool { return !p.IsFainted() })
 }
 
 type PokemonEachStatCalculator struct {

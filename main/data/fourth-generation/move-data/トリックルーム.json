@@ -8,6 +8,6 @@
     "priorityRank":-7,
     "criticalRank":0,
     "target":"全体",
-    "piercingProtect":"",
-    "piercingSubstitute":""
+    "canProtect":false,
+    "canSubstitute":false
 }

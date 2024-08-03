@@ -15,6 +15,7 @@ type MoveData struct {
     PriorityRank int
     CriticalRank CriticalRank
     Target MoveTarget
+	CanSubstitute bool
 }
 
 func LoadMoveData(moveName MoveName) (MoveData, error) {
@@ -83,8 +84,8 @@ const (
     BULLET_PUNCH   // バレットパンチ
 )
 
-func (name MoveName) ToString() string {
-	return MOVE_NAME_TO_STRING[name]
+func (n MoveName) ToString() string {
+	return MOVE_NAME_TO_STRING[n]
 }
 
 type MoveNames []MoveName
@@ -135,10 +136,10 @@ const (
     OPPONENT_RANDOM_ONE_TARGET       // 相手ランダム1体
 )
 
-var TARGET_RANGE_TO_STRING = omwmaps.Invert[map[MoveTarget]string](STRING_TO_TARGET_RANGE)
+var MOVE_TARGET_TO_STRING = omwmaps.Invert[map[MoveTarget]string](STRING_TO_MOVE_TARGET)
 
 func (t MoveTarget) ToString() string {
-	return TARGET_RANGE_TO_STRING[t]
+	return MOVE_TARGET_TO_STRING[t]
 }
 
 type PointUp int
@@ -247,6 +248,7 @@ type EasyReadMoveData struct {
 	PriorityRank int
 	CriticalRank CriticalRank
 	Target       string
+	CanSubstitute bool
 }
 
 func (m *EasyReadMoveData) From() (MoveData, error) {
@@ -260,7 +262,7 @@ func (m *EasyReadMoveData) From() (MoveData, error) {
 		return MoveData{}, err
 	}
 
-	target, err := StringToTargetRange(m.Target)
+	target, err := StringToMoveTarget(m.Target)
 	if err != nil {
 		return MoveData{}, err
 	}

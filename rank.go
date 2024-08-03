@@ -35,34 +35,44 @@ func (r RankStat) Clone() RankStat {
 	return r
 }
 
-func (r *RankStat) Fluctuation(v *RankStat) {
+func (r *RankStat) Fluctuation(v *RankStat, isClearBody bool) {
 	if v.Atk > 0 {
 		r.Atk = omwmath.Min(r.Atk+v.Atk, MAX_RANK)
 	} else {
-		r.Atk = omwmath.Max(r.Atk+v.Atk, MIN_RANK)
+		if !isClearBody {
+			r.Atk = omwmath.Max(r.Atk+v.Atk, MIN_RANK)
+		}
 	}
 
 	if v.Def > 0 {
 		r.Def = omwmath.Min(r.Def+v.Def, MAX_RANK)
 	} else {
-		r.Def = omwmath.Max(r.Def+v.Def, MIN_RANK)
+		if !isClearBody {
+			r.Def = omwmath.Max(r.Def+v.Def, MIN_RANK)
+		}
 	}
 
 	if v.SpAtk > 0 {
 		r.SpAtk = omwmath.Min(r.SpAtk+v.SpAtk, MAX_RANK)
 	} else {
-		r.SpAtk = omwmath.Max(r.SpAtk+v.SpAtk, MIN_RANK)
+		if !isClearBody {
+			r.SpAtk = omwmath.Max(r.SpAtk+v.SpAtk, MIN_RANK)
+		}
 	}
 
 	if v.SpDef > 0 {
 		r.SpDef = omwmath.Min(r.SpDef+v.SpDef, MAX_RANK)
 	} else {
-		r.SpDef = omwmath.Max(r.SpDef+v.SpDef, MIN_RANK)
+		if !isClearBody {
+			r.SpDef = omwmath.Max(r.SpDef+v.SpDef, MIN_RANK)
+		}
 	}
 
 	if v.Speed > 0 {
 		r.Speed = omwmath.Min(r.Speed+v.Speed, MAX_RANK)
 	} else {
-		r.Speed = omwmath.Max(r.Speed+v.Speed, MIN_RANK)
+		if !isClearBody {
+			r.Speed = omwmath.Max(r.Speed+v.Speed, MIN_RANK)
+		}
 	}
 }

@@ -1,4 +1,4 @@
-package single_test
+package battle_test
 
 // import (
 // 	"fmt"

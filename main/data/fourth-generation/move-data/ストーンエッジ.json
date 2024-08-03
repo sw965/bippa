@@ -8,6 +8,6 @@
     "priorityRank":0,
     "criticalRank":1,
     "target":"通常",
-    "piercingProtect":"非貫通",
-    "piercingSubstitute":"非貫通"
+    "canProtect":true,
+    "canSubstitute":true
 }

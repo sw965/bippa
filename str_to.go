@@ -166,7 +166,7 @@ func StringToMoveCategory(s string) (MoveCategory, error) {
 	}
 }
 
-var STRING_TO_TARGET_RANGE = map[string]MoveTarget{
+var STRING_TO_MOVE_TARGET = map[string]MoveTarget{
 	"通常":NORMAL_TARGET,
 	"相手2体":OPPONENT_TWO_TARGET,
 	"自分":SELF_TARGET,
@@ -188,9 +188,9 @@ func StringsToTypes(ss []string) (Types, error) {
 	return fn.MapWithError[Types](ss, StringToType)
 }
 
-func StringToTargetRange(s string) (MoveTarget, error) {
-	if target, ok := STRING_TO_TARGET_RANGE[s]; !ok {
-		msg := fmt.Sprintf("%s は STRING_TO_TARGET_RANGE に含まれていない為、TargetRangeに変換出来ません。", s)
+func StringToMoveTarget(s string) (MoveTarget, error) {
+	if target, ok := STRING_TO_MOVE_TARGET[s]; !ok {
+		msg := fmt.Sprintf("%s は STRING_TO_MOVE_TARGETに含まれていない為、MoveTargetに変換出来ません。", s)
 		return target, fmt.Errorf(msg)
 	} else {
 		return target, nil

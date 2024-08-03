@@ -7,3 +7,5 @@ const (
 	STANDARD_LEVEL Level = 50
 	MAX_LEVEL Level = 100
 )
+
+type Levels []Level
