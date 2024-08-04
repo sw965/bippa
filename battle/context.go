@@ -6,9 +6,9 @@ import (
 	"github.com/sw965/bippa/battle/dmgtools"
 )
 
-type Observer func(*Manager, EventType, int)
+type Observer func(*Manager, EventType)
 
-func EmptyObserver(_ *Manager, _ EventType, _ int) {}
+func EmptyObserver(_ *Manager, _ EventType) {}
 
 type Context struct {
 	DamageRandBonuses []float64

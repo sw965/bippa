@@ -29,8 +29,9 @@ func Test(t *testing.T) {
 			bp.NewMoruhu2007Metagross(),
 			bp.NewMoruhu2007Snorlax(),
 		},
-		IsPlayer1View:true,
 	}
+
+	m.Init()
 	p2View := m.Clone()
 	p2View.SwapView()
 
@@ -50,31 +51,38 @@ func Test(t *testing.T) {
 				SrcIndex:1,
 				TargetIndex:1,
 				IsSelfLeadTarget:true,
-				Speed:m.SelfLeadPokemons[1].Stat.Speed,
+				Speed:m.OpponentLeadPokemons[1].Stat.Speed,
 				IsSelfView:false,
 			},
 			
 			battle.SoloAction{
 				MoveName:bp.TRICK_ROOM,
 				SrcIndex:0,
-				Speed:m.SelfLeadPokemons[0].Stat.Speed,
+				Speed:m.OpponentLeadPokemons[0].Stat.Speed,
 				IsSelfView:false,
 			},
 		},
 
 		battle.Action{
+			// battle.SoloAction{
+			// 	MoveName:bp.FAKE_OUT,
+			// 	SrcIndex:0,
+			// 	TargetIndex:0,
+			// 	Speed:m.OpponentLeadPokemons[0].Stat.Speed,
+			// 	IsSelfView:true,
+			// },
+
 			battle.SoloAction{
-				MoveName:bp.FAKE_OUT,
 				SrcIndex:0,
 				TargetIndex:0,
-				Speed:m.OpponentLeadPokemons[0].Stat.Speed,
+				Speed:m.SelfLeadPokemons[0].Stat.Speed,
 				IsSelfView:true,
 			},
 
 			battle.SoloAction{
 				MoveName:bp.SURF,
 				SrcIndex:1,
-				Speed:m.OpponentLeadPokemons[1].Stat.Speed,
+				Speed:m.SelfLeadPokemons[1].Stat.Speed,
 				IsSelfView:true,
 			},
 		},

@@ -93,6 +93,7 @@ func (m *Move) Run(battle *Manager, action *SoloAction, context *Context) error 
 
 		//かんそうはだ
 		if moveData.Type == bp.WATER && target.Ability == bp.DRY_SKIN {
+			fmt.Println("かんそうはだが発動した！")
 			heal := int(float64(target.Stat.CurrentHP) * 0.25)
 			err := target.AddCurrentHP(heal)
 			if err != nil {
@@ -120,15 +121,17 @@ func (m *Move) Run(battle *Manager, action *SoloAction, context *Context) error 
 			}
 
 			var isBodyAttack bool
+			var isFocusSash bool
+
 			if target.IsSubstituteState() {
 				if moveData.CanSubstitute {
 					err = target.SubSubstituteHP(dmg)
 				} else {
-					err = target.SubCurrentHP(dmg)
+					isFocusSash, err = target.SubCurrentHP(dmg, true)
 					isBodyAttack = true
 				}
 			} else {
-				err = target.SubCurrentHP(dmg)
+				isFocusSash, err = target.SubCurrentHP(dmg, true)
 				isBodyAttack = true
 			}
 
@@ -136,13 +139,20 @@ func (m *Move) Run(battle *Manager, action *SoloAction, context *Context) error 
 				return err
 			}
 
+			if isFocusSash {
+				context.Observer(battle, ITEM_USE_EVENT)
+			}
+
 			isTargetFainted := target.IsFainted()
 			if isTargetFainted {
 				faintedCount += 1	
 			}
 
-			m.SelfAdditionalEffect(src, context)
-			if isBodyAttack && !isTargetFainted {
+			if m.SelfAdditionalEffect != nil {
+				m.SelfAdditionalEffect(src, context)
+			}
+
+			if isBodyAttack && !isTargetFainted && m.OpponentAdditionalEffect != nil {
 				m.OpponentAdditionalEffect(target, context)
 			}
 		}
@@ -193,7 +203,8 @@ func NewStruggle() Move {
 	return Move{
 		SelfAdditionalEffect:func(src *bp.Pokemon, context *Context) error {
 			dmg := int(float64(src.Stat.CurrentHP) / 4.0)
-			return src.SubCurrentHP(dmg)
+			_, err := src.SubCurrentHP(dmg, false)
+			return err
 		},
 	}
 }
@@ -438,7 +449,7 @@ func NewCometPunch() Move {
 }
 
 //サイコキネシス
-func Psychic() Move {
+func NewPsychic() Move {
 	return Move{
 		OpponentAdditionalEffect:func(target *bp.Pokemon, context *Context) error {
 			isClearBodyValid := true
@@ -449,12 +460,12 @@ func Psychic() Move {
 }
 
 //ジャイロボール
-func GyroBall() Move {
+func NewGyroBall() Move {
 	return Move{}
 }
 
 //ダークホール
-func DarkVoid() Move {
+func NewDarkVoid() Move {
 	return Move{
 		StatusEffect:func(_ *Manager, src, target *bp.Pokemon, context *Context) error {
 			return target.SetStatusAilment(bp.SLEEP, 100, context.Rand)
@@ -463,18 +474,18 @@ func DarkVoid() Move {
 }
 
 //トリックルーム
-func TrickRoom() Move {
+func NewTrickRoom() Move {
 	return Move{}
 }
 
 //ハイドロポンプ
-func HydroPump() Move {
+func NewHydroPump() Move {
 	return Move{}
 }
 
 
 //バレットパンチ
-func BulletPunch() Move {
+func NewBulletPunch() Move {
 	return Move{}
 }
 
@@ -514,6 +525,46 @@ func GetMove(moveName bp.MoveName) Move {
 			return NewEarthquake()
 		case bp.SELF_DESTRUCT:
 			return NewSelfDestruct()
+		case bp.WATERFALL:
+			return NewWaterfall()
+		case bp.EXPLOSION:
+			return NewExplosion()
+		case bp.TAUNT:
+			return NewTaunt()
+		case bp.THUNDER_WAVE:
+			return NewThunderWave()
+		case bp.FAKE_OUT:
+			return NewFakeOut()
+		case bp.HEAT_WAVE:
+			return NewHeatWave()
+		case bp.BELLY_DRUM:
+			return NewBellyDrum()
+		case bp.SUCKER_PUNCH:
+			return NewSuckerPunch()
+		case bp.FIRE_PUNCH:
+			return NewFirePunch()
+		case bp.PROTECT:
+			return NewProtect()
+		case bp.SUBSTITUTE:
+			return NewSubstitute()
+		case bp.DRACO_METEOR:
+			return NewDracoMeteor()
+		case bp.CROSS_CHOP:
+			return NewCrossChop()
+		case bp.COMET_PUNCH:
+			return NewCometPunch()
+		case bp.PSYCHIC:
+			return NewHypnosis()
+		case bp.GYRO_BALL:
+			return NewGyroBall()
+		case bp.DARK_VOID:
+			return NewDarkVoid()
+		case bp.TRICK_ROOM:
+			return NewTrickRoom()
+		case bp.HYDRO_PUMP:
+			return NewHydroPump()
+		case bp.BULLET_PUNCH:
+			return NewBulletPunch()
 	}
 	return Move{}
 }

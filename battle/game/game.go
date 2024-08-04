@@ -1,7 +1,7 @@
 package game
 
 import (
-	"fmt"
+	//"fmt"
 	"github.com/sw965/crow/game/simultaneous"
 	"github.com/sw965/bippa/battle"
     //bp "github.com/sw965/bippa"
@@ -58,11 +58,9 @@ func NewPushFunc(context *battle.Context) func(battle.Manager, battle.Actions) (
 	return func(m battle.Manager, actions battle.Actions) (battle.Manager, error) {
 		m = m.Clone()
 		soloActions := actions.ToSoloActions()
-		fmt.Println(soloActions)
 		soloActions.SortByOrder(context.Rand)
 
 		for _, soloAction := range soloActions {
-			fmt.Println(soloAction.MoveName.ToString())
 			if soloAction.IsSelfView {
 				m.SoloAction(&soloAction, context)
 			} else {

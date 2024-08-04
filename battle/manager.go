@@ -37,6 +37,31 @@ type Manager struct {
 	IsPlayer1View bool
 }
 
+func (m *Manager) Init() {
+	m.IsPlayer1View = true
+
+	id := 0
+	for i := range m.SelfLeadPokemons {
+		m.SelfLeadPokemons[i].Id = id
+		id += 1
+	}
+
+	for i := range m.SelfBenchPokemons {
+		m.SelfBenchPokemons[i].Id = id
+		id += 1
+	}
+
+	for i := range m.OpponentLeadPokemons {
+		m.OpponentLeadPokemons[i].Id = id
+		id += 1
+	}
+
+	for i := range m.OpponentBenchPokemons {
+		m.OpponentBenchPokemons[i].Id = id
+		id += 1
+	}
+}
+
 func (m Manager) Clone() Manager {
 	return Manager{
 		SelfLeadPokemons:m.SelfLeadPokemons.Clone(),
@@ -290,8 +315,7 @@ func (m *Manager) MoveUse(action *SoloAction, context *Context) error {
 	}
 
 	m.SelfLeadPokemons[action.SrcIndex].Moveset[action.MoveName].Current -= 1
-	fmt.Println("moveuse", action.MoveName.ToString())
-	context.Observer(m, MOVE_USE_EVENT, action.SrcIndex)
+	context.Observer(m, MOVE_USE_EVENT)
 	move := GetMove(action.MoveName)
 	move.Run(m, action, context)
 	return nil
@@ -327,9 +351,8 @@ func (m *Manager) Switch(leadIdx, benchIdx int, context *Context) error {
 		msg := fmt.Sprintf("%d番目の %sに 交代しようとしたが、瀕死状態である為、交代出来ません。", benchIdx, name.ToString())
 		return fmt.Errorf(msg)
 	}
-
 	m.SelfLeadPokemons[leadIdx], m.SelfBenchPokemons[benchIdx] = m.SelfBenchPokemons[benchIdx], m.SelfLeadPokemons[leadIdx]
-	context.Observer(m, SWITCH_EVENT, leadIdx)
+	context.Observer(m, SWITCH_EVENT)
 	return nil
 }
 
@@ -338,6 +361,14 @@ func (m *Manager) SoloAction(action *SoloAction, context *Context) error {
 		return m.MoveUse(action, context)
 	} else {
 		return m.Switch(action.SrcIndex, action.TargetIndex, context)
+	}
+}
+
+func (m *Manager) LeadPokemons(isSelf bool) bp.Pokemons {
+	if isSelf {
+		return m.SelfLeadPokemons
+	} else {
+		return m.OpponentLeadPokemons
 	}
 }
 

@@ -262,6 +262,7 @@ type Pokemon struct {
 
 	LastPlannedUseMoveName MoveName
 	Turn int
+	Id int
 }
 
 func NewPokemon(name PokeName, level Level, nature Nature, ability Ability, item Item, moveNames MoveNames, pointUps PointUps, iv *IndividualStat, ev *EffortStat) (Pokemon, error) {
@@ -313,6 +314,7 @@ func (p *Pokemon) SetAbility(a Ability) error {
 		m := fmt.Sprintf("特性：%s の % s は 不適です。", a.ToString(), p.Name.ToString())
 		return fmt.Errorf(m)
 	}
+	p.Ability = a
 	return nil
 }
 
@@ -349,12 +351,21 @@ func (p *Pokemon) AddCurrentHP(a int) error {
 	return nil
 }
 
-func (p *Pokemon) SubCurrentHP(dmg int) error {
+func (p *Pokemon) SubCurrentHP(dmg int, isFocusSashValid bool) (bool, error) {
 	if dmg < 0 {
-		return fmt.Errorf("Pokemon.SubCurrentHPに渡す引数は、0以上でなければならない。")
+		return false, fmt.Errorf("Pokemon.SubCurrentHPに渡す引数は、0以上でなければならない。")
 	}
-	p.Stat.CurrentHP -= omwmath.Min(dmg, p.Stat.CurrentHP)
-	return nil
+
+	var isFocusSash bool
+	if p.IsFullHP() && dmg > p.Stat.CurrentHP && isFocusSashValid && p.Item == FOCUS_SASH {
+		dmg = p.Stat.MaxHP - 1
+		p.Item = EMPTY_ITEM
+		isFocusSash = true
+	} else {
+		dmg = omwmath.Min(dmg, p.Stat.CurrentHP)
+	}
+	p.Stat.CurrentHP -= dmg
+	return isFocusSash, nil
 }
 
 func (p *Pokemon) SubSubstituteHP(dmg int) error {
@@ -553,6 +564,23 @@ func (ps Pokemons) ToPointers() PokemonPointers {
 		pps[i] = &ps[i]
 	}
 	return pps
+}
+
+func (ps Pokemons) Ids() []int {
+	ids := make([]int, len(ps))
+	for i, p := range ps {
+		ids[i] = p.Id
+	}
+	return ids
+}
+
+func (ps Pokemons) ById(id int) (Pokemon, error) {
+	for _, p := range ps {
+		if p.Id == id {
+			return p, nil
+		}
+	}
+	return Pokemon{}, fmt.Errorf("該当するIdのポケモンが見つからなかった。")
 }
 
 type PokemonPointers []*Pokemon

@@ -16,6 +16,10 @@ const (
     LUM_BERRY    // ラムのみ
 )
 
+func (i Item) ToString() string {
+	return ITEM_TO_STRING[i]
+}
+
 type Items []Item
 
 var ALL_ITEMS = func() Items {
