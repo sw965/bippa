@@ -3,7 +3,7 @@ package battle
 import (
  	"fmt"
  	bp "github.com/sw965/bippa"
-// 	omwslices "github.com/sw965/omw/slices"
+ 	omwslices "github.com/sw965/omw/slices"
 )
 
 type EventType int
@@ -17,6 +17,8 @@ const (
 	RECOIL_EVENT
 	ITEM_USE_EVENT
 	CURRENT_HP_EVENT
+	FOLLOW_ME_EVENT
+	TRICK_ROOM_EVENT
 )
 
 type DisplayUI struct {
@@ -175,6 +177,16 @@ func (ui *ObserverUI) LastUsedItem(currentManager *Manager) (bp.Item, bp.PokeNam
 	return bp.EMPTY_ITEM, bp.EMPTY_POKE_NAME, false, fmt.Errorf("最後に使ったアイテムを特定出来なかった。")
 }
 
+func (ui *ObserverUI) LastFollowmePokemon(currentManager *Manager) (*bp.Pokemon, error) {
+	lastManager := ui.LastManager(currentManager.IsPlayer1View)
+	cn := len(currentManager.SelfFollowMePokemonPointers)
+	ln := len(lastManager.SelfFollowMePokemonPointers)
+	if ln == cn - 1 {
+		return omwslices.End[bp.PokemonPointers](currentManager.SelfFollowMePokemonPointers), nil
+	}
+	return &bp.Pokemon{}, fmt.Errorf("直前にこのゆびとまれを繰り出したポケモンを、差分計算で特定出来ませんでした。")
+}
+
 func (ui *ObserverUI) Observer(current *Manager, event EventType) {
 	lastManager := ui.LastManager(current.IsPlayer1View)
 	switch event {
@@ -204,6 +216,25 @@ func (ui *ObserverUI) Observer(current *Manager, event EventType) {
 				panic(err)
 			}
 			fmt.Println(item.ToString(), isSelf, pokeName.ToString())
+		case FOLLOW_ME_EVENT:
+			p, err := ui.LastFollowmePokemon(current)
+			if err != nil {
+				panic(err)
+			}
+			fmt.Println(fmt.Sprintf("%s は ちゅうもくのまとになった!", p.Name.ToString()))
+		case TRICK_ROOM_EVENT:
+			moveName, pokeName, err := ui.LastUsedMoveName(current)
+			if err != nil {
+				panic(err)
+			}
+			if moveName != bp.TRICK_ROOM {
+				panic("トリックルームイベントで、トリックルームが最後に使った技ではない。")
+			}
+			if current.RemainingTurnTrickRoom == 0 {
+				fmt.Println(pokeName.ToString(), "じくうをもとにもどした！", current.IsPlayer1View)
+			} else {
+				fmt.Println(pokeName.ToString(), "じくうをゆがめた", current.IsPlayer1View)
+			}
 	}
 
 	if lastManager.IsPlayer1View {

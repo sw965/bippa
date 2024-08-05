@@ -83,6 +83,7 @@ func (m *Manager) IsTrickRoomState() bool {
 func (m *Manager) SwapView() {
 	m.SelfLeadPokemons, m.SelfBenchPokemons, m.OpponentLeadPokemons, m.OpponentBenchPokemons =
 		m.OpponentLeadPokemons, m.OpponentBenchPokemons, m.SelfLeadPokemons, m.SelfBenchPokemons
+	m.SelfFollowMePokemonPointers, m.OpponentFollowMePokemonPointers = m.OpponentFollowMePokemonPointers, m.SelfFollowMePokemonPointers
 	m.IsPlayer1View = !m.IsPlayer1View
 }
 

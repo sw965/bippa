@@ -55,6 +55,7 @@ func (m *Move) Run(battle *Manager, action *SoloAction, context *Context) error 
 			} else {
 				battle.RemainingTurnTrickRoom = 5
 			}
+			context.Observer(battle, TRICK_ROOM_EVENT)
 			return nil
 	}
 
@@ -256,11 +257,12 @@ func NewIcyWind() Move {
 //このゆびとまれ
 func NewFollowMe() Move {
 	return Move{
-		StatusEffect:func(b *Manager, src, target *bp.Pokemon, _ *Context) error {
+		StatusEffect:func(b *Manager, src, target *bp.Pokemon, context *Context) error {
 			if src != target {
 				return fmt.Errorf("このゆびとまれ は 技を繰り出したポケモン と 対象になるポケモン の アドレスが 一致していなければならない。")
 			}
 			b.SelfFollowMePokemonPointers = append(b.SelfFollowMePokemonPointers, src)
+			context.Observer(b, FOLLOW_ME_EVENT)
 			return nil
 		},
 	}
