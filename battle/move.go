@@ -5,19 +5,19 @@ import (
 	"math"
 	bp "github.com/sw965/bippa"
 	omwrand "github.com/sw965/omw/math/rand"
-	//"github.com/sw965/bippa/battle/dmgtools"
+	"golang.org/x/exp/slices"
 )
 
-/*
-	第4世代の技データ
-	(あ行～た行) https://yakkun.com/dp/waza_list.htm#k
-	(な行～わ行) https://yakkun.com/dp/waza_list2.htm
-*/
+// /*
+// 	第4世代の技データ
+// 	(あ行～た行) https://yakkun.com/dp/waza_list.htm#k
+// 	(な行～わ行) https://yakkun.com/dp/waza_list2.htm
+// */
 
-type StatusEffect func(*Manager, *bp.Pokemon, *bp.Pokemon, *Context) error
+type StatusEffect func(*Manager, *bp.Pokemon, *bp.Pokemon) error
 
 // https://wiki.xn--rckteqa2e.com/wiki/%E8%BF%BD%E5%8A%A0%E5%8A%B9%E6%9E%9C
-type AdditionalEffect func(*bp.Pokemon, *Context) error
+type AdditionalEffect func(*Manager, *bp.Pokemon) error
 
 type Move struct {
 	StatusEffect StatusEffect
@@ -25,42 +25,46 @@ type Move struct {
 	OpponentAdditionalEffect AdditionalEffect
 }
 
-func (m *Move) Run(battle *Manager, action *SoloAction, context *Context) error {
-	src := &battle.SelfLeadPokemons[action.SrcIndex]
+func (m *Move) Run(manager *Manager, action *SoloAction) error {
+	src := &manager.SelfLeadPokemons[action.SrcIndex]
 	if src.IsFainted() {
 		m := fmt.Sprintf("%s は 瀕死状態なので、技を繰り出す事が出来ません。", src.Name.ToString())
 		return fmt.Errorf(m)
 	}
 
-	if src.IsFlinchState {
-		m := fmt.Sprintf("%s は 怯み状態なので、技を繰り出す事が出来ません。", src.Name.ToString())
-		return fmt.Errorf(m)
-	}
+	mm := MessageMaker{IsSelf:manager.IsHostView}
+	manager.HostViewMessage = mm.MoveUse(src.Name, action.MoveName)
+	GlobalContext.Observer(manager, MESSAGE_EVENT)
 
 	switch action.MoveName {
 		//あまごい
 		case bp.RAIN_DANCE:
-			battle.Weather = RAIN
-			battle.RemainingTurnWeather = 5
+			manager.Weather = RAIN
+			manager.RemainingTurn.Weather = 5
 			return nil
 		//ねこだまし
 		case bp.FAKE_OUT:
-			if src.Turn != 1 {
+			if src.TurnCount != 1 {
 				return nil
 			}
 		//トリックルーム
 		case bp.TRICK_ROOM:
-			if battle.IsTrickRoomState() {
-				battle.RemainingTurnTrickRoom = 0
+			if manager.IsTrickRoomState() {
+				manager.RemainingTurn.TrickRoom = 0
 			} else {
-				battle.RemainingTurnTrickRoom = 5
+				manager.RemainingTurn.TrickRoom = 5
 			}
-			context.Observer(battle, TRICK_ROOM_EVENT)
 			return nil
+		//じばく
+		case bp.SELF_DESTRUCT:
+			src.Stat.CurrentHP = 0
+		//だいばくはつ
+		case bp.EXPLOSION:
+			src.Stat.CurrentHP = 0
 	}
 
 	moveData := bp.MOVEDEX[action.MoveName]
-	targetPokemons := battle.TargetPokemonPointers(action, context)
+	targetPokemons := manager.TargetPokemonPointers(action)
 	targetPokemons.SortBySpeed()
 	targetN := len(targetPokemons)
 
@@ -82,7 +86,7 @@ func (m *Move) Run(battle *Manager, action *SoloAction, context *Context) error 
 		if moveData.Accuracy == -1 {
 			isHit = true
 		} else {
-			isHit, err = omwrand.IsPercentageMet(moveData.Accuracy, context.Rand)
+			isHit, err = omwrand.IsPercentageMet(moveData.Accuracy, GlobalContext.Rand)
 			if err != nil {
 				return err
 			}
@@ -94,9 +98,8 @@ func (m *Move) Run(battle *Manager, action *SoloAction, context *Context) error 
 
 		//かんそうはだ
 		if moveData.Type == bp.WATER && target.Ability == bp.DRY_SKIN {
-			fmt.Println("かんそうはだが発動した！")
 			heal := int(float64(target.Stat.CurrentHP) * 0.25)
-			err := target.AddCurrentHP(heal)
+			err := target.ApplyHealToBody(heal)
 			if err != nil {
 				return err
 			}
@@ -106,34 +109,67 @@ func (m *Move) Run(battle *Manager, action *SoloAction, context *Context) error 
 		if moveData.Category == bp.STATUS {
 			if target.IsSubstituteState() {
 				if !moveData.CanSubstitute {
-					m.StatusEffect(battle, src, target, context)
+					m.StatusEffect(manager, src, target)
 				}
 			} else {
-				m.StatusEffect(battle, src, target, context)
+				m.StatusEffect(manager, src, target)
 			}
 		} else {
-			dmg, isNoEffect, err := battle.CalculateDamage(action, target, isSingleDmg || (faintedCount-1) == targetN, context)
+			switch action.MoveName {
+				//ふいうち
+				case bp.SUCKER_PUNCH:
+					if target.ThisTurnPlannedUseMoveName == bp.EMPTY_MOVE_NAME {
+						break
+					}
+					md := bp.MOVEDEX[target.ThisTurnPlannedUseMoveName]
+					if md.Category == bp.STATUS {
+						break
+					}
+			}
+
+			isCrit, err := IsCritical(moveData.CriticalRank, GlobalContext.Rand)
 			if err != nil {
 				return err
 			}
 
-			if isNoEffect {
-				continue
+			calc := DamageCalculator{
+				Attacker:NewAttackerInfo(src),
+				Defender:NewDefenderInfo(target),
+				IsCritical:isCrit,
+				RandBonus:GlobalContext.GetDamageRandBonus(),
+				IsSingleDamage:isSingleDmg || (faintedCount-1) == targetN,
+				IsDamageCappedByCurrentHP:true,
 			}
 
-			var isBodyAttack bool
+			dmgResult := calc.Calculation(action.MoveName)
+			if dmgResult.TypeEffective == bp.NO_EFFECTIVE {
+				continue
+			}
+			dmg := dmgResult.Damage
+
 			var isFocusSash bool
+			var isBodyAttack bool
+
+			bodyAttack := func() error {
+				if target.Item == bp.FOCUS_SASH {
+					if target.IsFullHP() && target.Stat.MaxHP == dmg {
+						isFocusSash = true
+						dmg -= 1
+					}
+				}
+				target.ApplyDamageToBody(dmg)
+				isBodyAttack = true
+				return err
+			}
 
 			if target.IsSubstituteState() {
 				if moveData.CanSubstitute {
-					err = target.SubSubstituteHP(dmg)
+					target.ApplyDamageToSubstitute(dmg)
 				} else {
-					isFocusSash, err = target.SubCurrentHP(dmg, true)
-					isBodyAttack = true
+					err = bodyAttack()
 				}
 			} else {
-				isFocusSash, err = target.SubCurrentHP(dmg, true)
-				isBodyAttack = true
+				err = bodyAttack()
 			}
 
 			if err != nil {
@@ -141,20 +177,20 @@ func (m *Move) Run(battle *Manager, action *SoloAction, context *Context) error 
 			}
 
 			if isFocusSash {
-				context.Observer(battle, ITEM_USE_EVENT)
+				target.Item = bp.EMPTY_ITEM
 			}
 
 			isTargetFainted := target.IsFainted()
 			if isTargetFainted {
-				faintedCount += 1	
+				faintedCount += 1
 			}
 
-			if m.SelfAdditionalEffect != nil {
-				m.SelfAdditionalEffect(src, context)
+			if m.SelfAdditionalEffect != nil && !src.IsFainted() {
+				m.SelfAdditionalEffect(manager, src)
 			}
 
 			if isBodyAttack && !isTargetFainted && m.OpponentAdditionalEffect != nil {
-				m.OpponentAdditionalEffect(target, context)
+				m.OpponentAdditionalEffect(manager, target)
 			}
 		}
 	}
@@ -164,8 +200,16 @@ func (m *Move) Run(battle *Manager, action *SoloAction, context *Context) error 
 //10まんボルト
 func NewThunderbolt() Move {
 	return Move{
-		OpponentAdditionalEffect:func(target *bp.Pokemon, context *Context) error {
-			return target.SetStatusAilment(bp.PARALYSIS, 10, context.Rand)
+		OpponentAdditionalEffect:func(m *Manager, target *bp.Pokemon) error {
+			if target.StatusAilment != bp.EMPTY_STATUS_AILMENT {
+				return nil
+			}
+
+			ok, err := omwrand.IsPercentageMet(10, GlobalContext.Rand)
+			if ok {
+				target.StatusAilment = bp.PARALYSIS
+			}
+			return err
 		},
 	}
 }
@@ -173,9 +217,11 @@ func NewThunderbolt() Move {
 //アームハンマー
 func NewHammerArm() Move {
 	return Move{
-		SelfAdditionalEffect:func(src *bp.Pokemon, context *Context) error {
-			isClearBodyValid := false
-			return src.RankFluctuation(&bp.RankStat{Speed:-1}, 100, isClearBodyValid, context.Rand)
+		SelfAdditionalEffect:func(m *Manager, src *bp.Pokemon) error {
+			if src.Rank.Speed != bp.MIN_RANK {
+				src.Rank.Speed -= 1
+			}
+			return nil
 		},
 	}
 }
@@ -193,8 +239,20 @@ func NewSurf() Move {
 //れいとうビーム
 func NewIceBeam() Move {
 	return Move{
-		OpponentAdditionalEffect:func(target *bp.Pokemon, context *Context) error {
-			return target.SetStatusAilment(bp.FREEZE, 10, context.Rand)
+		OpponentAdditionalEffect:func(m *Manager, target *bp.Pokemon) error {
+			if target.StatusAilment != bp.EMPTY_STATUS_AILMENT {
+				return nil
+			}
+
+			if slices.Contains(target.Types, bp.ICE) {
+				return nil
+			}
+
+			ok, err := omwrand.IsPercentageMet(10, GlobalContext.Rand)
+			if ok {
+				target.StatusAilment = bp.FREEZE
+			}
+			return err
 		},
 	}
 }
@@ -202,9 +260,9 @@ func NewIceBeam() Move {
 //わるあがき
 func NewStruggle() Move {
 	return Move{
-		SelfAdditionalEffect:func(src *bp.Pokemon, context *Context) error {
+		SelfAdditionalEffect:func(m *Manager, src *bp.Pokemon) error {
 			dmg := int(float64(src.Stat.CurrentHP) / 4.0)
-			_, err := src.SubCurrentHP(dmg, false)
+			err := src.ApplyDamageToBody(dmg)
 			return err
 		},
 	}
@@ -218,8 +276,12 @@ func NewRainDance() Move {
 //いわなだれ
 func NewRockSlide() Move {
 	return Move{
-		SelfAdditionalEffect:func(target *bp.Pokemon, context *Context) error {
-			return target.SetIsFlinchState(30, context.Rand)
+		OpponentAdditionalEffect:func(m *Manager, target *bp.Pokemon) error {
+			ok, err := omwrand.IsPercentageMet(30, GlobalContext.Rand)
+			if ok {
+				target.IsFlinchState = true
+			}
+			return err
 		},
 	}
 }
@@ -232,9 +294,20 @@ func NewReturn() Move {
 //かみくだく
 func NewCrunch() Move {
 	return Move{
-		OpponentAdditionalEffect:func(target *bp.Pokemon, context *Context) error {
-			isClearBodyValid := true
-			return target.RankFluctuation(&bp.RankStat{Def:-1}, 20, isClearBodyValid, context.Rand)
+		OpponentAdditionalEffect:func(m *Manager, target *bp.Pokemon) error {
+			if target.Ability == bp.CLEAR_BODY {
+				return nil
+			}
+
+			if target.Rank.Def == bp.MIN_RANK {
+				return nil
+			}
+
+			ok, err := omwrand.IsPercentageMet(20, GlobalContext.Rand)
+			if ok {
+				target.Rank.Def -= 1
+			}
+			return err
 		},
 	}
 }
@@ -247,9 +320,17 @@ func NewEndeavor() Move {
 //こごえるかぜ
 func NewIcyWind() Move {
 	return Move{
-		OpponentAdditionalEffect:func(target *bp.Pokemon, context *Context) error {
-			isClearBodyValid := true
-			return target.RankFluctuation(&bp.RankStat{Speed:-1}, 100, isClearBodyValid, context.Rand)
+		OpponentAdditionalEffect:func(m *Manager, target *bp.Pokemon) error {
+			if target.Ability == bp.CLEAR_BODY {
+				return nil
+			}
+
+			if target.Rank.Speed == bp.MIN_RANK {
+				return nil
+			}
+
+			target.Rank.Speed -= 1
+			return nil
 		},
 	}
 }
@@ -257,12 +338,11 @@ func NewIcyWind() Move {
 //このゆびとまれ
 func NewFollowMe() Move {
 	return Move{
-		StatusEffect:func(b *Manager, src, target *bp.Pokemon, context *Context) error {
+		StatusEffect:func(m *Manager, src, target *bp.Pokemon) error {
 			if src != target {
 				return fmt.Errorf("このゆびとまれ は 技を繰り出したポケモン と 対象になるポケモン の アドレスが 一致していなければならない。")
 			}
-			b.SelfFollowMePokemonPointers = append(b.SelfFollowMePokemonPointers, src)
-			context.Observer(b, FOLLOW_ME_EVENT)
+			m.SelfFollowMePokemonPointers = append(m.SelfFollowMePokemonPointers, src)
 			return nil
 		},
 	}
@@ -271,8 +351,17 @@ func NewFollowMe() Move {
 //さいみんじゅつ
 func NewHypnosis() Move {
 	return Move{
-		StatusEffect:func(_ *Manager, _ *bp.Pokemon, target *bp.Pokemon, context *Context) error {
-			return target.SetStatusAilment(bp.SLEEP, 100, context.Rand)
+		StatusEffect:func(m *Manager, src, target *bp.Pokemon) error {
+			if target.StatusAilment != bp.EMPTY_STATUS_AILMENT {
+				return nil
+			}
+
+			target.StatusAilment = bp.SLEEP
+			if target.Item == bp.LUM_BERRY {
+				target.Item = bp.EMPTY_ITEM
+				target.StatusAilment = bp.EMPTY_STATUS_AILMENT
+			}
+			return nil
 		},
 	}
 }
@@ -280,7 +369,7 @@ func NewHypnosis() Move {
 //じこあんじ
 func NewRecover() Move {
 	return Move{
-		StatusEffect:func(_ *Manager, src *bp.Pokemon, target *bp.Pokemon, _ *Context) error {
+		StatusEffect:func(_ *Manager, src *bp.Pokemon, target *bp.Pokemon) error {
 			src.Rank = target.Rank.Clone()
 			return nil
 		},
@@ -300,8 +389,12 @@ func NewSelfDestruct() Move {
 //たきのぼり
 func NewWaterfall() Move {
 	return Move{
-		OpponentAdditionalEffect:func(target *bp.Pokemon, context *Context) error {
-			return target.SetIsFlinchState(20, context.Rand)
+		OpponentAdditionalEffect:func(m *Manager, target *bp.Pokemon) error {
+			ok, err := omwrand.IsPercentageMet(20, GlobalContext.Rand)
+			if ok {
+				target.IsFlinchState = true
+			}
+			return err
 		},
 	}
 }
@@ -314,8 +407,8 @@ func NewExplosion() Move {
 //ちょうはつ
 func NewTaunt() Move {
 	return Move{
-		StatusEffect:func(_ *Manager, _, target *bp.Pokemon, context *Context) error {
-			target.SetRemainingTurnTauntState(context.Rand)
+		StatusEffect:func(m *Manager, _, target *bp.Pokemon) error {
+			target.RemainingTurnTauntState = omwrand.IntUniform(2, 5, GlobalContext.Rand)
 			return nil
 		},
 	}
@@ -324,8 +417,15 @@ func NewTaunt() Move {
 //でんじは
 func NewThunderWave() Move {
 	return Move{
-		StatusEffect:func(_ *Manager, _, target *bp.Pokemon, context *Context) error {
-			return target.SetStatusAilment(bp.PARALYSIS, 100, context.Rand)
+		StatusEffect:func(m *Manager, src, target *bp.Pokemon) error {
+			if slices.Contains(target.Types, bp.GROUND) {
+				return nil
+			}
+			if target.StatusAilment != bp.EMPTY_STATUS_AILMENT {
+				return nil
+			}
+			target.StatusAilment = bp.PARALYSIS
+			return nil
 		},
 	}
 }
@@ -333,8 +433,9 @@ func NewThunderWave() Move {
 //ねこだまし
 func NewFakeOut() Move {
 	return Move{
-		OpponentAdditionalEffect:func(target *bp.Pokemon, context *Context) error {
-			return target.SetIsFlinchState(100, context.Rand)
+		OpponentAdditionalEffect:func(m *Manager, target *bp.Pokemon) error {
+			target.IsFlinchState = true
+			return nil
 		},
 	}
 }
@@ -342,8 +443,20 @@ func NewFakeOut() Move {
 //ねっぷう
 func NewHeatWave() Move {
 	return Move{
-		OpponentAdditionalEffect:func(target *bp.Pokemon, context *Context) error {
-			return target.SetStatusAilment(bp.BURN, 10, context.Rand)
+		OpponentAdditionalEffect:func(m *Manager, target *bp.Pokemon) error {
+			if target.StatusAilment != bp.EMPTY_STATUS_AILMENT {
+				return nil
+			}
+
+			if slices.Contains(target.Types, bp.FIRE) {
+				return nil
+			}
+
+			ok, err := omwrand.IsPercentageMet(10, GlobalContext.Rand)
+			if ok {
+				target.StatusAilment = bp.BURN
+			}
+			return err
 		},
 	}
 }
@@ -351,7 +464,7 @@ func NewHeatWave() Move {
 //はらだいこ
 func NewBellyDrum() Move {
 	return Move{
-		StatusEffect:func(_ *Manager, src, target *bp.Pokemon, _ *Context) error {
+		StatusEffect:func(_ *Manager, src, target *bp.Pokemon) error {
 			if src != target {
 				return fmt.Errorf("はらだいこ は 技を繰り出したポケモン と 対象になるポケモン の アドレスが 一致していなければならない。")
 			}
@@ -369,8 +482,20 @@ func NewSuckerPunch() Move {
 //ほのおのパンチ
 func NewFirePunch() Move {
 	return Move{
-		OpponentAdditionalEffect:func(target *bp.Pokemon, context *Context) error {
-			return target.SetStatusAilment(bp.BURN, 10, context.Rand)
+		OpponentAdditionalEffect:func(m *Manager, target *bp.Pokemon) error {
+			if target.StatusAilment != bp.EMPTY_STATUS_AILMENT {
+				return nil
+			}
+
+			if slices.Contains(target.Types, bp.FIRE) {
+				return nil
+			}
+
+			ok, err := omwrand.IsPercentageMet(10, GlobalContext.Rand)
+			if ok {
+				target.StatusAilment = bp.BURN
+			}
+			return err
 		},
 	}
 }
@@ -378,13 +503,13 @@ func NewFirePunch() Move {
 //まもる
 func NewProtect() Move {
 	return Move{
-		StatusEffect:func(_ *Manager, src, target *bp.Pokemon, context *Context) error {
+		StatusEffect:func(_ *Manager, src, target *bp.Pokemon) error {
 			if src != target {
 				return fmt.Errorf("まもる は 技を繰り出したポケモン と 対象になるポケモン の アドレスが 一致していなければならない。")
 			}
 
 			// https://wiki.xn--rckteqa2e.com/wiki/%E3%81%BE%E3%82%82%E3%82%8B#%E6%88%90%E5%8A%9F%E7%8E%87
-			isSuccess := math.Pow(0.5, float64(src.ProtectConsecutiveSuccess)) > context.Rand.Float64()
+			isSuccess := math.Pow(0.5, float64(src.ProtectConsecutiveSuccess)) > GlobalContext.Rand.Float64()
 			src.IsProtectState = isSuccess
 			if isSuccess {
 				src.ProtectConsecutiveSuccess += 1
@@ -399,7 +524,7 @@ func NewProtect() Move {
 //みがわり
 func NewSubstitute() Move {
 	return Move{
-		StatusEffect:func(_ *Manager, src, target *bp.Pokemon, _ *Context) error {
+		StatusEffect:func(_ *Manager, src, target *bp.Pokemon) error {
 			if src != target {
 				return fmt.Errorf("みがわり は 技を繰り出したポケモン と 対象になるポケモン の アドレスが 一致していなければならない。")
 			}
@@ -416,7 +541,6 @@ func NewSubstitute() Move {
 				src.Stat.CurrentHP -= cost
 				src.SubstituteHP = cost
 			}
-
 			return nil
 		},
 	}
@@ -425,9 +549,12 @@ func NewSubstitute() Move {
 //りゅうせいぐん
 func NewDracoMeteor() Move {
 	return Move{
-		SelfAdditionalEffect:func(src *bp.Pokemon, context *Context) error {
-			isClearBodyValid := false
-			src.RankFluctuation(&bp.RankStat{SpAtk:-2}, 100, isClearBodyValid, context.Rand)
+		SelfAdditionalEffect:func(_ *Manager, src *bp.Pokemon) error {
+			if src.Rank.SpAtk >= bp.MIN_RANK - 2 {
+				src.Rank.Speed -= 2
+			} else if src.Rank.SpAtk != bp.MIN_RANK {
+				src.Rank.Speed -= 1
+			}
 			return nil
 		},
 	}
@@ -442,10 +569,15 @@ func NewCrossChop() Move {
 //コメットパンチ
 func NewCometPunch() Move {
 	return Move{
-		SelfAdditionalEffect:func(src *bp.Pokemon, context *Context) error {
-			isClearBodyValid := false
-			src.RankFluctuation(&bp.RankStat{Atk:1}, 20, isClearBodyValid, context.Rand)
-			return nil
+		SelfAdditionalEffect:func(_ *Manager, src *bp.Pokemon) error {
+			if src.Rank.Atk == bp.MAX_RANK {
+				return nil
+			}
+			ok, err := omwrand.IsPercentageMet(20, GlobalContext.Rand)
+			if ok {
+				src.Rank.Atk += 1
+			}
+			return err
 		},
 	}
 }
@@ -453,10 +585,20 @@ func NewCometPunch() Move {
 //サイコキネシス
 func NewPsychic() Move {
 	return Move{
-		OpponentAdditionalEffect:func(target *bp.Pokemon, context *Context) error {
-			isClearBodyValid := true
-			target.RankFluctuation(&bp.RankStat{SpDef:-1}, 10, isClearBodyValid, context.Rand)
-			return nil
+		OpponentAdditionalEffect:func(_ *Manager, target *bp.Pokemon) error {
+			if target.Rank.SpDef == bp.MIN_RANK {
+				return nil
+			}
+
+			if target.Ability == bp.CLEAR_BODY {
+				return nil
+			}
+
+			ok, err := omwrand.IsPercentageMet(10, GlobalContext.Rand)
+			if ok {
+				target.Rank.SpDef -= 1
+			}
+			return err
 		},
 	}
 }
@@ -469,8 +611,12 @@ func NewGyroBall() Move {
 //ダークホール
 func NewDarkVoid() Move {
 	return Move{
-		StatusEffect:func(_ *Manager, src, target *bp.Pokemon, context *Context) error {
-			return target.SetStatusAilment(bp.SLEEP, 100, context.Rand)
+		StatusEffect:func(_ *Manager, src, target *bp.Pokemon) error {
+			if target.StatusAilment != bp.EMPTY_STATUS_AILMENT {
+				return nil
+			}
+			target.StatusAilment = bp.SLEEP
+			return nil
 		},
 	}
 }

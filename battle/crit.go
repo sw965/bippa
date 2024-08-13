@@ -1,9 +1,9 @@
-package dmgtools
+package battle
 
 import (
 	"fmt"
-	"math/rand"
 	bp "github.com/sw965/bippa"
+	"math/rand"
 )
 
 func CriticalN(rank bp.CriticalRank) (int, error) {

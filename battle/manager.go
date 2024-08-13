@@ -1,12 +1,9 @@
 package battle
 
-import (
-	"fmt"
-	bp "github.com/sw965/bippa"
+ import (
+ 	"fmt"
+ 	bp "github.com/sw965/bippa"
 	omwrand "github.com/sw965/omw/math/rand"
-	omwmath "github.com/sw965/omw/math"
-	"github.com/sw965/bippa/battle/dmgtools"
-	"github.com/sw965/omw/fn"
 	"golang.org/x/exp/slices"
 )
 
@@ -15,31 +12,38 @@ const (
 	LEAD_NUM = 1
 	BENCH_NUM = 2
 	FIGHTERS_NUM = LEAD_NUM + BENCH_NUM
-	DOUBLE = 2
+	DOUBLE_BATTLE_NUM = 2
 )
 
+type RemainingTurn struct {
+	Weather int
+	TrickRoom int
+}
+
 type Manager struct {
+	SelfHumanTitle bp.HumanTitle
+	SelfHumanName bp.HumanName
+	OpponentHumanTitle bp.HumanTitle
+	OpponentHumanName bp.HumanName
+
 	SelfLeadPokemons bp.Pokemons
 	SelfBenchPokemons  bp.Pokemons
 	OpponentLeadPokemons bp.Pokemons
 	OpponentBenchPokemons bp.Pokemons
 
-	Weather Weather
-	RemainingTurnWeather int
-
 	SelfFollowMePokemonPointers bp.PokemonPointers
 	OpponentFollowMePokemonPointers bp.PokemonPointers
 
-	RemainingTurnTrickRoom int
-
-	IsSingle bool
+	Weather Weather
+	RemainingTurn RemainingTurn
 	Turn int
-	IsPlayer1View bool
+	
+	IsSingle bool
+	IsHostView bool
+	HostViewMessage Message
 }
 
 func (m *Manager) Init() {
-	m.IsPlayer1View = true
-
 	id := 0
 	for i := range m.SelfLeadPokemons {
 		m.SelfLeadPokemons[i].Id = id
@@ -62,75 +66,36 @@ func (m *Manager) Init() {
 	}
 }
 
-func (m Manager) Clone() Manager {
-	return Manager{
-		SelfLeadPokemons:m.SelfLeadPokemons.Clone(),
-		SelfBenchPokemons:m.SelfBenchPokemons.Clone(),
-		OpponentLeadPokemons:m.OpponentLeadPokemons.Clone(),
-		OpponentBenchPokemons:m.OpponentBenchPokemons.Clone(),
-		Turn:m.Turn,
-		Weather:m.Weather,
-		RemainingTurnWeather:m.RemainingTurnWeather,
-		IsPlayer1View:m.IsPlayer1View,
-		IsSingle:m.IsSingle,
+func (m *Manager) GetLeadPokemons(isSelf bool) bp.Pokemons {
+	if isSelf {
+		return m.SelfLeadPokemons
+	} else {
+		return m.OpponentLeadPokemons
 	}
 }
 
+func (m Manager) Clone() Manager {
+	m.SelfLeadPokemons = m.SelfLeadPokemons.Clone()
+	m.SelfBenchPokemons = m.SelfBenchPokemons.Clone()
+	m.OpponentLeadPokemons = m.OpponentLeadPokemons.Clone()
+	m.OpponentBenchPokemons = m.OpponentBenchPokemons.Clone()
+	m.SelfFollowMePokemonPointers = slices.Clone(m.SelfFollowMePokemonPointers)
+	m.OpponentFollowMePokemonPointers = slices.Clone(m.OpponentFollowMePokemonPointers)
+	return m
+}
+
 func (m *Manager) IsTrickRoomState() bool {
-	return m.RemainingTurnTrickRoom > 0
+	return m.RemainingTurn.TrickRoom > 0
 }
 
 func (m *Manager) SwapView() {
 	m.SelfLeadPokemons, m.SelfBenchPokemons, m.OpponentLeadPokemons, m.OpponentBenchPokemons =
 		m.OpponentLeadPokemons, m.OpponentBenchPokemons, m.SelfLeadPokemons, m.SelfBenchPokemons
 	m.SelfFollowMePokemonPointers, m.OpponentFollowMePokemonPointers = m.OpponentFollowMePokemonPointers, m.SelfFollowMePokemonPointers
-	m.IsPlayer1View = !m.IsPlayer1View
-}
-
-func (m *Manager) CalculateDamage(action *SoloAction, defender *bp.Pokemon, isSingleDmg bool, context *Context) (int, bool, error) {
-	attacker := m.SelfLeadPokemons[action.SrcIndex]
-	if _, ok := attacker.Moveset[action.MoveName]; !ok {
-		msg := fmt.Sprintf("%sは %sを 繰り出そうとしたが、覚えていない", attacker.Name.ToString(), action.MoveName.ToString())
- 		return 0, false, fmt.Errorf(msg)
-	}
-
-	switch action.MoveName {
-		//がむしゃら
-		case bp.ENDEAVOR:
-			if slices.Contains(defender.Types, bp.GHOST) {
-				return 0, true, nil
-			} else {
-				dmg := defender.Stat.CurrentHP - attacker.Stat.CurrentHP
-				isNoEffect := dmg <= 0
-				return omwmath.Max(dmg, 0), isNoEffect, nil
-			}
-		//ふいうち
-		case bp.SUCKER_PUNCH:
-			if bp.MOVEDEX[defender.LastPlannedUseMoveName].Category == bp.STATUS {
-				return 0, true, nil
-			}
-	}
-
-	moveData := bp.MOVEDEX[action.MoveName]
-	critRank := moveData.CriticalRank
-	isCrit, err := dmgtools.IsCritical(critRank, context.Rand)
-	if err != nil {
-		return 0, false, err
-	}
-
-	calculator := dmgtools.Calculator{
-		Attacker:dmgtools.NewAttacker(&attacker),
-		Defender:dmgtools.NewDefender(defender),
-		IsSingleDamage:isSingleDmg,
-		IsCritical:isCrit,
-		RandBonus:context.DamageRandBonus(),
-	}
-	dmg, isNoEffect := calculator.Calculation(action.MoveName)
-	return dmg, isNoEffect, nil
 }
 
 //攻撃する側のポケモンは瀕死ではない事が前提で呼び出す関数
-func (m *Manager) TargetPokemonPointers(action *SoloAction, context *Context) bp.PokemonPointers {
+func (m *Manager) TargetPokemonPointers(action *SoloAction) bp.PokemonPointers {
 	moveData := bp.MOVEDEX[action.MoveName]
 
 	single := func() bp.PokemonPointers {
@@ -166,7 +131,7 @@ func (m *Manager) TargetPokemonPointers(action *SoloAction, context *Context) bp
 				if len(ps) == 0 {
 					return bp.PokemonPointers{}
 				}
-				return omwrand.Sample(ps, 1, context.Rand)
+				return omwrand.Sample(ps, 1, GlobalContext.Rand)
 			} else {
 				return bp.PokemonPointers{&m.SelfLeadPokemons[action.TargetIndex]}
 			}
@@ -191,7 +156,7 @@ func (m *Manager) TargetPokemonPointers(action *SoloAction, context *Context) bp
 		if len(ps) == 0 {
 			return bp.PokemonPointers{}
 		} else {
-			return omwrand.Sample(ps, 1, context.Rand)
+			return omwrand.Sample(ps, 1, GlobalContext.Rand)
 		}
 	}
 
@@ -222,155 +187,53 @@ func (m *Manager) TargetPokemonPointers(action *SoloAction, context *Context) bp
 	}
 }
 
-func (m *Manager) SelfLegalMoveSoloActions() SoloActions {
-	selfLeadN := len(m.SelfLeadPokemons)
-	opponentLeadN := len(m.OpponentLeadPokemons)
-	actions := make(SoloActions, 0, (selfLeadN * opponentLeadN * bp.MAX_MOVESET_LENGTH) +  (selfLeadN * selfLeadN * bp.MAX_MOVESET_LENGTH))
+// いかく
+// https://wiki.xn--rckteqa2e.com/wiki/%E3%81%84%E3%81%8B%E3%81%8F
+// https://wiki.xn--rckteqa2e.com/wiki/%E3%82%BF%E3%83%BC%E3%83%B3#%E3%82%BF%E3%83%BC%E3%83%B3%E3%81%AE%E8%A9%B3%E7%B4%B0
 
-	selfNotFaintedIdxs := m.SelfLeadPokemons.NotFaintedIndices()
-	for _, srcI := range selfNotFaintedIdxs {
-		src := m.SelfLeadPokemons[srcI]
-		speed := src.Stat.Speed
-		for _, usableMoveName := range src.UsableMoveNames() {
-			//対象を指定して味方への攻撃や変化技を繰り出す場合
-			for _, targetI := range selfNotFaintedIdxs {
-				actions = append(actions, SoloAction{
-				    MoveName:usableMoveName,
-			        SrcIndex:srcI,
-				    TargetIndex:targetI,
-				    Speed:speed,
-				    IsSelfLeadTarget:true,
-					IsSelfView:true,
-				})
-			}
-
-			opponentNotFaintedIdxs := m.OpponentLeadPokemons.NotFaintedIndices()
-			//対象を指定して相手への攻撃や変化技を繰り出す場合
-			for _, targetI := range opponentNotFaintedIdxs {
-				actions = append(actions, SoloAction{
-					MoveName:usableMoveName,
-					SrcIndex:srcI,
-					TargetIndex:targetI,
-					Speed:speed,
-					IsSelfLeadTarget:false,
-					IsSelfView:true,
-				})				
-			}
-
-			//対象指定なし
-			actions = append(actions, SoloAction{
-				MoveName:usableMoveName,
-				SrcIndex:srcI,
-				TargetIndex:-1,
-				Speed:speed,
-				IsSelfView:true,
-			})
-		}
-	}
-
-	return fn.Filter(actions, func(a SoloAction) bool {
-		moveData := bp.MOVEDEX[a.MoveName]
-		switch moveData.Target {
-			case bp.NORMAL_TARGET:
-				if a.TargetIndex == -1 {
-					return false
-				} else if a.IsSelfLeadTarget {
-					return a.SrcIndex != a.TargetIndex
-				} else {
-					return true
-				}
-			case bp.OPPONENT_TWO_TARGET:
-				return a.TargetIndex == -1
-			case bp.SELF_TARGET:
-				return a.IsSelfLeadTarget && a.SrcIndex == a.TargetIndex
-			case bp.OTHERS_TARGET:
-				return a.TargetIndex == -1
-			case bp.ALL_TARGET:
-				return a.TargetIndex == -1
-			case bp.OPPONENT_RANDOM_ONE_TARGET:
-				return a.TargetIndex == -1
-			default:
-				return true
-		}
-	})
-}
-
-func (m *Manager) OpponentLegalMoveSoloActions() SoloActions {
-	m.SwapView()
-	as := m.SelfLegalMoveSoloActions()
-	as.ToggleIsSelf()
-	m.SwapView()
-	return as
-}
-
-func (m *Manager) MoveUse(action *SoloAction, context *Context) error {
-	pp, ok := m.SelfLeadPokemons[action.SrcIndex].Moveset[action.MoveName]
-	if !ok {
-		msg := fmt.Sprintf("%sは %sを 繰り出そうとしたが、覚えていない", m.SelfLeadPokemons[action.SrcIndex].Name.ToString(), action.MoveName.ToString())
-		return fmt.Errorf(msg)
-	}
-
-	if pp.Current <= 0 {
-		msg := fmt.Sprintf("%sは %sを 繰り出そうとしたが、PPが0", m.SelfLeadPokemons[action.SrcIndex].Name.ToString(), action.MoveName.ToString())
-		return fmt.Errorf(msg)
-	}
-
-	m.SelfLeadPokemons[action.SrcIndex].Moveset[action.MoveName].Current -= 1
-	context.Observer(m, MOVE_USE_EVENT)
-	move := GetMove(action.MoveName)
-	move.Run(m, action, context)
-	return nil
-}
-
-func (m *Manager) SelfLegalSwitchSoloActions() SoloActions {
-	actions := make(SoloActions, 0, len(m.SelfLeadPokemons) * len(m.SelfBenchPokemons))
-	for leadI, leadPokemon := range m.SelfLeadPokemons {
-		for _, benchI := range m.SelfBenchPokemons.NotFaintedIndices() {
-			actions = append(actions, SoloAction{
-				MoveName:bp.EMPTY_MOVE_NAME,
-				SrcIndex:leadI,
-				TargetIndex:benchI,
-				Speed:leadPokemon.Stat.Speed,
-				IsSelfView:true,
-			})
-		}
-	}
-	return actions
-}
-
-func (m *Manager) OpponentLegalSwitchSoloActions() SoloActions {
-	m.SwapView()
-	as := m.SelfLegalSwitchSoloActions()
-	as.ToggleIsSelf()
-	m.SwapView()
-	return as
-}
-
-func (m *Manager) Switch(leadIdx, benchIdx int, context *Context) error {
+func (m *Manager) Switch(leadIdx, benchIdx int) error {
 	if m.SelfBenchPokemons[benchIdx].IsFainted() {
 		name := m.SelfBenchPokemons[benchIdx].Name
 		msg := fmt.Sprintf("%d番目の %sに 交代しようとしたが、瀕死状態である為、交代出来ません。", benchIdx, name.ToString())
 		return fmt.Errorf(msg)
 	}
+
+	mm := MessageMaker{IsSelf:m.IsHostView}
+	m.HostViewMessage = mm.Back(m.SelfLeadPokemons[leadIdx].Name)
+	GlobalContext.Observer(m, MESSAGE_EVENT)
 	m.SelfLeadPokemons[leadIdx], m.SelfBenchPokemons[benchIdx] = m.SelfBenchPokemons[benchIdx], m.SelfLeadPokemons[leadIdx]
-	context.Observer(m, SWITCH_EVENT)
+	m.HostViewMessage = mm.Go(m.SelfLeadPokemons[leadIdx].Name)
+	GlobalContext.Observer(m, MESSAGE_EVENT)
+
+	if m.SelfLeadPokemons[leadIdx].Ability == bp.INTIMIDATE {
+		for i := range m.OpponentLeadPokemons {
+			p := m.OpponentLeadPokemons[i]
+			if p.Rank.Atk == bp.MIN_RANK {
+				continue
+			}
+
+			if p.Ability == bp.CLEAR_BODY {
+				m.HostViewMessage = Message(fmt.Sprintf("%sの クリアボディで %sの いかくは きかなかった！", p.Name.ToString(), m.SelfLeadPokemons[leadIdx].Name.ToString()))
+				GlobalContext.Observer(m, MESSAGE_EVENT)
+				continue
+			}
+
+			m.HostViewMessage = Message(fmt.Sprintf("%sの いかくで %sの こうげきが さがった！", m.SelfLeadPokemons[leadIdx].Name.ToString(), p.Name.ToString()))
+			GlobalContext.Observer(m, MESSAGE_EVENT)
+
+			if p.Ability != bp.CLEAR_BODY && p.Rank.Atk != bp.MIN_RANK {
+				m.OpponentLeadPokemons[i].Rank.Atk -= 1
+			}
+		}
+	}
 	return nil
 }
 
-func (m *Manager) SoloAction(action *SoloAction, context *Context) error {
-	if action.IsMove() {
-		return m.MoveUse(action, context)
-	} else {
-		return m.Switch(action.SrcIndex, action.TargetIndex, context)
-	}
-}
+// https://latest.pokewiki.net/%E3%83%90%E3%83%88%E3%83%AB%E4%B8%AD%E3%81%AE%E5%87%A6%E7%90%86%E3%81%AE%E9%A0%86%E7%95%AA
+// https://wiki.xn--rckteqa2e.com/wiki/%E3%82%BF%E3%83%BC%E3%83%B3#1.%E3%83%9D%E3%82%B1%E3%83%A2%E3%83%B3%E3%82%92%E7%B9%B0%E3%82%8A%E5%87%BA%E3%81%99
 
-func (m *Manager) LeadPokemons(isSelf bool) bp.Pokemons {
-	if isSelf {
-		return m.SelfLeadPokemons
-	} else {
-		return m.OpponentLeadPokemons
-	}
+func (m *Manager) TurnEnd() error {
+	return nil
 }
 
 func (m *Manager) ToEasyRead() EasyReadManager {
@@ -382,9 +245,8 @@ func (m *Manager) ToEasyRead() EasyReadManager {
 		OpponentBenchPokemons:m.OpponentBenchPokemons.ToEasyRead(),
 
 		Turn:m.Turn,
-		IsPlayer1View:m.IsPlayer1View,
 		Weather:m.Weather.ToString(),
-		RemainingTurnWeather:m.RemainingTurnWeather,
+		RemainingTurn:m.RemainingTurn,
 	}
 }
 
@@ -396,8 +258,8 @@ type EasyReadManager struct {
 	OpponentBenchPokemons bp.EasyReadPokemons
 
 	Turn int
-	IsPlayer1View bool
+	IsHostView bool
 
 	Weather string
-	RemainingTurnWeather int
+	RemainingTurn RemainingTurn
 }

@@ -3,7 +3,6 @@ package battle
 import (
 	"math/rand"
 	omwrand "github.com/sw965/omw/math/rand"
-	"github.com/sw965/bippa/battle/dmgtools"
 )
 
 type Observer func(*Manager, EventType)
@@ -11,19 +10,17 @@ type Observer func(*Manager, EventType)
 func EmptyObserver(_ *Manager, _ EventType) {}
 
 type Context struct {
-	DamageRandBonuses []float64
 	Rand *rand.Rand
+	DamageRandBonuses []float64
 	Observer Observer
 }
 
-func NewContext(r *rand.Rand) Context {
-	return Context{
-		DamageRandBonuses:dmgtools.RAND_BONUSES,
-		Rand:r,
-		Observer:EmptyObserver,
-	}
+var GlobalContext = Context{
+	Rand:omwrand.NewMt19937(),
+	DamageRandBonuses:DAMAGE_RAND_BONUSES,
+	Observer:EmptyObserver,
 }
 
-func (c *Context) DamageRandBonus() float64 {
+func (c *Context) GetDamageRandBonus() float64 {
 	return omwrand.Choice(c.DamageRandBonuses, c.Rand)
 }

@@ -3,7 +3,6 @@ package battle_test
 import (
 	"testing"
 	"github.com/sw965/bippa/battle/game"
-	omwrand "github.com/sw965/omw/math/rand"
 	"github.com/sw965/bippa/battle"
 	bp "github.com/sw965/bippa"
 )
@@ -35,14 +34,12 @@ func Test(t *testing.T) {
 	p2View := m.Clone()
 	p2View.SwapView()
 
-	r := omwrand.NewMt19937()
-	context := battle.NewContext(r)
 	ui := battle.ObserverUI{
 		LastP1ViewManager:m,
 		LastP2ViewManager:p2View,
 	}
-	context.Observer = ui.Observer
-	push := game.NewPushFunc(&context)
+
+	battle.GlobalContext.Observer = ui.Observer
 
 	actions := battle.Actions{
 		battle.Action{
@@ -52,14 +49,14 @@ func Test(t *testing.T) {
 				TargetIndex:1,
 				IsSelfLeadTarget:true,
 				Speed:m.OpponentLeadPokemons[1].Stat.Speed,
-				IsSelfView:false,
+				IsSelf:false,
 			},
 			
 			battle.SoloAction{
 				MoveName:bp.TRICK_ROOM,
 				SrcIndex:0,
 				Speed:m.OpponentLeadPokemons[0].Stat.Speed,
-				IsSelfView:false,
+				IsSelf:false,
 			},
 		},
 
@@ -76,19 +73,19 @@ func Test(t *testing.T) {
 				SrcIndex:0,
 				TargetIndex:0,
 				Speed:m.SelfLeadPokemons[0].Stat.Speed,
-				IsSelfView:true,
+				IsSelf:true,
 			},
 
 			battle.SoloAction{
 				MoveName:bp.SURF,
 				SrcIndex:1,
 				Speed:m.SelfLeadPokemons[1].Stat.Speed,
-				IsSelfView:true,
+				IsSelf:true,
 			},
 		},
 	}
 
-	_, err := push(m, actions)
+	_, err := game.Push(m, actions)
 	if err != nil {
 		panic(err)
 	}

@@ -46,12 +46,25 @@ var TYPEDEX = func() Typedex {
 	return d
 }()
 
-func (t Typedex) EffectivenessValue(atk Type, def Types) float64 {
+func (t Typedex) Effectiveness(atk Type, def Types) float64 {
 	v := 1.0
 	for _, e := range def {
 		v *= t[atk][e]
 	}
 	return v
+}
+
+func (t Typedex) Effective(atk Type, def Types) TypeEffective {
+	v := t.Effectiveness(atk, def)
+	if v == 1.0 {
+		return NEUTRAL_EFFECTIVE
+	} else if v > 1.0 {
+		return SUPER_EFFECTIVE
+	} else if v == 0.0 {
+		return NO_EFFECTIVE
+	} else {
+		return NOT_VERY_EFFECTIVE
+	}
 }
 
 func (t Typedex) ToEasyRead() EasyReadTypedex {
@@ -165,3 +178,12 @@ var ALL_TWO_TYPES_SLICE = func() TypesSlice {
 		omwslices.Combination[TypesSlice, Types](ALL_TYPES, 2),
 	)
 }()
+
+type TypeEffective int
+
+const (
+	NEUTRAL_EFFECTIVE TypeEffective = iota
+	SUPER_EFFECTIVE
+	NOT_VERY_EFFECTIVE
+	NO_EFFECTIVE
+)

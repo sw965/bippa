@@ -11,3 +11,21 @@ const (
 	BAD_POISON //もうどく
 	SLEEP //ねむり
 )
+
+func (sa StatusAilment) ToString() string {
+	switch sa {
+		case BURN:
+			return "やけど"
+		case FREEZE:
+			return "こおり"
+		case PARALYSIS:
+			return "まひ"
+		case NORMAL_POISON:
+			return "どく"
+		case BAD_POISON:
+			return "もうどく"
+		case SLEEP:
+			return "ねむり"
+	}
+	return ""
+}

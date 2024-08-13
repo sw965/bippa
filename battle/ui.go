@@ -1,24 +1,26 @@
 package battle
 
-import (
- 	"fmt"
- 	bp "github.com/sw965/bippa"
- 	omwslices "github.com/sw965/omw/slices"
+ import (
+  	"fmt"
+  	bp "github.com/sw965/bippa"
+  	omwslices "github.com/sw965/omw/slices"
 )
 
 type EventType int
 
 const (
 	MOVE_USE_EVENT EventType = iota
-	ATTACK_MOVE_DAMAGE_EVENT
-	SWITCH_EVENT
-	SELF_FAINT_EVENT
-	OPPONENT_FAINT_EVENT
-	RECOIL_EVENT
-	ITEM_USE_EVENT
 	CURRENT_HP_EVENT
+	SWITCH_EVENT
+	ITEM_USE_EVENT
 	FOLLOW_ME_EVENT
 	TRICK_ROOM_EVENT
+	RANK_FLUCTUATION_EVENT
+	STATUS_AILMENT_FAILURE_EVENT
+	SUBSTITUTE_HP_EVENT
+	TAUNT_EVENT
+	FLINCH_STATE_EVENT
+	MESSAGE_EVENT
 )
 
 type DisplayUI struct {
@@ -49,7 +51,7 @@ func (ui *ObserverUI) LastManager(isPlayer1View bool) Manager {
 }
 
 func (ui *ObserverUI) LastUsedMoveName(currentManager *Manager) (bp.MoveName, bp.PokeName, error) {
-	lastManager := ui.LastManager(currentManager.IsPlayer1View)
+	lastManager := ui.LastManager(currentManager.IsHostView)
 
 	getLastUsedMoveName := func(current, last bp.Moveset) bp.MoveName {
 		n := len(current)
@@ -89,7 +91,7 @@ func (ui *ObserverUI) LastUsedMoveName(currentManager *Manager) (bp.MoveName, bp
 }
 
 func (ui *ObserverUI) SwitchPokeName(currentManager *Manager) (bp.PokeName, bp.PokeName, error) {
-	lastManager := ui.LastManager(currentManager.IsPlayer1View)
+	lastManager := ui.LastManager(currentManager.IsHostView)
 	currentLeadIds := currentManager.SelfLeadPokemons.Ids()
 	lastLeadIds := lastManager.SelfLeadPokemons.Ids()
 	var beforeId int
@@ -114,7 +116,7 @@ func (ui *ObserverUI) SwitchPokeName(currentManager *Manager) (bp.PokeName, bp.P
 }
 
 func (ui *ObserverUI) CurrentHPDiff(currentManager *Manager) (int, int, bool, error) {
-	lastManager := ui.LastManager(currentManager.IsPlayer1View)
+	lastManager := ui.LastManager(currentManager.IsHostView)
 
 	get := func(currentPokemons, lastPokemons bp.Pokemons) (int, int) {
 		for i, currentPokemon := range currentPokemons {
@@ -147,7 +149,7 @@ func (ui *ObserverUI) CurrentHPDiff(currentManager *Manager) (int, int, bool, er
 }
 
 func (ui *ObserverUI) LastUsedItem(currentManager *Manager) (bp.Item, bp.PokeName, bool, error) {
-	lastManager := ui.LastManager(currentManager.IsPlayer1View)
+	lastManager := ui.LastManager(currentManager.IsHostView)
 
 	get := func(currentPokemons, lastPokemons bp.Pokemons) (bp.Item, bp.PokeName) {
 		for i, currentPokemon := range currentPokemons {
@@ -178,7 +180,7 @@ func (ui *ObserverUI) LastUsedItem(currentManager *Manager) (bp.Item, bp.PokeNam
 }
 
 func (ui *ObserverUI) LastFollowmePokemon(currentManager *Manager) (*bp.Pokemon, error) {
-	lastManager := ui.LastManager(currentManager.IsPlayer1View)
+	lastManager := ui.LastManager(currentManager.IsHostView)
 	cn := len(currentManager.SelfFollowMePokemonPointers)
 	ln := len(lastManager.SelfFollowMePokemonPointers)
 	if ln == cn - 1 {
@@ -188,7 +190,7 @@ func (ui *ObserverUI) LastFollowmePokemon(currentManager *Manager) (*bp.Pokemon,
 }
 
 func (ui *ObserverUI) Observer(current *Manager, event EventType) {
-	lastManager := ui.LastManager(current.IsPlayer1View)
+	lastManager := ui.LastManager(current.IsHostView)
 	switch event {
 		case MOVE_USE_EVENT:
 			lastUsedMoveName, pokeName, err := ui.LastUsedMoveName(current)
@@ -208,7 +210,7 @@ func (ui *ObserverUI) Observer(current *Manager, event EventType) {
 			if err != nil {
 				panic(err)
 			}
-			leadPokemons := current.LeadPokemons(isSelf)
+			leadPokemons := current.GetLeadPokemons(isSelf)
 			fmt.Println(diff, leadPokemons[leadIdx].Name.ToString(), isSelf)
 		case ITEM_USE_EVENT:
 			item, pokeName, isSelf, err := ui.LastUsedItem(current)
@@ -230,14 +232,16 @@ func (ui *ObserverUI) Observer(current *Manager, event EventType) {
 			if moveName != bp.TRICK_ROOM {
 				panic("トリックルームイベントで、トリックルームが最後に使った技ではない。")
 			}
-			if current.RemainingTurnTrickRoom == 0 {
-				fmt.Println(pokeName.ToString(), "じくうをもとにもどした！", current.IsPlayer1View)
+			if current.RemainingTurn.TrickRoom == 0 {
+				fmt.Println(pokeName.ToString(), "じくうをもとにもどした！", current.IsHostView)
 			} else {
-				fmt.Println(pokeName.ToString(), "じくうをゆがめた", current.IsPlayer1View)
+				fmt.Println(pokeName.ToString(), "じくうをゆがめた", current.IsHostView)
 			}
+		case MESSAGE_EVENT:
+			fmt.Println(current.HostViewMessage)
 	}
 
-	if lastManager.IsPlayer1View {
+	if lastManager.IsHostView {
 		ui.LastP1ViewManager = lastManager.Clone()
 	} else {
 		ui.LastP2ViewManager = lastManager.Clone()

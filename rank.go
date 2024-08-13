@@ -35,44 +35,99 @@ func (r RankStat) Clone() RankStat {
 	return r
 }
 
-func (r *RankStat) Fluctuation(v *RankStat, isClearBody bool) {
+func (r RankStat) DownToZero() RankStat {
+	r.Atk = omwmath.Max(r.Atk, 0)
+	r.Def = omwmath.Max(r.Def, 0)
+	r.SpAtk = omwmath.Max(r.SpAtk, 0)
+	r.SpDef = omwmath.Max(r.SpDef, 0)
+	r.Speed = omwmath.Max(r.Speed, 0)
+	return r
+}
+
+func (r RankStat) ContainsNotZero() bool {
+	if r.Atk != 0 {
+		return true
+	}
+
+	if r.Def != 0 {
+		return true
+	}
+
+	if r.SpAtk != 0 {
+		return true
+	}
+
+	if r.SpDef != 0 {
+		return true
+	}
+
+	if r.Speed != 0 {
+		return true
+	}
+
+	return false
+}
+
+func (r *RankStat) Fluctuation(v *RankStat) RankStatFluctuationResult {
+	var atk Rank
 	if v.Atk > 0 {
-		r.Atk = omwmath.Min(r.Atk+v.Atk, MAX_RANK)
+		atk = omwmath.Min(v.Atk, MAX_RANK - r.Atk)
 	} else {
-		if !isClearBody {
-			r.Atk = omwmath.Max(r.Atk+v.Atk, MIN_RANK)
-		}
+		atk = omwmath.Max(v.Atk, MIN_RANK - r.Atk)
 	}
 
+	var def Rank
 	if v.Def > 0 {
-		r.Def = omwmath.Min(r.Def+v.Def, MAX_RANK)
+		def = omwmath.Min(v.Atk, MAX_RANK - r.Atk)
 	} else {
-		if !isClearBody {
-			r.Def = omwmath.Max(r.Def+v.Def, MIN_RANK)
-		}
+		def = omwmath.Max(v.Atk, MIN_RANK - r.Atk)
 	}
 
+	var spAtk Rank
 	if v.SpAtk > 0 {
-		r.SpAtk = omwmath.Min(r.SpAtk+v.SpAtk, MAX_RANK)
+		spAtk = omwmath.Min(v.Atk, MAX_RANK - r.Atk)
 	} else {
-		if !isClearBody {
-			r.SpAtk = omwmath.Max(r.SpAtk+v.SpAtk, MIN_RANK)
-		}
+		spAtk = omwmath.Max(v.Atk, MIN_RANK - r.Atk)
 	}
 
+	var spDef Rank
 	if v.SpDef > 0 {
-		r.SpDef = omwmath.Min(r.SpDef+v.SpDef, MAX_RANK)
+		spDef = omwmath.Min(v.Atk, MAX_RANK - r.Atk)
 	} else {
-		if !isClearBody {
-			r.SpDef = omwmath.Max(r.SpDef+v.SpDef, MIN_RANK)
-		}
+		spDef = omwmath.Max(v.Atk, MIN_RANK - r.Atk)
 	}
 
+	var speed Rank
 	if v.Speed > 0 {
-		r.Speed = omwmath.Min(r.Speed+v.Speed, MAX_RANK)
+		speed = omwmath.Min(v.Atk, MAX_RANK - r.Atk)
 	} else {
-		if !isClearBody {
-			r.Speed = omwmath.Max(r.Speed+v.Speed, MIN_RANK)
-		}
+		speed = omwmath.Max(v.Atk, MIN_RANK - r.Atk)
 	}
+
+	r.Atk += atk
+	r.Def += def
+	r.SpAtk += spAtk
+	r.SpDef += spDef
+	r.Speed += speed
+
+	return RankStatFluctuationResult{
+		Atk:atk,
+		Def:def,
+		SpAtk:spAtk,
+		SpDef:spDef,
+		Speed:speed,
+	}
+}
+
+func (r RankStat) Sub(v *RankStat) RankStat {
+	return r
+}
+
+type RankStatFluctuationResult struct {
+	Atk Rank
+	Def Rank
+	SpAtk Rank
+	SpDef Rank
+	Speed Rank
+	IsClearBody bool
 }

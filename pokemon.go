@@ -2,12 +2,10 @@ package bippa
 
 import (
 	"fmt"
-	"math/rand"
 	omwjson "github.com/sw965/omw/json"
 	"github.com/sw965/omw/fn"
 	"golang.org/x/exp/slices"
 	omwmath "github.com/sw965/omw/math"
-	omwrand "github.com/sw965/omw/math/rand"
 	omwslices "github.com/sw965/omw/slices"
 )
 
@@ -249,19 +247,18 @@ type Pokemon struct {
 	Types Types
 
 	Stat PokemonStat
-
 	StatusAilment StatusAilment
 	Rank RankStat
 
-	IsFlinchState bool
 	SubstituteHP int
+	IsFlinchState bool
 	IsProtectState bool
 	ProtectConsecutiveSuccess int
-
 	RemainingTurnTauntState int
 
-	LastPlannedUseMoveName MoveName
-	Turn int
+	TurnCount int
+	ThisTurnPlannedUseMoveName MoveName
+
 	Id int
 }
 
@@ -343,61 +340,6 @@ func (p *Pokemon) UpdateStat() error {
 	return nil
 }
 
-func (p *Pokemon) AddCurrentHP(a int) error {
-	if a < 0 {
-		return fmt.Errorf("Pokemon.AddCurrentHPに渡す引数は、0以上でなければならない。")
-	}
-	p.Stat.CurrentHP += omwmath.Min(a, p.Stat.MaxHP-p.Stat.CurrentHP)
-	return nil
-}
-
-func (p *Pokemon) SubCurrentHP(dmg int, isFocusSashValid bool) (bool, error) {
-	if dmg < 0 {
-		return false, fmt.Errorf("Pokemon.SubCurrentHPに渡す引数は、0以上でなければならない。")
-	}
-
-	var isFocusSash bool
-	if p.IsFullHP() && dmg > p.Stat.CurrentHP && isFocusSashValid && p.Item == FOCUS_SASH {
-		dmg = p.Stat.MaxHP - 1
-		p.Item = EMPTY_ITEM
-		isFocusSash = true
-	} else {
-		dmg = omwmath.Min(dmg, p.Stat.CurrentHP)
-	}
-	p.Stat.CurrentHP -= dmg
-	return isFocusSash, nil
-}
-
-func (p *Pokemon) SubSubstituteHP(dmg int) error {
-	if dmg < 0 {
-		return fmt.Errorf("Pokemon.SubSubstituteHPに渡す引数は、0以上でなければならない。")
-	}
-	p.SubstituteHP -= omwmath.Min(dmg, p.SubstituteHP)
-	return nil
-}
-
-func (p *Pokemon) SetStatusAilment(status StatusAilment, percentage int, r *rand.Rand) error {
-	if p.StatusAilment != EMPTY_STATUS_AILMENT {
-		return nil
-	}
-	
-	//https://wiki.xn--rckteqa2e.com/wiki/%E3%81%93%E3%81%8A%E3%82%8A_(%E7%8A%B6%E6%85%8B%E7%95%B0%E5%B8%B8)
-	if status == FREEZE && slices.Contains(p.Types, ICE) {
-		return nil
-	}
-
-	// https://wiki.xn--rckteqa2e.com/wiki/%E3%82%84%E3%81%91%E3%81%A9
-	if status == BURN && slices.Contains(p.Types, FIRE) {
-		return nil
-	}
-	
-	ok, err := omwrand.IsPercentageMet(percentage, r)
-	if ok {
-		p.StatusAilment = status
-	}
-	return err
-}
-
 func (p *Pokemon) Equal(other *Pokemon) bool {
 	if p.Name != other.Name {
 		return false
@@ -430,23 +372,6 @@ func (p *Pokemon) IsSubstituteState() bool {
 	return p.SubstituteHP > 0
 }
 
-func (p *Pokemon) RankFluctuation(v *RankStat, percentage int, isClearBodyValid bool, r *rand.Rand) error {
-	ok, err := omwrand.IsPercentageMet(percentage, r)
-	isClearBody := isClearBodyValid && p.Ability == CLEAR_BODY
-	if ok {
-		p.Rank.Fluctuation(v, isClearBody)
-	}
-	return err
-}
-
-func (p *Pokemon) SetIsFlinchState(percentage int, r *rand.Rand) error {
-	ok, err := omwrand.IsPercentageMet(percentage, r)
-	if ok {
-		p.IsFlinchState = ok
-	}
-	return err
-}
-
 func (p *Pokemon) IsTauntState() bool {
 	return p.RemainingTurnTauntState > 0
 }
@@ -465,8 +390,32 @@ func (p *Pokemon) UsableMoveNames() MoveNames {
 	return ns
 }
 
-func (p *Pokemon) SetRemainingTurnTauntState(r *rand.Rand) {
-	p.RemainingTurnTauntState = omwrand.IntUniform(2, 5, r)
+func (p *Pokemon) ApplyHealToBody(heal int) error {
+	if heal < 0 {
+		return fmt.Errorf("回復量は0以上でなければならない")
+	}
+
+	heal = omwmath.Min(heal, p.Stat.MaxHP - p.Stat.CurrentHP)
+	p.Stat.CurrentHP += heal
+	return nil
+}
+
+func (p *Pokemon) ApplyDamageToBody(dmg int) error {
+	if dmg < 0 {
+		return fmt.Errorf("ダメージは0以上でなければならない")
+	}
+	dmg = omwmath.Min(dmg, p.Stat.CurrentHP)
+	p.Stat.CurrentHP -= dmg
+	return nil
+}
+
+func (p *Pokemon) ApplyDamageToSubstitute(dmg int) error {
+	if dmg < 0 {
+		return fmt.Errorf("ダメージは0以上でなければならない")
+	}
+	dmg = omwmath.Min(dmg, p.SubstituteHP)
+	p.SubstituteHP -= dmg
+	return nil
 }
 
 func (p *Pokemon) ToEasyRead() EasyReadPokemon {
@@ -486,6 +435,15 @@ func (p *Pokemon) ToEasyRead() EasyReadPokemon {
 }
 
 type Pokemons []Pokemon
+
+func (ps Pokemons) IsAnyFainted() bool {
+	for _, p := range ps {
+		if p.IsFainted() {
+			return true
+		}
+	}
+	return false
+}
 
 func (ps Pokemons) Names() PokeNames {
 	ret := make(PokeNames, len(ps))
@@ -517,6 +475,15 @@ func (ps Pokemons) CurrentHPs() []int {
 		hps[i] = p.Stat.CurrentHP
 	}
 	return hps
+}
+
+func (ps Pokemons) isAnyFainted() bool {
+	for _, p := range ps {
+		if p.IsFainted() {
+			return true
+		}
+	}
+	return false
 }
 
 func (ps Pokemons) Clone() Pokemons {
