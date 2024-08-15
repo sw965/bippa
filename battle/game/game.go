@@ -1,7 +1,7 @@
 package game
 
 import (
-	//"fmt"
+	"fmt"
 	//"github.com/sw965/crow/game/simultaneous"
 	"github.com/sw965/bippa/battle"
     bp "github.com/sw965/bippa"
@@ -25,8 +25,8 @@ import (
 // }
 
 func IsEnd(m *battle.Manager) (bool, []float64) {
-	self := omwslices.Concat(m.SelfLeadPokemons, m.SelfBenchPokemons)
-	opponent := omwslices.Concat(m.OpponentLeadPokemons, m.OpponentBenchPokemons)
+	self := omwslices.Concat(m.CurrentSelfLeadPokemons, m.CurrentSelfBenchPokemons)
+	opponent := omwslices.Concat(m.CurrentOpponentLeadPokemons, m.CurrentOpponentBenchPokemons)
 
 	isSelfAllFaint := self.IsAllFainted()
 	isOpponentAllFaint := opponent.IsAllFainted()
@@ -43,12 +43,12 @@ func IsEnd(m *battle.Manager) (bool, []float64) {
 }
 
 // func LegalSeparateActions(m *battle.Manager) battle.ActionsSlice {
-// 	selfMove := m.SelfLegalMoveSoloActions()
-// 	selfSwitch := m.SelfLegalSwitchSoloActions()
+// 	selfMove := m.CurrentSelfLegalMoveSoloActions()
+// 	selfSwitch := m.CurrentSelfLegalSwitchSoloActions()
 // 	self := omwslices.Concat(selfMove, selfSwitch)
 
-// 	opponentMove := m.OpponentLegalMoveSoloActions()
-// 	opponentSwitch := m.OpponentLegalSwitchSoloActions()
+// 	opponentMove := m.CurrentOpponentLegalMoveSoloActions()
+// 	opponentSwitch := m.CurrentOpponentLegalSwitchSoloActions()
 // 	opponent := omwslices.Concat(opponentMove, opponentSwitch)
 
 // 	return battle.ActionsSlice{self.ToActions(), opponent.ToActions()}
@@ -92,8 +92,8 @@ func IsEnd(m *battle.Manager) (bool, []float64) {
 //いずれかのプレイヤーが行動するときに呼び出される関数
 func Push(manager battle.Manager, actions battle.Actions) (battle.Manager, error) {
 	manager = manager.Clone()
-	isSelfLeadAnyFainted := manager.SelfLeadPokemons.IsAnyFainted()
-	isOpponentLeadAnyFainted := manager.OpponentLeadPokemons.IsAnyFainted()
+	isSelfLeadAnyFainted := manager.CurrentSelfLeadPokemons.IsAnyFainted()
+	isOpponentLeadAnyFainted := manager.CurrentOpponentLeadPokemons.IsAnyFainted()
 
 	soloActions := actions.ToSoloActions()
 	soloActions.SortByOrder(battle.GlobalContext.Rand)
@@ -120,9 +120,17 @@ func Push(manager battle.Manager, actions battle.Actions) (battle.Manager, error
 			manager.SwapView()
 		}
 
+		srcPokemon := manager.GetHostLeadPokemons()[soloAction.SrcIndex]
+
 		if soloAction.MoveName != bp.EMPTY_MOVE_NAME {
-			if manager.SelfLeadPokemons[soloAction.SrcIndex].IsFlinchState {
-				battle.GlobalContext.Observer(&manager, battle.FLINCH_STATE_EVENT)
+			if srcPokemon.IsFlinchState {
+				if soloAction.IsSelf {
+					manager.HostViewMessage = fmt.Sprintf("%sは ひるんで わざが だせない！", srcPokemon.Name.ToString())
+				} else {
+					manager.HostViewMessage = fmt.Sprintf("%sの %sは ひるんで わざが だせない！", manager.GuestHumanName, srcPokemon.Name.ToString())
+				}
+
+				battle.GlobalContext.Observer(&manager)
 				continue
 			}
 			move := battle.GetMove(soloAction.MoveName)

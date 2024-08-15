@@ -19,22 +19,95 @@ type StatusEffect func(*Manager, *bp.Pokemon, *bp.Pokemon) error
 // https://wiki.xn--rckteqa2e.com/wiki/%E8%BF%BD%E5%8A%A0%E5%8A%B9%E6%9E%9C
 type AdditionalEffect func(*Manager, *bp.Pokemon) error
 
+func NewPraalysisAdditionalEffect(percentage int) AdditionalEffect {
+	return func(m *Manager, p *bp.Pokemon) error {
+		if p.StatusAilment != bp.EMPTY_STATUS_AILMENT {
+			return nil
+		}
+
+		ok, err := omwrand.IsPercentageMet(percentage, GlobalContext.Rand)
+		if ok {
+			p.StatusAilment = bp.PARALYSIS
+			if p.IsHost {
+				m.HostViewMessage = fmt.Sprintf("%sは まひして わざが でにくくなった！", p.Name.ToString())
+			} else {
+				m.HostViewMessage = fmt.Sprintf("%sの %sは まひして わざが でにくくなった！", m.GuestHumanName, p.Name.ToString())
+			}
+			GlobalContext.Observer(m)
+		}
+		return err
+	}
+}
+
+func NewBurnAdditionalEffect(percentage int) AdditionalEffect {
+	return func(m *Manager, p *bp.Pokemon) error {
+		if p.StatusAilment != bp.EMPTY_STATUS_AILMENT {
+			return nil
+		}
+	
+		if slices.Contains(p.Types, bp.FIRE) {
+			return nil
+		}
+	
+		ok, err := omwrand.IsPercentageMet(percentage, GlobalContext.Rand)
+		if ok {
+			p.StatusAilment = bp.BURN
+			if p.IsHost {
+				m.HostViewMessage = fmt.Sprintf("%sは やけどをおった！", p.Name.ToString())
+			} else {
+				m.HostViewMessage = fmt.Sprintf("%sの %sは やけどをおった！", m.GuestHumanName, p.Name.ToString())
+			}
+			GlobalContext.Observer(m)
+		}
+		return err
+	}
+}
+
+func NewFreezeAdditionalEffect(percentage int) AdditionalEffect {
+	return func(m *Manager, p *bp.Pokemon) error {
+		if p.StatusAilment != bp.EMPTY_STATUS_AILMENT {
+			return nil
+		}
+
+		if slices.Contains(p.Types, bp.ICE) {
+			return nil
+		}
+
+		ok, err := omwrand.IsPercentageMet(percentage, GlobalContext.Rand)
+		if ok {
+			p.StatusAilment = bp.FREEZE
+			if p.IsHost {
+				m.HostViewMessage = fmt.Sprintf("%sは こおりついた！", p.Name.ToString())
+			} else {
+				m.HostViewMessage = fmt.Sprintf("%sの %sは こおりついた！", m.GuestHumanName, p.Name.ToString())
+			}
+			GlobalContext.Observer(m)
+		}
+		return err
+	}
+}
+
 type Move struct {
 	StatusEffect StatusEffect
 	SelfAdditionalEffect AdditionalEffect
 	OpponentAdditionalEffect AdditionalEffect
 }
 
-func (m *Move) Run(manager *Manager, action *SoloAction) error {
-	src := &manager.SelfLeadPokemons[action.SrcIndex]
+func (move *Move) Run(manager *Manager, action *SoloAction) error {
+	src := &manager.CurrentSelfLeadPokemons[action.SrcIndex]
 	if src.IsFainted() {
 		m := fmt.Sprintf("%s は 瀕死状態なので、技を繰り出す事が出来ません。", src.Name.ToString())
 		return fmt.Errorf(m)
 	}
 
-	mm := MessageMaker{IsSelf:manager.IsHostView}
-	manager.HostViewMessage = mm.MoveUse(src.Name, action.MoveName)
-	GlobalContext.Observer(manager, MESSAGE_EVENT)
+	srcPokeNameStr := src.Name.ToString()
+	moveNameStr := action.MoveName.ToString()
+	if manager.CurrentSelfIsHost {
+		manager.HostViewMessage = fmt.Sprintf("%sの %s！", srcPokeNameStr, moveNameStr)
+	} else {
+		manager.HostViewMessage = fmt.Sprintf("%sの %sの %s！", manager.GuestHumanName, srcPokeNameStr, moveNameStr)
+	}
+	GlobalContext.Observer(manager)
 
 	switch action.MoveName {
 		//あまごい
@@ -51,8 +124,20 @@ func (m *Move) Run(manager *Manager, action *SoloAction) error {
 		case bp.TRICK_ROOM:
 			if manager.IsTrickRoomState() {
 				manager.RemainingTurn.TrickRoom = 0
+				if manager.CurrentSelfIsHost {
+					manager.HostViewMessage = fmt.Sprintf("%sは じくうを もどした！", srcPokeNameStr)
+				} else {
+					manager.HostViewMessage = fmt.Sprintf("%sの %sは じくうを もどした！", manager.GuestHumanName, srcPokeNameStr)
+				}
+				GlobalContext.Observer(manager)
 			} else {
 				manager.RemainingTurn.TrickRoom = 5
+				if manager.CurrentSelfIsHost {
+					manager.HostViewMessage = fmt.Sprintf("%sは じくうを ゆがめた！", srcPokeNameStr)
+				} else {
+					manager.HostViewMessage = fmt.Sprintf("%sの %sは じくうを ゆがめた！", manager.GuestHumanName, srcPokeNameStr)
+				}
+				GlobalContext.Observer(manager)
 			}
 			return nil
 		//じばく
@@ -82,6 +167,8 @@ func (m *Move) Run(manager *Manager, action *SoloAction) error {
 
 	var err error
 	for _, target := range targetPokemons {
+		targetPokeNameStr := target.Name.ToString()
+
 		var isHit bool
 		if moveData.Accuracy == -1 {
 			isHit = true
@@ -99,20 +186,37 @@ func (m *Move) Run(manager *Manager, action *SoloAction) error {
 		//かんそうはだ
 		if moveData.Type == bp.WATER && target.Ability == bp.DRY_SKIN {
 			heal := int(float64(target.Stat.CurrentHP) * 0.25)
+			isFullHP := target.IsFullHP()
 			err := target.ApplyHealToBody(heal)
 			if err != nil {
 				return err
 			}
+
+			drySkinStr := bp.DRY_SKIN.ToString()
+			if isFullHP {
+				if target.IsHost {
+					manager.HostViewMessage = fmt.Sprintf("%sの %sで %sは こうかが なかった！", targetPokeNameStr, drySkinStr, moveNameStr)
+				} else {
+					manager.HostViewMessage = fmt.Sprintf("%sの %sの %sで %sは こうかが なかった！", manager.GuestHumanName, targetPokeNameStr, drySkinStr, moveNameStr)
+				}
+			} else {
+				if target.IsHost {
+					manager.HostViewMessage = fmt.Sprintf("%sは %sで かいふくした！", targetPokeNameStr, drySkinStr)
+				} else {
+					manager.HostViewMessage = fmt.Sprintf("%sの %sは %sで かいふくした！", manager.GuestHumanName, targetPokeNameStr, drySkinStr)
+				}
+			}
+			GlobalContext.Observer(manager)
 			continue
 		}
 
 		if moveData.Category == bp.STATUS {
 			if target.IsSubstituteState() {
 				if !moveData.CanSubstitute {
-					m.StatusEffect(manager, src, target)
+					move.StatusEffect(manager, src, target)
 				}
 			} else {
-				m.StatusEffect(manager, src, target)
+				move.StatusEffect(manager, src, target)
 			}
 		} else {
 			switch action.MoveName {
@@ -143,6 +247,7 @@ func (m *Move) Run(manager *Manager, action *SoloAction) error {
 
 			dmgResult := calc.Calculation(action.MoveName)
 			if dmgResult.TypeEffective == bp.NO_EFFECTIVE {
+				manager.HostViewMessage = fmt.Sprintf("こうかは ないようだ...")
 				continue
 			}
 			dmg := dmgResult.Damage
@@ -176,8 +281,29 @@ func (m *Move) Run(manager *Manager, action *SoloAction) error {
 				return err
 			}
 
+			if isCrit {
+				manager.HostViewMessage = fmt.Sprintf("きゅうしょに あたった！")
+				GlobalContext.Observer(manager)
+			}
+
+			switch dmgResult.TypeEffective {
+				case bp.SUPER_EFFECTIVE:
+					manager.HostViewMessage = fmt.Sprintf("こうかは ばつぐんだ！")
+					GlobalContext.Observer(manager)
+				case bp.NOT_VERY_EFFECTIVE:
+					manager.HostViewMessage = fmt.Sprintf("こうかは いまひとつのようだ...")
+					GlobalContext.Observer(manager)
+			}
+
 			if isFocusSash {
 				target.Item = bp.EMPTY_ITEM
+				focusSashStr := bp.FOCUS_SASH.ToString()
+				if target.IsHost {
+					manager.HostViewMessage = fmt.Sprintf("%sは %sで もちこたえた！", targetPokeNameStr, focusSashStr)
+				} else {
+					manager.HostViewMessage = fmt.Sprintf("%sの %sは %sで もちこたえた！", manager.GuestHumanName, targetPokeNameStr, focusSashStr)
+				}
+				GlobalContext.Observer(manager)
 			}
 
 			isTargetFainted := target.IsFainted()
@@ -185,12 +311,12 @@ func (m *Move) Run(manager *Manager, action *SoloAction) error {
 				faintedCount += 1
 			}
 
-			if m.SelfAdditionalEffect != nil && !src.IsFainted() {
-				m.SelfAdditionalEffect(manager, src)
+			if move.SelfAdditionalEffect != nil && !src.IsFainted() {
+				move.SelfAdditionalEffect(manager, src)
 			}
 
-			if isBodyAttack && !isTargetFainted && m.OpponentAdditionalEffect != nil {
-				m.OpponentAdditionalEffect(manager, target)
+			if isBodyAttack && !isTargetFainted && move.OpponentAdditionalEffect != nil {
+				move.OpponentAdditionalEffect(manager, target)
 			}
 		}
 	}
@@ -200,17 +326,7 @@ func (m *Move) Run(manager *Manager, action *SoloAction) error {
 //10まんボルト
 func NewThunderbolt() Move {
 	return Move{
-		OpponentAdditionalEffect:func(m *Manager, target *bp.Pokemon) error {
-			if target.StatusAilment != bp.EMPTY_STATUS_AILMENT {
-				return nil
-			}
-
-			ok, err := omwrand.IsPercentageMet(10, GlobalContext.Rand)
-			if ok {
-				target.StatusAilment = bp.PARALYSIS
-			}
-			return err
-		},
+		OpponentAdditionalEffect:NewPraalysisAdditionalEffect(10),
 	}
 }
 
@@ -239,21 +355,7 @@ func NewSurf() Move {
 //れいとうビーム
 func NewIceBeam() Move {
 	return Move{
-		OpponentAdditionalEffect:func(m *Manager, target *bp.Pokemon) error {
-			if target.StatusAilment != bp.EMPTY_STATUS_AILMENT {
-				return nil
-			}
-
-			if slices.Contains(target.Types, bp.ICE) {
-				return nil
-			}
-
-			ok, err := omwrand.IsPercentageMet(10, GlobalContext.Rand)
-			if ok {
-				target.StatusAilment = bp.FREEZE
-			}
-			return err
-		},
+		OpponentAdditionalEffect:NewFreezeAdditionalEffect(10),
 	}
 }
 
@@ -342,7 +444,13 @@ func NewFollowMe() Move {
 			if src != target {
 				return fmt.Errorf("このゆびとまれ は 技を繰り出したポケモン と 対象になるポケモン の アドレスが 一致していなければならない。")
 			}
-			m.SelfFollowMePokemonPointers = append(m.SelfFollowMePokemonPointers, src)
+			m.CurrentSelfFollowMePokemonPointers = append(m.CurrentSelfFollowMePokemonPointers, src)
+			if m.CurrentSelfIsHost {
+				m.HostViewMessage = fmt.Sprintf("%sは ちゅうもくのまとになった！", src.Name.ToString())
+			} else {
+				m.HostViewMessage = fmt.Sprintf("%sの %sは ちゅうもくの まとになった！", m.GuestHumanName, src.Name.ToString())
+			}
+			GlobalContext.Observer(m)
 			return nil
 		},
 	}
@@ -369,8 +477,13 @@ func NewHypnosis() Move {
 //じこあんじ
 func NewRecover() Move {
 	return Move{
-		StatusEffect:func(_ *Manager, src *bp.Pokemon, target *bp.Pokemon) error {
+		StatusEffect:func(m *Manager, src *bp.Pokemon, target *bp.Pokemon) error {
 			src.Rank = target.Rank.Clone()
+			if src.IsHost {
+				m.HostViewMessage = fmt.Sprintf("%sは %sの のうりょうへんかを コピーした！", src.Name.ToString(), target.Name.ToString())
+			} else {
+				m.HostViewMessage = fmt.Sprintf("%sの %sは %sの のうりょうへんかを コピーした！", m.GuestHumanName, src.Name.ToString(), target.Name.ToString())
+			}
 			return nil
 		},
 	}
@@ -443,21 +556,7 @@ func NewFakeOut() Move {
 //ねっぷう
 func NewHeatWave() Move {
 	return Move{
-		OpponentAdditionalEffect:func(m *Manager, target *bp.Pokemon) error {
-			if target.StatusAilment != bp.EMPTY_STATUS_AILMENT {
-				return nil
-			}
-
-			if slices.Contains(target.Types, bp.FIRE) {
-				return nil
-			}
-
-			ok, err := omwrand.IsPercentageMet(10, GlobalContext.Rand)
-			if ok {
-				target.StatusAilment = bp.BURN
-			}
-			return err
-		},
+		OpponentAdditionalEffect:NewBurnAdditionalEffect(10),
 	}
 }
 
@@ -482,28 +581,14 @@ func NewSuckerPunch() Move {
 //ほのおのパンチ
 func NewFirePunch() Move {
 	return Move{
-		OpponentAdditionalEffect:func(m *Manager, target *bp.Pokemon) error {
-			if target.StatusAilment != bp.EMPTY_STATUS_AILMENT {
-				return nil
-			}
-
-			if slices.Contains(target.Types, bp.FIRE) {
-				return nil
-			}
-
-			ok, err := omwrand.IsPercentageMet(10, GlobalContext.Rand)
-			if ok {
-				target.StatusAilment = bp.BURN
-			}
-			return err
-		},
+		OpponentAdditionalEffect:NewBurnAdditionalEffect(10),
 	}
 }
 
 //まもる
 func NewProtect() Move {
 	return Move{
-		StatusEffect:func(_ *Manager, src, target *bp.Pokemon) error {
+		StatusEffect:func(m *Manager, src, target *bp.Pokemon) error {
 			if src != target {
 				return fmt.Errorf("まもる は 技を繰り出したポケモン と 対象になるポケモン の アドレスが 一致していなければならない。")
 			}
@@ -513,8 +598,14 @@ func NewProtect() Move {
 			src.IsProtectState = isSuccess
 			if isSuccess {
 				src.ProtectConsecutiveSuccess += 1
+				if target.IsHost {
+					m.HostViewMessage = fmt.Sprintf("%sは まもりの たいせいに はいった！", src.Name.ToString())
+				} else {
+					m.HostViewMessage = fmt.Sprintf("%sの %sは まもりの たいせいに はいった！", m.GuestHumanName, src.Name.ToString())
+				}
 			} else {
 				src.ProtectConsecutiveSuccess = 0
+				m.HostViewMessage = fmt.Sprintf("しかし うまく きまらなかった")
 			}
 			return nil
 		},
@@ -524,7 +615,7 @@ func NewProtect() Move {
 //みがわり
 func NewSubstitute() Move {
 	return Move{
-		StatusEffect:func(_ *Manager, src, target *bp.Pokemon) error {
+		StatusEffect:func(m *Manager, src, target *bp.Pokemon) error {
 			if src != target {
 				return fmt.Errorf("みがわり は 技を繰り出したポケモン と 対象になるポケモン の アドレスが 一致していなければならない。")
 			}
@@ -532,15 +623,28 @@ func NewSubstitute() Move {
 			// https://wiki.xn--rckteqa2e.com/wiki/%E3%81%BF%E3%81%8C%E3%82%8F%E3%82%8A
 
 			if src.IsSubstituteState() {
+				if src.IsHost {
+					m.HostViewMessage = fmt.Sprintf("しかし %sの みがわりは すでに でていた", src.Name.ToString())
+				} else {
+					m.HostViewMessage = fmt.Sprintf("しかし %sの %sの みがわりは すでに でていた", m.GuestHumanName, src.Name.ToString())
+				}
+				GlobalContext.Observer(m)
 				return nil
 			}
 
 			cost := int(float64(src.Stat.MaxHP) * 0.25)
-
 			if src.Stat.CurrentHP > cost {
 				src.Stat.CurrentHP -= cost
 				src.SubstituteHP = cost
+				if src.IsHost {
+					m.HostViewMessage = fmt.Sprintf("%sの ぶんしんが あらわれた！", src.Name.ToString())
+				} else {
+					m.HostViewMessage = fmt.Sprintf("%sの %sの ぶんしんが あらわれた！", m.GuestHumanName, src.Name.ToString())
+				}
+			} else {
+				m.HostViewMessage = fmt.Sprintf("しかし みがわりを だすには たいりょくが たりなかった！")
 			}
+			GlobalContext.Observer(m)
 			return nil
 		},
 	}

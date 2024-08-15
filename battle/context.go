@@ -5,9 +5,9 @@ import (
 	omwrand "github.com/sw965/omw/math/rand"
 )
 
-type Observer func(*Manager, EventType)
+type Observer func(*Manager)
 
-func EmptyObserver(_ *Manager, _ EventType) {}
+func EmptyObserver(_ *Manager) {}
 
 type Context struct {
 	Rand *rand.Rand

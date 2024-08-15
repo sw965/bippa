@@ -9,22 +9,25 @@ import (
 
 func Test(t *testing.T) {
 	m := battle.Manager{
-		SelfLeadPokemons:bp.Pokemons{
+		GuestHumanTitle:"ポケモントレーナー",
+		GuestHumanName:"メイ",
+
+		CurrentSelfLeadPokemons:bp.Pokemons{
 			bp.NewKusanagi2009Toxicroak(),
 			bp.NewKusanagi2009Empoleon(),
 		},
 
-		SelfBenchPokemons:bp.Pokemons{
+		CurrentSelfBenchPokemons:bp.Pokemons{
 			bp.NewKusanagiSalamence2009(),
 			bp.NewKusanagi2009Snorlax(),
 		},
 
-		OpponentLeadPokemons:bp.Pokemons{
+		CurrentOpponentLeadPokemons:bp.Pokemons{
 			bp.NewMoruhu2007Bronzong(),
 			bp.NewMoruhu2007Smeargle(),
 		},
 
-		OpponentBenchPokemons:bp.Pokemons{
+		CurrentOpponentBenchPokemons:bp.Pokemons{
 			bp.NewMoruhu2007Metagross(),
 			bp.NewMoruhu2007Snorlax(),
 		},
@@ -48,38 +51,38 @@ func Test(t *testing.T) {
 				SrcIndex:1,
 				TargetIndex:1,
 				IsSelfLeadTarget:true,
-				Speed:m.OpponentLeadPokemons[1].Stat.Speed,
+				Speed:m.CurrentOpponentLeadPokemons[1].Stat.Speed,
 				IsSelf:false,
 			},
 			
 			battle.SoloAction{
 				MoveName:bp.TRICK_ROOM,
 				SrcIndex:0,
-				Speed:m.OpponentLeadPokemons[0].Stat.Speed,
+				Speed:m.CurrentOpponentLeadPokemons[0].Stat.Speed,
 				IsSelf:false,
 			},
 		},
 
 		battle.Action{
-			// battle.SoloAction{
-			// 	MoveName:bp.FAKE_OUT,
-			// 	SrcIndex:0,
-			// 	TargetIndex:0,
-			// 	Speed:m.OpponentLeadPokemons[0].Stat.Speed,
-			// 	IsSelfView:true,
-			// },
-
 			battle.SoloAction{
+				MoveName:bp.FAKE_OUT,
 				SrcIndex:0,
 				TargetIndex:0,
-				Speed:m.SelfLeadPokemons[0].Stat.Speed,
+				Speed:m.CurrentOpponentLeadPokemons[0].Stat.Speed,
 				IsSelf:true,
 			},
+
+			// battle.SoloAction{
+			// 	SrcIndex:0,
+			// 	TargetIndex:0,
+			// 	Speed:m.CurrentSelfLeadPokemons[0].Stat.Speed,
+			// 	IsSelf:true,
+			// },
 
 			battle.SoloAction{
 				MoveName:bp.SURF,
 				SrcIndex:1,
-				Speed:m.SelfLeadPokemons[1].Stat.Speed,
+				Speed:m.CurrentSelfLeadPokemons[1].Stat.Speed,
 				IsSelf:true,
 			},
 		},

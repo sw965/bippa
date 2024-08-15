@@ -21,66 +21,52 @@ type RemainingTurn struct {
 }
 
 type Manager struct {
-	SelfHumanTitle bp.HumanTitle
-	SelfHumanName bp.HumanName
-	OpponentHumanTitle bp.HumanTitle
-	OpponentHumanName bp.HumanName
+	GuestHumanTitle bp.HumanTitle
+	GuestHumanName bp.HumanName
 
-	SelfLeadPokemons bp.Pokemons
-	SelfBenchPokemons  bp.Pokemons
-	OpponentLeadPokemons bp.Pokemons
-	OpponentBenchPokemons bp.Pokemons
+	CurrentSelfLeadPokemons bp.Pokemons
+	CurrentSelfBenchPokemons  bp.Pokemons
+	CurrentOpponentLeadPokemons bp.Pokemons
+	CurrentOpponentBenchPokemons bp.Pokemons
 
-	SelfFollowMePokemonPointers bp.PokemonPointers
-	OpponentFollowMePokemonPointers bp.PokemonPointers
+	CurrentSelfFollowMePokemonPointers bp.PokemonPointers
+	CurrentOpponentFollowMePokemonPointers bp.PokemonPointers
 
 	Weather Weather
 	RemainingTurn RemainingTurn
 	Turn int
 	
 	IsSingle bool
-	IsHostView bool
-	HostViewMessage Message
+	CurrentSelfIsHost bool
+	HostViewMessage string
+}
+
+func (m *Manager) GetHostLeadPokemons() bp.Pokemons {
+	if m.CurrentSelfIsHost {
+		return m.CurrentSelfLeadPokemons
+	} else {
+		return m.CurrentOpponentLeadPokemons
+	}
 }
 
 func (m *Manager) Init() {
-	id := 0
-	for i := range m.SelfLeadPokemons {
-		m.SelfLeadPokemons[i].Id = id
-		id += 1
+	for i := range m.CurrentSelfLeadPokemons {
+		m.CurrentSelfLeadPokemons[i].IsHost = true
 	}
 
-	for i := range m.SelfBenchPokemons {
-		m.SelfBenchPokemons[i].Id = id
-		id += 1
+	for i := range m.CurrentSelfBenchPokemons {
+		m.CurrentSelfBenchPokemons[i].IsHost = true
 	}
-
-	for i := range m.OpponentLeadPokemons {
-		m.OpponentLeadPokemons[i].Id = id
-		id += 1
-	}
-
-	for i := range m.OpponentBenchPokemons {
-		m.OpponentBenchPokemons[i].Id = id
-		id += 1
-	}
-}
-
-func (m *Manager) GetLeadPokemons(isSelf bool) bp.Pokemons {
-	if isSelf {
-		return m.SelfLeadPokemons
-	} else {
-		return m.OpponentLeadPokemons
-	}
+	m.CurrentSelfIsHost = true
 }
 
 func (m Manager) Clone() Manager {
-	m.SelfLeadPokemons = m.SelfLeadPokemons.Clone()
-	m.SelfBenchPokemons = m.SelfBenchPokemons.Clone()
-	m.OpponentLeadPokemons = m.OpponentLeadPokemons.Clone()
-	m.OpponentBenchPokemons = m.OpponentBenchPokemons.Clone()
-	m.SelfFollowMePokemonPointers = slices.Clone(m.SelfFollowMePokemonPointers)
-	m.OpponentFollowMePokemonPointers = slices.Clone(m.OpponentFollowMePokemonPointers)
+	m.CurrentSelfLeadPokemons = m.CurrentSelfLeadPokemons.Clone()
+	m.CurrentSelfBenchPokemons = m.CurrentSelfBenchPokemons.Clone()
+	m.CurrentOpponentLeadPokemons = m.CurrentOpponentLeadPokemons.Clone()
+	m.CurrentOpponentBenchPokemons = m.CurrentOpponentBenchPokemons.Clone()
+	m.CurrentSelfFollowMePokemonPointers = slices.Clone(m.CurrentSelfFollowMePokemonPointers)
+	m.CurrentOpponentFollowMePokemonPointers = slices.Clone(m.CurrentOpponentFollowMePokemonPointers)
 	return m
 }
 
@@ -89,9 +75,10 @@ func (m *Manager) IsTrickRoomState() bool {
 }
 
 func (m *Manager) SwapView() {
-	m.SelfLeadPokemons, m.SelfBenchPokemons, m.OpponentLeadPokemons, m.OpponentBenchPokemons =
-		m.OpponentLeadPokemons, m.OpponentBenchPokemons, m.SelfLeadPokemons, m.SelfBenchPokemons
-	m.SelfFollowMePokemonPointers, m.OpponentFollowMePokemonPointers = m.OpponentFollowMePokemonPointers, m.SelfFollowMePokemonPointers
+	m.CurrentSelfLeadPokemons, m.CurrentSelfBenchPokemons, m.CurrentOpponentLeadPokemons, m.CurrentOpponentBenchPokemons =
+		m.CurrentOpponentLeadPokemons, m.CurrentOpponentBenchPokemons, m.CurrentSelfLeadPokemons, m.CurrentSelfBenchPokemons
+	m.CurrentSelfFollowMePokemonPointers, m.CurrentOpponentFollowMePokemonPointers = m.CurrentOpponentFollowMePokemonPointers, m.CurrentSelfFollowMePokemonPointers
+	m.CurrentSelfIsHost = !m.CurrentSelfIsHost
 }
 
 //攻撃する側のポケモンは瀕死ではない事が前提で呼び出す関数
@@ -101,45 +88,45 @@ func (m *Manager) TargetPokemonPointers(action *SoloAction) bp.PokemonPointers {
 	single := func() bp.PokemonPointers {
 		switch moveData.Target {
 			case bp.NORMAL_TARGET:
-				return m.OpponentLeadPokemons.ToPointers().NotFainted()
+				return m.CurrentOpponentLeadPokemons.ToPointers().NotFainted()
 			case bp.OPPONENT_TWO_TARGET:
-				return m.OpponentLeadPokemons.ToPointers().NotFainted()
+				return m.CurrentOpponentLeadPokemons.ToPointers().NotFainted()
 			case bp.SELF_TARGET:
-				return m.SelfLeadPokemons.ToPointers().NotFainted()
+				return m.CurrentSelfLeadPokemons.ToPointers().NotFainted()
 			case bp.OTHERS_TARGET:
-				return m.OpponentLeadPokemons.ToPointers().NotFainted()
+				return m.CurrentOpponentLeadPokemons.ToPointers().NotFainted()
 			case bp.ALL_TARGET:
 				return bp.PokemonPointers{}
 			case bp.OPPONENT_RANDOM_ONE_TARGET:
-				return m.OpponentLeadPokemons.ToPointers().NotFainted()
+				return m.CurrentOpponentLeadPokemons.ToPointers().NotFainted()
 		}
 		return bp.PokemonPointers{}
 	}
 
 	doubleNormalTarget := func() bp.PokemonPointers {
-		followMe := m.OpponentFollowMePokemonPointers.NotFainted()
+		followMe := m.CurrentOpponentFollowMePokemonPointers.NotFainted()
 		if len(followMe) != 0 {
 			return bp.PokemonPointers{followMe[0]}
 		}
 
 		//味方への攻撃
 		if action.IsSelfLeadTarget {
-			ally := m.SelfLeadPokemons[action.TargetIndex]
+			ally := m.CurrentSelfLeadPokemons[action.TargetIndex]
 			//攻撃対象の味方が瀕死ならば、ランダムに相手を攻撃する。
 			if ally.IsFainted() {
-				ps:= m.OpponentLeadPokemons.ToPointers().NotFainted()
+				ps:= m.CurrentOpponentLeadPokemons.ToPointers().NotFainted()
 				if len(ps) == 0 {
 					return bp.PokemonPointers{}
 				}
 				return omwrand.Sample(ps, 1, GlobalContext.Rand)
 			} else {
-				return bp.PokemonPointers{&m.SelfLeadPokemons[action.TargetIndex]}
+				return bp.PokemonPointers{&m.CurrentSelfLeadPokemons[action.TargetIndex]}
 			}
 		} else {
-			target := m.OpponentLeadPokemons[action.TargetIndex]
+			target := m.CurrentOpponentLeadPokemons[action.TargetIndex]
 			if target.IsFainted() {
 				otherI := map[int]int{0:1, 1:0}[action.TargetIndex]
-				other := m.OpponentLeadPokemons[otherI]
+				other := m.CurrentOpponentLeadPokemons[otherI]
 				if other.IsFainted() {
 					return bp.PokemonPointers{}
 				} else {
@@ -152,7 +139,7 @@ func (m *Manager) TargetPokemonPointers(action *SoloAction) bp.PokemonPointers {
 	}
 
 	doubleOpponentRandomOneTarget := func() bp.PokemonPointers {
-		ps := m.OpponentLeadPokemons.ToPointers().NotFainted()
+		ps := m.CurrentOpponentLeadPokemons.ToPointers().NotFainted()
 		if len(ps) == 0 {
 			return bp.PokemonPointers{}
 		} else {
@@ -165,13 +152,13 @@ func (m *Manager) TargetPokemonPointers(action *SoloAction) bp.PokemonPointers {
 			case bp.NORMAL_TARGET:
 				return doubleNormalTarget()
 			case bp.OPPONENT_TWO_TARGET:
-				return m.OpponentLeadPokemons.ToPointers().NotFainted()
+				return m.CurrentOpponentLeadPokemons.ToPointers().NotFainted()
 			case bp.SELF_TARGET:
-				return bp.PokemonPointers{&m.SelfLeadPokemons[action.TargetIndex]}
+				return bp.PokemonPointers{&m.CurrentSelfLeadPokemons[action.TargetIndex]}
 			case bp.OTHERS_TARGET:
 				allyI := map[int]int{0:1, 1:0}[action.SrcIndex]
-				ally := m.SelfLeadPokemons[allyI]
-				return bp.PokemonPointers{&ally, &m.OpponentLeadPokemons[0], &m.OpponentLeadPokemons[1]}.NotFainted()
+				ally := m.CurrentSelfLeadPokemons[allyI]
+				return bp.PokemonPointers{&ally, &m.CurrentOpponentLeadPokemons[0], &m.CurrentOpponentLeadPokemons[1]}.NotFainted()
 			case bp.ALL_TARGET:
 				return bp.PokemonPointers{}
 			case bp.OPPONENT_RANDOM_ONE_TARGET:
@@ -192,37 +179,61 @@ func (m *Manager) TargetPokemonPointers(action *SoloAction) bp.PokemonPointers {
 // https://wiki.xn--rckteqa2e.com/wiki/%E3%82%BF%E3%83%BC%E3%83%B3#%E3%82%BF%E3%83%BC%E3%83%B3%E3%81%AE%E8%A9%B3%E7%B4%B0
 
 func (m *Manager) Switch(leadIdx, benchIdx int) error {
-	if m.SelfBenchPokemons[benchIdx].IsFainted() {
-		name := m.SelfBenchPokemons[benchIdx].Name
-		msg := fmt.Sprintf("%d番目の %sに 交代しようとしたが、瀕死状態である為、交代出来ません。", benchIdx, name.ToString())
+	beforePokeName := m.CurrentSelfLeadPokemons[benchIdx].Name
+	beforePokeNameStr := beforePokeName.ToString()
+
+	if m.CurrentSelfBenchPokemons[benchIdx].IsFainted() {
+		msg := fmt.Sprintf("%d番目の %sに 交代しようとしたが、瀕死状態である為、交代出来ません。", benchIdx, beforePokeNameStr)
 		return fmt.Errorf(msg)
 	}
 
-	mm := MessageMaker{IsSelf:m.IsHostView}
-	m.HostViewMessage = mm.Back(m.SelfLeadPokemons[leadIdx].Name)
-	GlobalContext.Observer(m, MESSAGE_EVENT)
-	m.SelfLeadPokemons[leadIdx], m.SelfBenchPokemons[benchIdx] = m.SelfBenchPokemons[benchIdx], m.SelfLeadPokemons[leadIdx]
-	m.HostViewMessage = mm.Go(m.SelfLeadPokemons[leadIdx].Name)
-	GlobalContext.Observer(m, MESSAGE_EVENT)
+	if m.CurrentSelfIsHost {
+		m.HostViewMessage = fmt.Sprintf("もどれ！ %s！", beforePokeNameStr)
+	} else {
+		m.HostViewMessage = fmt.Sprintf("%sの %sは %sを 引っ込めた！", m.GuestHumanTitle, m.GuestHumanName, beforePokeNameStr)
+	}
 
-	if m.SelfLeadPokemons[leadIdx].Ability == bp.INTIMIDATE {
-		for i := range m.OpponentLeadPokemons {
-			p := m.OpponentLeadPokemons[i]
-			if p.Rank.Atk == bp.MIN_RANK {
+	GlobalContext.Observer(m)
+	m.CurrentSelfLeadPokemons[leadIdx], m.CurrentSelfBenchPokemons[benchIdx] = m.CurrentSelfBenchPokemons[benchIdx], m.CurrentSelfLeadPokemons[leadIdx]
+
+	afterPokemon := m.CurrentSelfLeadPokemons[leadIdx]
+	afterPokeName := afterPokemon.Name
+	afterPokeNameStr := afterPokeName.ToString()
+
+	if m.CurrentSelfIsHost {
+		m.HostViewMessage = fmt.Sprintf("ゆけっ！ %s！", afterPokeNameStr)
+	} else {
+		m.HostViewMessage = fmt.Sprintf("%sの %sは %sを くりだした！", m.GuestHumanTitle, m.GuestHumanName, afterPokeNameStr)
+	}
+	GlobalContext.Observer(m)
+
+	if afterPokemon.Ability == bp.INTIMIDATE {
+		for i := range m.CurrentOpponentLeadPokemons {
+			target := m.CurrentOpponentLeadPokemons[i]
+			if target.Rank.Atk == bp.MIN_RANK {
 				continue
 			}
 
-			if p.Ability == bp.CLEAR_BODY {
-				m.HostViewMessage = Message(fmt.Sprintf("%sの クリアボディで %sの いかくは きかなかった！", p.Name.ToString(), m.SelfLeadPokemons[leadIdx].Name.ToString()))
-				GlobalContext.Observer(m, MESSAGE_EVENT)
+			targetPokeNameStr := target.Name.ToString()
+
+			if target.Ability == bp.CLEAR_BODY {
+				if m.CurrentSelfIsHost {
+					m.HostViewMessage = fmt.Sprintf("%sの %sの クリアボディで %sの いかくは きかなかった！", m.GuestHumanName, targetPokeNameStr, afterPokeNameStr)
+				} else {
+					m.HostViewMessage = fmt.Sprintf("%sの クリアボディで %sの %sの いかくは きかなかった！", targetPokeNameStr, m.GuestHumanName, afterPokeNameStr)
+				}
+				GlobalContext.Observer(m)
 				continue
 			}
 
-			m.HostViewMessage = Message(fmt.Sprintf("%sの いかくで %sの こうげきが さがった！", m.SelfLeadPokemons[leadIdx].Name.ToString(), p.Name.ToString()))
-			GlobalContext.Observer(m, MESSAGE_EVENT)
-
-			if p.Ability != bp.CLEAR_BODY && p.Rank.Atk != bp.MIN_RANK {
-				m.OpponentLeadPokemons[i].Rank.Atk -= 1
+			if target.Rank.Atk != bp.MIN_RANK {
+				m.CurrentOpponentLeadPokemons[i].Rank.Atk -= 1
+				if m.CurrentSelfIsHost {
+					m.HostViewMessage = fmt.Sprintf("%sの いかくで %sの %sの こうげきが さがった！", afterPokeNameStr, m.GuestHumanName, targetPokeNameStr)
+				} else {
+					m.HostViewMessage = fmt.Sprintf("%sの %sの いかくで %sの こうげきが さがった！", m.GuestHumanName, afterPokeNameStr, targetPokeNameStr)
+				}
+				GlobalContext.Observer(m)
 			}
 		}
 	}
@@ -238,11 +249,11 @@ func (m *Manager) TurnEnd() error {
 
 func (m *Manager) ToEasyRead() EasyReadManager {
 	return EasyReadManager{
-		SelfLeadPokemons:m.SelfLeadPokemons.ToEasyRead(),
-		SelfBenchPokemons:m.SelfBenchPokemons.ToEasyRead(),
+		SelfLeadPokemons:m.CurrentSelfLeadPokemons.ToEasyRead(),
+		SelfBenchPokemons:m.CurrentSelfBenchPokemons.ToEasyRead(),
 
-		OpponentLeadPokemons:m.OpponentLeadPokemons.ToEasyRead(),
-		OpponentBenchPokemons:m.OpponentBenchPokemons.ToEasyRead(),
+		OpponentLeadPokemons:m.CurrentOpponentLeadPokemons.ToEasyRead(),
+		OpponentBenchPokemons:m.CurrentOpponentBenchPokemons.ToEasyRead(),
 
 		Turn:m.Turn,
 		Weather:m.Weather.ToString(),

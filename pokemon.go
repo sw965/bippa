@@ -258,8 +258,7 @@ type Pokemon struct {
 
 	TurnCount int
 	ThisTurnPlannedUseMoveName MoveName
-
-	Id int
+	IsHost bool
 }
 
 func NewPokemon(name PokeName, level Level, nature Nature, ability Ability, item Item, moveNames MoveNames, pointUps PointUps, iv *IndividualStat, ev *EffortStat) (Pokemon, error) {
@@ -531,23 +530,6 @@ func (ps Pokemons) ToPointers() PokemonPointers {
 		pps[i] = &ps[i]
 	}
 	return pps
-}
-
-func (ps Pokemons) Ids() []int {
-	ids := make([]int, len(ps))
-	for i, p := range ps {
-		ids[i] = p.Id
-	}
-	return ids
-}
-
-func (ps Pokemons) ById(id int) (Pokemon, error) {
-	for _, p := range ps {
-		if p.Id == id {
-			return p, nil
-		}
-	}
-	return Pokemon{}, fmt.Errorf("該当するIdのポケモンが見つからなかった。")
 }
 
 type PokemonPointers []*Pokemon
