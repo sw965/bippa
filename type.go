@@ -115,27 +115,6 @@ const (
 	FAIRY
 )
 
-var STRING_TO_TYPE = map[string]Type{
-	"ノーマル":NORMAL,
-	"ほのお":FIRE,
-	"みず":WATER,
-	"くさ":GRASS,
-	"でんき":ELECTRIC,
-	"こおり":ICE,
-	"かくとう":FIGHTING,
-	"どく":POISON,
-	"じめん":GROUND,
-	"ひこう":FLYING,
-	"エスパー":PSYCHIC_TYPE,
-	"むし":BUG,
-	"いわ":ROCK,
-	"ゴースト":GHOST,
-	"ドラゴン":DRAGON,
-	"あく":DARK,
-	"はがね":STEEL,
-	"フェアリー":FAIRY,
-}
-
 var TYPE_TO_STRING = omwmaps.Invert[map[Type]string](STRING_TO_TYPE)
 
 func (t Type) ToString() string {
@@ -149,34 +128,40 @@ var ALL_TYPES = func() Types {
 	if err != nil {
 		panic(err)
 	}
-	ret := make(Types, len(buff))
+	ts := make(Types, len(buff))
 	for i, s := range buff {
-		ret[i] = STRING_TO_TYPE[s]
+		ts[i] = STRING_TO_TYPE[s]
 	}
-	return ret
+	return ts
 }()
 
 func (ts Types) ToStrings() []string {
-	ret := make([]string, len(ts))
+	ss := make([]string, len(ts))
 	for i, t := range ts {
-		ret[i] = t.ToString()
+		ss[i] = t.ToString()
 	}
-	return ret
+	return ss
 }
 
-func (ts Types) Sort() Types {
-	ret := slices.Clone(ts)
-	slices.SortFunc(ret, func(t1, t2 Type) bool { return slices.Index(ALL_TYPES, t1) < slices.Index(ALL_TYPES, t2) } )
-	return ret
+func (ts Types) Sort() {
+	slices.SortFunc(ts, func(t1, t2 Type) bool {
+		return slices.Index(ALL_TYPES, t1) < slices.Index(ALL_TYPES, t2)
+	})
+}
+
+func (ts Types) Sorted() Types {
+	c := slices.Clone(ts)
+	c.Sort()
+	return c
+
 }
 
 type TypesSlice []Types
 
 var ALL_TWO_TYPES_SLICE = func() TypesSlice {
-	return omwslices.Concat(
-		fn.Map[TypesSlice](ALL_TYPES, func(t Type) Types { return Types{t} }),
-		omwslices.Combination[TypesSlice, Types](ALL_TYPES, 2),
-	)
+	oneTypes := fn.Map[TypesSlice](ALL_TYPES, func(t Type) Types { return Types{t} })
+	twoTypes := omwslices.Combination[TypesSlice, Types](ALL_TYPES, 2)
+	return omwslices.Concat(oneTypes, twoTypes)
 }()
 
 type TypeEffective int

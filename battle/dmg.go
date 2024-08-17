@@ -56,9 +56,9 @@ func NewAttackerInfo(p *bp.Pokemon) AttackerInfo {
 		Types:p.Types,
 		CurrentHP:p.Stat.CurrentHP,
 		Atk:p.Stat.Atk,
-		AtkRank:p.Rank.Atk,
+		AtkRank:p.RankStat.Atk,
 		SpAtk:p.Stat.SpAtk,
-		SpAtkRank:p.Rank.SpAtk,
+		SpAtkRank:p.RankStat.SpAtk,
 		Speed:p.Stat.Speed,
 		Ability:p.Ability,
 	}
@@ -84,9 +84,9 @@ func NewDefenderInfo(p *bp.Pokemon) DefenderInfo {
 		Types:p.Types,
 		CurrentHP:p.Stat.CurrentHP,
 		Def:p.Stat.Def,
-		DefRank:p.Rank.Def,
+		DefRank:p.RankStat.Def,
 		SpDef:p.Stat.SpDef,
-		SpDefRank:p.Rank.SpDef,
+		SpDefRank:p.RankStat.SpDef,
 		Speed:p.Stat.Speed,
 		Ability:p.Ability,
 	}

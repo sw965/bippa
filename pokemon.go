@@ -9,121 +9,6 @@ import (
 	omwslices "github.com/sw965/omw/slices"
 )
 
-type EasyReadPokemon struct {
-	Name string
-	Level Level
-	Nature string
-
-	MoveNames []string
-	PointUps PointUps
-	Moveset EasyReadMoveset
-
-	Individual IndividualStat
-	Effort EffortStat
-
-	Stat PokemonStat
-
-	StatusAilment StatusAilment
-	Rank RankStat
-}
-
-func (p *EasyReadPokemon) From() (Pokemon, error) {
-	pokeName, err := StringToPokeName(p.Name)
-	if err != nil {
-		return Pokemon{}, err
-	}
-
-	nature, err := StringToNature(p.Nature)
-	if err != nil {
-		return Pokemon{}, err
-	}
-
-	moveNames, err := fn.MapWithError[MoveNames](p.MoveNames, StringToMoveName)
-	if err != nil {
-		return Pokemon{}, err
-	}
-
-	moveset, err := p.Moveset.From()
-	if err != nil {
-		return Pokemon{}, err
-	}
-
-	return Pokemon{
-		Name:pokeName,
-		Level:p.Level,
-		Nature:nature,
-
-		MoveNames:moveNames,
-		PointUps:p.PointUps,
-		Moveset:moveset,
-
-		Individual:p.Individual,
-		Effort:p.Effort,
-
-		Stat:p.Stat,
-
-		StatusAilment:p.StatusAilment,
-		Rank:p.Rank,
-	}, nil
-}
-
-type EasyReadPokemons []EasyReadPokemon
-
-func (es EasyReadPokemons) From() (Pokemons, error) {
-	ps := make(Pokemons, len(es))
-	for i, e := range es {
-		p, err := e.From()
-		if err != nil {
-			return Pokemons{}, err
-		}
-		ps[i] = p
-	}
-	return ps, nil
-}
-
-type EasyReadPokedex map[string]EasyReadPokeData
-
-type EasyReadPokeData struct {
-	Types []string
-	BaseHP int
-	BaseAtk int
-	BaseDef int
-	BaseSpAtk int
-	BaseSpDef int
-	BaseSpeed int
-	Abilities []string
-	Learnset []string
-}
-
-func (p *EasyReadPokeData) From() (PokeData, error) {
-	types, err := StringsToTypes(p.Types)
-	if err != nil {
-		return PokeData{}, err
-	}
-
-	abilities, err := StringsToAbilities(p.Abilities)
-	if err != nil {
-		return PokeData{}, err
-	}
-
-	learnset, err := StringsToMoveNames(p.Learnset)
-	if err != nil {
-		return PokeData{}, err
-	}
-
-	return PokeData{
-		Types:types,
-		BaseHP:p.BaseHP,
-		BaseAtk:p.BaseAtk,
-		BaseDef:p.BaseDef,
-		BaseSpAtk:p.BaseSpAtk,
-		BaseSpDef:p.BaseSpDef,
-		BaseSpeed:p.BaseSpeed,
-		Abilities:abilities,
-		Learnset:learnset,
-	}, nil
-}
-
 type PokeData struct {
 	Types Types
 	BaseHP int
@@ -150,13 +35,13 @@ func (p *PokeData) ToEasyRead() EasyReadPokeData {
 	}
 }
 
-func LoadPokeData(pokeName PokeName) (PokeData, error) {
-	if _, ok := POKE_NAME_TO_STRING[pokeName]; !ok {
-		msg := fmt.Sprintf("%s が POKE_NAME_TO_STRING の中に存在しない", pokeName.ToString())
+func LoadPokeData(name PokeName) (PokeData, error) {
+	if _, ok := POKE_NAME_TO_STRING[name]; !ok {
+		msg := fmt.Sprintf("%s が POKE_NAME_TO_STRING の中に存在しない", name.ToString())
 		return PokeData{}, fmt.Errorf(msg)
 	}
 
-	path := POKE_DATA_PATH + POKE_NAME_TO_STRING[pokeName] + omwjson.EXTENSION
+	path := POKE_DATA_PATH + POKE_NAME_TO_STRING[name] + omwjson.EXTENSION
 	buff, err := omwjson.Load[EasyReadPokeData](path)
 	if err != nil {
 		return PokeData{}, err
@@ -167,24 +52,67 @@ func LoadPokeData(pokeName PokeName) (PokeData, error) {
 type Pokedex map[PokeName]*PokeData
 
 var POKEDEX = func() Pokedex {
-	ret := Pokedex{}
+	d := Pokedex{}
 	for _, name := range ALL_POKE_NAMES {
 		data, err := LoadPokeData(name)
 		if err != nil {
 			panic(err)
 		}
-		ret[name] = &data
+		d[name] = &data
 	}
-	return ret
+	return d
 }()
 
 func (p Pokedex) ToEasyRead() EasyReadPokedex {
-	ret := EasyReadPokedex{}
+	e := EasyReadPokedex{}
 	for k, v := range p {
-		ret[k.ToString()] = v.ToEasyRead()
+		e[k.ToString()] = v.ToEasyRead()
 	}
-	return ret
+	return e
 }
+
+type EasyReadPokeData struct {
+	Types []string
+	BaseHP int
+	BaseAtk int
+	BaseDef int
+	BaseSpAtk int
+	BaseSpDef int
+	BaseSpeed int
+	Abilities []string
+	Learnset []string
+}
+
+func (e *EasyReadPokeData) From() (PokeData, error) {
+	types, err := StringsToTypes(e.Types)
+	if err != nil {
+		return PokeData{}, err
+	}
+
+	abilities, err := StringsToAbilities(e.Abilities)
+	if err != nil {
+		return PokeData{}, err
+	}
+
+	learnset, err := StringsToMoveNames(e.Learnset)
+	if err != nil {
+		return PokeData{}, err
+	}
+
+	return PokeData{
+		Types:types,
+		BaseHP:e.BaseHP,
+		BaseAtk:e.BaseAtk,
+		BaseDef:e.BaseDef,
+		BaseSpAtk:e.BaseSpAtk,
+		BaseSpDef:e.BaseSpDef,
+		BaseSpeed:e.BaseSpeed,
+		Abilities:abilities,
+		Learnset:learnset,
+	}, nil
+}
+
+type EasyReadPokedex map[string]EasyReadPokeData
 
 type PokeName int
 
@@ -201,8 +129,8 @@ const (
     TOXICROAK  // ドクロッグ
 )
 
-func (n PokeName) ToString() string {
-	return POKE_NAME_TO_STRING[n]
+func (pn PokeName) ToString() string {
+	return POKE_NAME_TO_STRING[pn]
 }
 
 type PokeNames []PokeName
@@ -213,17 +141,17 @@ var ALL_POKE_NAMES = func() PokeNames {
 		panic(err)
 	}
 
-	ret, err := StringsToPokeNames(buff)
+	pns, err := StringsToPokeNames(buff)
 	if err != nil {
 		panic(err)
 	}
-	return ret
+	return pns
 }()
 
-func (ns PokeNames) ToStrings() []string {
-	ss := make([]string, len(ns))
-	for i, n := range ns {
-		ss[i] = n.ToString()
+func (pns PokeNames) ToStrings() []string {
+	ss := make([]string, len(pns))
+	for i, pn := range pns {
+		ss[i] = pn.ToString()
 	}
 	return ss
 }
@@ -242,20 +170,22 @@ type Pokemon struct {
 	PointUps PointUps
 	Moveset Moveset
 
-	Individual IndividualStat
-	Effort EffortStat
-	Types Types
-
+	IndividualStat IndividualStat
+	EffortStat EffortStat
 	Stat PokemonStat
-	StatusAilment StatusAilment
-	Rank RankStat
 
-	SubstituteHP int
+	Types Types
+	StatusAilment StatusAilment
+	RankStat RankStat
+
 	IsFlinchState bool
+
+	RemainingTurnTauntState int
 	IsProtectState bool
 	ProtectConsecutiveSuccess int
-	RemainingTurnTauntState int
+	SubstituteHP int
 
+	//場に出てから経過したターンをカウントする。ねこだましなどに使う。
 	TurnCount int
 	ThisTurnPlannedUseMoveName MoveName
 	IsHost bool
@@ -294,8 +224,8 @@ func NewPokemon(name PokeName, level Level, nature Nature, ability Ability, item
 			return Pokemon{}, err
 		}
 	}
-	p.Individual = *iv
-	p.Effort = *ev
+	p.IndividualStat = *iv
+	p.EffortStat = *ev
 	p.Types = POKEDEX[name].Types
 	err = p.UpdateStat()
 	return p, err
@@ -330,15 +260,24 @@ func (p *Pokemon) SetInMoveset(k MoveName, up PointUp) error {
 }
 
 func (p *Pokemon) UpdateStat() error {
-	ev := p.Effort
+	ev := p.EffortStat
 	err := ev.SumError()
 	if err != nil {
 		return err
 	}
-	p.Stat = NewPokemonStat(p.Name, p.Level, p.Nature, p.Individual, p.Effort)
+	p.Stat = NewPokemonStat(p.Name, p.Level, p.Nature, p.IndividualStat, p.EffortStat)
 	return nil
 }
 
+func (p Pokemon) Clone() Pokemon {
+	p.MoveNames = slices.Clone(p.MoveNames)
+	p.PointUps = slices.Clone(p.PointUps)
+	p.Types = slices.Clone(p.Types)
+	p.Moveset = p.Moveset.Clone()
+	return p
+}
+
+//後でバトルで変化する部分のみをチェックするEqual関数も作る。
 func (p *Pokemon) Equal(other *Pokemon) bool {
 	if p.Name != other.Name {
 		return false
@@ -348,31 +287,82 @@ func (p *Pokemon) Equal(other *Pokemon) bool {
 		return false
 	}
 
+	if p.Nature != other.Nature {
+		return false
+	}
+
+	if p.Ability != other.Ability {
+		return false
+	}
+
+	if p.Item != other.Item {
+		return false
+	}
+
+	if !slices.Equal(p.MoveNames, other.MoveNames) {
+		return false
+	}
+
+	if !slices.Equal(p.PointUps, other.PointUps) {
+		return false
+	}
+
+	if !p.Moveset.Equal(other.Moveset) {
+		return false	
+	}
+
+	if p.IndividualStat != other.IndividualStat {
+		return false
+	}
+
+	if p.EffortStat != other.EffortStat {
+		return false
+	}
+
 	if p.Stat != other.Stat {
 		return false
 	}
-	return p.Moveset.Equal(other.Moveset)
-}
 
-func (p Pokemon) Clone() Pokemon {
-	p.Moveset = p.Moveset.Clone()
-	return p
-}
+	if !slices.Equal(p.Types, other.Types) {
+		return false
+	}
 
-func (p *Pokemon) IsFullHP() bool {
-	return p.Stat.IsFullHP()
-}
+	if p.StatusAilment != other.StatusAilment {
+		return false
+	}
 
-func (p *Pokemon) IsFainted() bool {
-	return p.Stat.CurrentHP <= 0
-}
+	if p.RankStat != other.RankStat {
+		return false
+	}
 
-func (p *Pokemon) IsSubstituteState() bool {
-	return p.SubstituteHP > 0
-}
+	if p.SubstituteHP != other.SubstituteHP {
+		return false
+	}
 
-func (p *Pokemon) IsTauntState() bool {
-	return p.RemainingTurnTauntState > 0
+	if p.IsFlinchState != other.IsFlinchState {
+		return false
+	}
+
+	if p.IsProtectState != other.IsProtectState {
+		return false
+	}
+
+	if p.ProtectConsecutiveSuccess != other.ProtectConsecutiveSuccess {
+		return false
+	}
+
+	if p.RemainingTurnTauntState != other.RemainingTurnTauntState {
+		return false
+	}
+
+	if p.TurnCount != other.TurnCount {
+		return false
+	}
+
+	if p.ThisTurnPlannedUseMoveName != other.ThisTurnPlannedUseMoveName {
+		return false
+	}
+	return p.IsHost == other.IsHost
 }
 
 func (p *Pokemon) UsableMoveNames() MoveNames {
@@ -387,6 +377,14 @@ func (p *Pokemon) UsableMoveNames() MoveNames {
 		ns = MoveNames{STRUGGLE}
 	}
 	return ns
+}
+
+func (p *Pokemon) IsFullHP() bool {
+	return p.Stat.IsFullHP()
+}
+
+func (p *Pokemon) IsFainted() bool {
+	return p.Stat.CurrentHP <= 0
 }
 
 func (p *Pokemon) ApplyHealToBody(heal int) error {
@@ -408,6 +406,14 @@ func (p *Pokemon) ApplyDamageToBody(dmg int) error {
 	return nil
 }
 
+func (p *Pokemon) IsTauntState() bool {
+	return p.RemainingTurnTauntState > 0
+}
+
+func (p *Pokemon) IsSubstituteState() bool {
+	return p.SubstituteHP > 0
+}
+
 func (p *Pokemon) ApplyDamageToSubstitute(dmg int) error {
 	if dmg < 0 {
 		return fmt.Errorf("ダメージは0以上でなければならない")
@@ -427,70 +433,22 @@ func (p *Pokemon) ToEasyRead() EasyReadPokemon {
 		PointUps:p.PointUps,
 		Moveset:p.Moveset.ToEasyRead(),
 
-		Individual:p.Individual,
-		Effort:p.Effort,
+		IndividualStat:p.IndividualStat,
+		EffortStat:p.EffortStat,
 		Stat:p.Stat,
+
+		Types:p.Types.ToStrings(),
 	}
 }
 
 type Pokemons []Pokemon
 
-func (ps Pokemons) IsAnyFainted() bool {
-	for _, p := range ps {
-		if p.IsFainted() {
-			return true
-		}
-	}
-	return false
-}
-
-func (ps Pokemons) Names() PokeNames {
-	ret := make(PokeNames, len(ps))
-	for i, p := range ps {
-		ret[i] = p.Name
-	}
-	return ret
-}
-
-func (ps Pokemons) Levels() Levels {
-	lvs := make(Levels, len(ps))
-	for i, p := range ps {
-		lvs[i] = p.Level
-	}
-	return lvs
-}
-
-func (ps Pokemons) MaxHPs() []int {
-	hps := make([]int, len(ps))
-	for i, p := range ps {
-		hps[i] = p.Stat.MaxHP
-	}
-	return hps
-}
-
-func (ps Pokemons) CurrentHPs() []int {
-	hps := make([]int, len(ps))
-	for i, p := range ps {
-		hps[i] = p.Stat.CurrentHP
-	}
-	return hps
-}
-
-func (ps Pokemons) isAnyFainted() bool {
-	for _, p := range ps {
-		if p.IsFainted() {
-			return true
-		}
-	}
-	return false
-}
-
 func (ps Pokemons) Clone() Pokemons {
-	ret := make(Pokemons, len(ps))
+	c := make(Pokemons, len(ps))
 	for i, p := range ps {
-		ret[i] = p.Clone()
+		c[i] = p.Clone()
 	}
-	return ret
+	return c
 }
 
 func (ps Pokemons) Equal(other Pokemons) bool {
@@ -503,6 +461,15 @@ func (ps Pokemons) Equal(other Pokemons) bool {
 	return true
 }
 
+func (ps Pokemons) IsAnyFainted() bool {
+	for _, p := range ps {
+		if p.IsFainted() {
+			return true
+		}
+	}
+	return false
+}
+
 func (ps Pokemons) IsAllFainted() bool {
 	for _, p := range ps {
 		if !p.IsFainted() {
@@ -510,14 +477,6 @@ func (ps Pokemons) IsAllFainted() bool {
 		}
 	}
 	return true
-}
-
-func (ps Pokemons) ToEasyRead() EasyReadPokemons {
-	es := make(EasyReadPokemons, len(ps))
-	for i, p := range ps {
-		es[i] = p.ToEasyRead()
-	}
-	return es
 }
 
 func (ps Pokemons) NotFaintedIndices() []int {
@@ -532,6 +491,14 @@ func (ps Pokemons) ToPointers() PokemonPointers {
 	return pps
 }
 
+func (ps Pokemons) ToEasyRead() EasyReadPokemons {
+	es := make(EasyReadPokemons, len(ps))
+	for i, p := range ps {
+		es[i] = p.ToEasyRead()
+	}
+	return es
+}
+
 type PokemonPointers []*Pokemon
 
 func (ps PokemonPointers) SortBySpeed() {
@@ -540,7 +507,7 @@ func (ps PokemonPointers) SortBySpeed() {
 	})
 }
 
-func (ps PokemonPointers) NotFainted() PokemonPointers {
+func (ps PokemonPointers) FilterByNotFainted() PokemonPointers {
 	return fn.Filter(ps, func(p *Pokemon) bool { return !p.IsFainted() })
 }
 
@@ -601,12 +568,89 @@ func NewPokemonStat(name PokeName, level Level, nature Nature, iv IndividualStat
 	return PokemonStat{MaxHP:hp, CurrentHP:hp, Atk:atk, Def:def, SpAtk:spAtk, SpDef:spDef, Speed:speed}
 }
 
+func (s *PokemonStat) IsFullHP() bool {
+	return s.MaxHP == s.CurrentHP
+}
+
 func (s *PokemonStat) HPPercentage() float64 {
 	return float64(s.CurrentHP) / float64(s.MaxHP)
 }
 
-func (s *PokemonStat) IsFullHP() bool {
-	return s.MaxHP == s.CurrentHP
+type EasyReadPokemon struct {
+	Name string
+	Level Level
+	Nature string
+
+	MoveNames []string
+	PointUps PointUps
+	Moveset EasyReadMoveset
+
+	IndividualStat IndividualStat
+	EffortStat EffortStat
+	Stat PokemonStat
+
+	Types []string
+	StatusAilment StatusAilment
+	RankStat RankStat
+}
+
+func (e *EasyReadPokemon) From() (Pokemon, error) {
+	pokeName, err := StringToPokeName(e.Name)
+	if err != nil {
+		return Pokemon{}, err
+	}
+
+	nature, err := StringToNature(e.Nature)
+	if err != nil {
+		return Pokemon{}, err
+	}
+
+	moveNames, err := fn.MapWithError[MoveNames](e.MoveNames, StringToMoveName)
+	if err != nil {
+		return Pokemon{}, err
+	}
+
+	moveset, err := e.Moveset.From()
+	if err != nil {
+		return Pokemon{}, err
+	}
+
+	types, err := StringsToTypes(e.Types)
+	if err != nil {
+		return Pokemon{}, err
+	}
+
+	return Pokemon{
+		Name:pokeName,
+		Level:e.Level,
+		Nature:nature,
+
+		MoveNames:moveNames,
+		PointUps:e.PointUps,
+		Moveset:moveset,
+
+		IndividualStat:e.IndividualStat,
+		EffortStat:e.EffortStat,
+		Stat:e.Stat,
+
+		Types:types,
+		StatusAilment:e.StatusAilment,
+		RankStat:e.RankStat,
+	}, nil
+}
+
+type EasyReadPokemons []EasyReadPokemon
+
+func (es EasyReadPokemons) From() (Pokemons, error) {
+	ps := make(Pokemons, len(es))
+	for i, e := range es {
+		p, err := e.From()
+		if err != nil {
+			return Pokemons{}, err
+		}
+		ps[i] = p
+	}
+	return ps, nil
 }
 
 //ギャラドス

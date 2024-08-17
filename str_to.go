@@ -31,6 +31,40 @@ func StringsToPokeNames(ss []string) (PokeNames, error) {
 	return fn.MapWithError[PokeNames](ss, StringToPokeName)
 }
 
+var STRING_TO_TYPE = map[string]Type{
+	"ノーマル":NORMAL,
+	"ほのお":FIRE,
+	"みず":WATER,
+	"くさ":GRASS,
+	"でんき":ELECTRIC,
+	"こおり":ICE,
+	"かくとう":FIGHTING,
+	"どく":POISON,
+	"じめん":GROUND,
+	"ひこう":FLYING,
+	"エスパー":PSYCHIC_TYPE,
+	"むし":BUG,
+	"いわ":ROCK,
+	"ゴースト":GHOST,
+	"ドラゴン":DRAGON,
+	"あく":DARK,
+	"はがね":STEEL,
+	"フェアリー":FAIRY,
+}
+
+func StringToType(s string) (Type, error) {
+	if t, ok := STRING_TO_TYPE[s]; !ok {
+		msg := fmt.Sprintf("%s は STRING_TO_TYPE に含まれていない為、Typeに変換出来ません。", s)
+		return t, fmt.Errorf(msg)
+	} else {
+		return t, nil
+	}
+}
+
+func StringsToTypes(ss []string) (Types, error) {
+	return fn.MapWithError[Types](ss, StringToType)
+}
+
 var STRING_TO_NATURE = map[string]Nature{
     ""         : EMPTY_NATURE,
     "さみしがり": LONELY,
@@ -65,13 +99,17 @@ var STRING_TO_NATURE = map[string]Nature{
     "まじめ":     SERIOUS,
 }
 
-var STRING_TO_ITEM = map[string]Item{
-	"イバンのみ":IAPAPA_BERRY,
-	"オボンのみ":SITRUS_BERRY,
-	"カゴのみ":CHESTO_BERRY,
-	"きあいのタスキ":FOCUS_SASH,
-	"ソクノのみ":WACAN_BERRY,
-	"ラムのみ":LUM_BERRY,
+func StringToNature(s string) (Nature, error) {
+	if nature, ok := STRING_TO_NATURE[s]; !ok {
+		msg := fmt.Sprintf("%s は STRING_TO_NATURE に含まれていない為、Natureに変換出来ません。", s)
+		return nature, fmt.Errorf(msg)
+	} else {
+		return nature, nil
+	}
+}
+
+func StringsToNatures(ss []string) (Natures, error) {
+	return fn.MapWithError[Natures](ss, StringToNature)
 }
 
 var STRING_TO_ABILITY = map[string]Ability{
@@ -95,6 +133,32 @@ func StringToAbility(s string) (Ability, error) {
 	} else {
 		return ability, nil
 	}
+}
+
+func StringsToAbilities(ss []string) (Abilities, error) {
+	return fn.MapWithError[Abilities](ss, StringToAbility)
+}
+
+var STRING_TO_ITEM = map[string]Item{
+	"イバンのみ":IAPAPA_BERRY,
+	"オボンのみ":SITRUS_BERRY,
+	"カゴのみ":CHESTO_BERRY,
+	"きあいのタスキ":FOCUS_SASH,
+	"ソクノのみ":WACAN_BERRY,
+	"ラムのみ":LUM_BERRY,
+}
+
+func StringToItem(s string) (Item, error) {
+	if item, ok := STRING_TO_ITEM[s]; !ok {
+		msg := fmt.Sprintf("%s は STRING_TO_ITEM に含まれていない為、Itemに変換出来ません。", s)
+		return item, fmt.Errorf(msg)
+	} else {
+		return item, nil
+	}
+}
+
+func StringsToItems(ss []string) (Items, error) {
+	return fn.MapWithError[Items](ss, StringToItem)
 }
 
 var STRING_TO_MOVE_NAME = map[string]MoveName{
@@ -175,19 +239,6 @@ var STRING_TO_MOVE_TARGET = map[string]MoveTarget{
 	"相手ランダム1体":OPPONENT_RANDOM_ONE_TARGET,
 }
 
-func StringToType(s string) (Type, error) {
-	if t, ok := STRING_TO_TYPE[s]; !ok {
-		msg := fmt.Sprintf("%s は STRING_TO_TYPE に含まれていない為、Typeに変換出来ません。", s)
-		return t, fmt.Errorf(msg)
-	} else {
-		return t, nil
-	}
-}
-
-func StringsToTypes(ss []string) (Types, error) {
-	return fn.MapWithError[Types](ss, StringToType)
-}
-
 func StringToMoveTarget(s string) (MoveTarget, error) {
 	if target, ok := STRING_TO_MOVE_TARGET[s]; !ok {
 		msg := fmt.Sprintf("%s は STRING_TO_MOVE_TARGETに含まれていない為、MoveTargetに変換出来ません。", s)
@@ -195,34 +246,4 @@ func StringToMoveTarget(s string) (MoveTarget, error) {
 	} else {
 		return target, nil
 	}
-}
-
-func StringToNature(s string) (Nature, error) {
-	if nature, ok := STRING_TO_NATURE[s]; !ok {
-		msg := fmt.Sprintf("%s は STRING_TO_NATURE に含まれていない為、Natureに変換出来ません。", s)
-		return nature, fmt.Errorf(msg)
-	} else {
-		return nature, nil
-	}
-}
-
-func StringsToNatures(ss []string) (Natures, error) {
-	return fn.MapWithError[Natures](ss, StringToNature)
-}
-
-func StringsToAbilities(ss []string) (Abilities, error) {
-	return fn.MapWithError[Abilities](ss, StringToAbility)
-}
-
-func StringToItem(s string) (Item, error) {
-	if item, ok := STRING_TO_ITEM[s]; !ok {
-		msg := fmt.Sprintf("%s は STRING_TO_ITEM に含まれていない為、Itemに変換出来ません。", s)
-		return item, fmt.Errorf(msg)
-	} else {
-		return item, nil
-	}
-}
-
-func StringsToItems(ss []string) (Items, error) {
-	return fn.MapWithError[Items](ss, StringToItem)
 }

@@ -41,6 +41,51 @@ func (m *MoveData) ToEasyRead() EasyReadMoveData {
 	}
 }
 
+type EasyReadMoveData struct {
+    Type         string
+    Category     string
+    Power        int
+    Accuracy     int
+    BasePP       int
+	IsContact    bool
+	PriorityRank int
+	CriticalRank CriticalRank
+	Target       string
+	CanSubstitute bool
+}
+
+func (m *EasyReadMoveData) From() (MoveData, error) {
+	t, err := StringToType(m.Type)
+	if err != nil {
+		return MoveData{}, err
+	}
+
+	category, err := StringToMoveCategory(m.Category)
+	if err != nil {
+		return MoveData{}, err
+	}
+
+	target, err := StringToMoveTarget(m.Target)
+	if err != nil {
+		return MoveData{}, err
+	}
+
+	return MoveData{
+		Type:t,
+		Category:category,
+		Power:m.Power,
+		Accuracy:m.Accuracy,
+		BasePP:m.BasePP,
+		IsContact:m.IsContact,
+		PriorityRank:m.PriorityRank,
+		CriticalRank:m.CriticalRank,
+		Target:target,
+		CanSubstitute:m.CanSubstitute,
+	}, nil
+}
+
+type EasyReadMovedex map[string]EasyReadMoveData
+
 type MoveName int
 
 const (
@@ -84,8 +129,8 @@ const (
     BULLET_PUNCH   // バレットパンチ
 )
 
-func (n MoveName) ToString() string {
-	return MOVE_NAME_TO_STRING[n]
+func (mn MoveName) ToString() string {
+	return MOVE_NAME_TO_STRING[mn]
 }
 
 type MoveNames []MoveName
@@ -96,17 +141,17 @@ var ALL_MOVE_NAMES = func() MoveNames {
 		panic(err)
 	}
 
-	ret, err := StringsToMoveNames(buff)
+	mns, err := StringsToMoveNames(buff)
 	if err != nil {
 		panic(err)
 	}
-	return ret
+	return mns
 }()
 
-func (ns MoveNames) ToStrings() []string {
-	ss := make([]string, len(ns))
-	for i, n := range ns {
-		ss[i] = n.ToString()
+func (mns MoveNames) ToStrings() []string {
+	ss := make([]string, len(mns))
+	for i, mn := range mns {
+		ss[i] = mn.ToString()
 	}
 	return ss
 }
@@ -121,14 +166,14 @@ const (
 	STATUS
 )
 
-func (m MoveCategory) ToString() string {
-	return MOVE_CATEGORY_TO_STRING[m]
+func (c MoveCategory) ToString() string {
+	return MOVE_CATEGORY_TO_STRING[c]
 }
 
 type MoveTarget int
 
 const (
-    NORMAL_TARGET MoveTarget = iota // 通常
+    NORMAL_TARGET MoveTarget = iota  // 通常
     OPPONENT_TWO_TARGET              // 相手2体
     SELF_TARGET                      // 自分
     OTHERS_TARGET                    // 自分以外
@@ -157,23 +202,23 @@ var (
 type Movedex map[MoveName]*MoveData
 
 var MOVEDEX = func() Movedex {
-	ret := Movedex{}
+	d := Movedex{}
 	for _, name := range ALL_MOVE_NAMES {
 		data, err := LoadMoveData(name)
 		if err != nil {
 			panic(err)
 		}
-		ret[name] = &data
+		d[name] = &data
 	}
-	return ret
+	return d
 }()
 
 func (m Movedex) ToEasyRead() EasyReadMovedex {
-	ret := EasyReadMovedex{}
+	e := EasyReadMovedex{}
 	for name, data := range m {
-		ret[name.ToString()] = data.ToEasyRead()
+		e[name.ToString()] = data.ToEasyRead()
 	}
-	return ret
+	return e
 }
 
 type PowerPoint struct {
@@ -195,12 +240,12 @@ func NewPowerPoint(base int, up PointUp) PowerPoint {
 type Moveset map[MoveName]*PowerPoint
 
 func (m Moveset) Equal(other Moveset) bool {
-	for moveName, pp := range m {
-		otherPP, ok := other[moveName]
+	for k, v1 := range m {
+		v2, ok := other[k]
 		if !ok {
 			return false
 		}
-		if *pp != *otherPP {
+		if *v1 != *v2 {
 			return false
 		}
 	}
@@ -208,19 +253,19 @@ func (m Moveset) Equal(other Moveset) bool {
 }
 
 func (m Moveset) Clone() Moveset {
-	clone := Moveset{}
-	for moveName, pp := range m {
-		clone[moveName] = &PowerPoint{Max:pp.Max, Current:pp.Current}
+	c := Moveset{}
+	for k, v := range m {
+		c[k] = &PowerPoint{Max:v.Max, Current:v.Current}
 	}
-	return clone
+	return c
 }
 
 func (m Moveset) ToEasyRead() EasyReadMoveset {
-	ret := EasyReadMoveset{}
-	for moveName, pp := range m {
-		ret[moveName.ToString()] = *pp
+	e := EasyReadMoveset{}
+	for k, v := range m {
+		e[k.ToString()] = *v
 	}
-	return ret
+	return e
 }
 
 type EasyReadMoveset map[string]PowerPoint
@@ -228,56 +273,12 @@ type EasyReadMoveset map[string]PowerPoint
 func (e EasyReadMoveset) From() (Moveset, error) {
 	m := Moveset{}
 	for k, v := range e {
-		n, err := StringToMoveName(k)
+		moveName, err := StringToMoveName(k)
 		if err != nil {
 			return Moveset{}, err
 		}
 		pp := PowerPoint{Max:v.Max, Current:v.Current}
-		m[n] = &pp
+		m[moveName] = &pp
 	}
 	return m, nil
 }
-
-type EasyReadMoveData struct {
-    Type         string
-    Category     string
-    Power        int
-    Accuracy     int
-    BasePP       int
-	IsContact    bool
-	PriorityRank int
-	CriticalRank CriticalRank
-	Target       string
-	CanSubstitute bool
-}
-
-func (m *EasyReadMoveData) From() (MoveData, error) {
-	t, err := StringToType(m.Type)
-	if err != nil {
-		return MoveData{}, err
-	}
-
-	category, err := StringToMoveCategory(m.Category)
-	if err != nil {
-		return MoveData{}, err
-	}
-
-	target, err := StringToMoveTarget(m.Target)
-	if err != nil {
-		return MoveData{}, err
-	}
-
-	return MoveData{
-		Type:t,
-		Category:category,
-		Power:m.Power,
-		Accuracy:m.Accuracy,
-		BasePP:m.BasePP,
-		IsContact:m.IsContact,
-		PriorityRank:m.PriorityRank,
-		CriticalRank:m.CriticalRank,
-		Target:target,
-	}, nil
-}
-
-type EasyReadMovedex map[string]EasyReadMoveData

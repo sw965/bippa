@@ -4,28 +4,28 @@ type StatusAilment int
 
 const (
 	EMPTY_STATUS_AILMENT StatusAilment = iota
-	BURN //やけど
-	FREEZE //こおり
+	SLEEP //ねむり
 	PARALYSIS //まひ
 	NORMAL_POISON //どく
 	BAD_POISON //もうどく
-	SLEEP //ねむり
+	BURN //やけど
+	FREEZE //こおり
 )
 
-func (sa StatusAilment) ToString() string {
-	switch sa {
-		case BURN:
-			return "やけど"
-		case FREEZE:
-			return "こおり"
+func (a StatusAilment) ToString() string {
+	switch a {
+		case SLEEP:
+			return "ねむり"
 		case PARALYSIS:
 			return "まひ"
 		case NORMAL_POISON:
 			return "どく"
 		case BAD_POISON:
 			return "もうどく"
-		case SLEEP:
-			return "ねむり"
+		case BURN:
+			return "やけど"
+		case FREEZE:
+			return "こおり"
 	}
 	return ""
 }

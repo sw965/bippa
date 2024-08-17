@@ -4,20 +4,6 @@ import (
 	omwjson "github.com/sw965/omw/json"
 )
 
-type EasyReadNaturedex map[string]NatureData
-
-func (e EasyReadNaturedex) From() (Naturedex, error) {
-	d := Naturedex{}
-	for k, v := range e {
-		n, err := StringToNature(k)
-		if err != nil {
-			return Naturedex{}, err
-		}
-		d[n] = &v
-	}
-	return d, nil
-}
-
 type NatureData struct {
 	AtkBonus NatureBonus
 	DefBonus NatureBonus
@@ -46,6 +32,20 @@ func (n Naturedex) ToEasyRead() EasyReadNaturedex {
 		e[k.ToString()] = *v
 	}
 	return e
+}
+
+type EasyReadNaturedex map[string]NatureData
+
+func (e EasyReadNaturedex) From() (Naturedex, error) {
+	d := Naturedex{}
+	for k, v := range e {
+		n, err := StringToNature(k)
+		if err != nil {
+			return Naturedex{}, err
+		}
+		d[n] = &v
+	}
+	return d, nil
 }
 
 type Nature int

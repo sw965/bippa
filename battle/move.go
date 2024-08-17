@@ -149,15 +149,20 @@ func (move *Move) Run(manager *Manager, action *SoloAction) error {
 	}
 
 	moveData := bp.MOVEDEX[action.MoveName]
-	targetPokemons := manager.TargetPokemonPointers(action)
+	targetPokemons, err := manager.TargetPokemonPointers(action)
+	if err != nil {
+		return err
+	}
+	// https://wiki.xn--rckteqa2e.com/wiki/%E3%83%80%E3%83%96%E3%83%AB%E3%83%90%E3%83%88%E3%83%AB
+	// 複数を対象とする技は、第四世代ではすばやさが高いポケモンから処理される。
 	targetPokemons.SortBySpeed()
-	targetN := len(targetPokemons)
+	targetNum := len(targetPokemons)
 
 	var isSingleDmg bool
 	if action.MoveName == bp.SELF_DESTRUCT || action.MoveName == bp.EXPLOSION {
-		isSingleDmg = targetN <= 2
+		isSingleDmg = targetNum <= 2
 	} else {
-		isSingleDmg = targetN == 1
+		isSingleDmg = targetNum == 1
 	}
 
 	faintedCount := 0
@@ -165,7 +170,6 @@ func (move *Move) Run(manager *Manager, action *SoloAction) error {
 		src.Stat.CurrentHP = 0
 	}
 
-	var err error
 	for _, target := range targetPokemons {
 		targetPokeNameStr := target.Name.ToString()
 
@@ -241,16 +245,18 @@ func (move *Move) Run(manager *Manager, action *SoloAction) error {
 				Defender:NewDefenderInfo(target),
 				IsCritical:isCrit,
 				RandBonus:GlobalContext.GetDamageRandBonus(),
-				IsSingleDamage:isSingleDmg || (faintedCount-1) == targetN,
+				IsSingleDamage:isSingleDmg || (faintedCount-1) == targetNum,
 				IsDamageCappedByCurrentHP:true,
 			}
 
-			dmgResult := calc.Calculation(action.MoveName)
-			if dmgResult.TypeEffective == bp.NO_EFFECTIVE {
+			dmgDetailResult := calc.Calculation(action.MoveName)
+			if dmgDetailResult.TypeEffective == bp.NO_EFFECTIVE {
 				manager.HostViewMessage = fmt.Sprintf("こうかは ないようだ...")
 				continue
+			} else if dmgDetailResult.IsEndeavorFailure {
+				manager.HostViewMessage = fmt.Sprintf("")
 			}
-			dmg := dmgResult.Damage
+			dmg := dmgDetailResult.Damage
 
 			var isFocusSash bool
 			var isBodyAttack bool
@@ -282,13 +288,17 @@ func (move *Move) Run(manager *Manager, action *SoloAction) error {
 			}
 
 			if isCrit {
-				manager.HostViewMessage = fmt.Sprintf("きゅうしょに あたった！")
+				var prefix string
+				if !target.IsHost {
+					prefix = manager.GuestHumanName + "の "
+				}
+				manager.HostViewMessage = prefix + fmt.Sprintf("%sの きゅうしょに あたった！", targetPokeNameStr)
 				GlobalContext.Observer(manager)
 			}
 
-			switch dmgResult.TypeEffective {
+			switch dmgDetailResult.TypeEffective {
 				case bp.SUPER_EFFECTIVE:
-					manager.HostViewMessage = fmt.Sprintf("こうかは ばつぐんだ！")
+					manager.HostViewMessage = fmt.Sprintf("%sに こうかは ばつぐんだ！")
 					GlobalContext.Observer(manager)
 				case bp.NOT_VERY_EFFECTIVE:
 					manager.HostViewMessage = fmt.Sprintf("こうかは いまひとつのようだ...")
@@ -334,8 +344,8 @@ func NewThunderbolt() Move {
 func NewHammerArm() Move {
 	return Move{
 		SelfAdditionalEffect:func(m *Manager, src *bp.Pokemon) error {
-			if src.Rank.Speed != bp.MIN_RANK {
-				src.Rank.Speed -= 1
+			if src.RankStat.Speed != bp.MIN_RANK {
+				src.RankStat.Speed -= 1
 			}
 			return nil
 		},
@@ -401,13 +411,13 @@ func NewCrunch() Move {
 				return nil
 			}
 
-			if target.Rank.Def == bp.MIN_RANK {
+			if target.RankStat.Def == bp.MIN_RANK {
 				return nil
 			}
 
 			ok, err := omwrand.IsPercentageMet(20, GlobalContext.Rand)
 			if ok {
-				target.Rank.Def -= 1
+				target.RankStat.Def -= 1
 			}
 			return err
 		},
@@ -427,11 +437,11 @@ func NewIcyWind() Move {
 				return nil
 			}
 
-			if target.Rank.Speed == bp.MIN_RANK {
+			if target.RankStat.Speed == bp.MIN_RANK {
 				return nil
 			}
 
-			target.Rank.Speed -= 1
+			target.RankStat.Speed -= 1
 			return nil
 		},
 	}
@@ -478,7 +488,7 @@ func NewHypnosis() Move {
 func NewRecover() Move {
 	return Move{
 		StatusEffect:func(m *Manager, src *bp.Pokemon, target *bp.Pokemon) error {
-			src.Rank = target.Rank.Clone()
+			src.RankStat = target.RankStat.Clone()
 			if src.IsHost {
 				m.HostViewMessage = fmt.Sprintf("%sは %sの のうりょうへんかを コピーした！", src.Name.ToString(), target.Name.ToString())
 			} else {
@@ -567,7 +577,7 @@ func NewBellyDrum() Move {
 			if src != target {
 				return fmt.Errorf("はらだいこ は 技を繰り出したポケモン と 対象になるポケモン の アドレスが 一致していなければならない。")
 			}
-			src.Rank.Atk = bp.MAX_RANK
+			src.RankStat.Atk = bp.MAX_RANK
 			return nil
 		},
 	}
@@ -654,10 +664,10 @@ func NewSubstitute() Move {
 func NewDracoMeteor() Move {
 	return Move{
 		SelfAdditionalEffect:func(_ *Manager, src *bp.Pokemon) error {
-			if src.Rank.SpAtk >= bp.MIN_RANK - 2 {
-				src.Rank.Speed -= 2
-			} else if src.Rank.SpAtk != bp.MIN_RANK {
-				src.Rank.Speed -= 1
+			if src.RankStat.SpAtk >= bp.MIN_RANK - 2 {
+				src.RankStat.Speed -= 2
+			} else if src.RankStat.SpAtk != bp.MIN_RANK {
+				src.RankStat.Speed -= 1
 			}
 			return nil
 		},
@@ -674,12 +684,12 @@ func NewCrossChop() Move {
 func NewCometPunch() Move {
 	return Move{
 		SelfAdditionalEffect:func(_ *Manager, src *bp.Pokemon) error {
-			if src.Rank.Atk == bp.MAX_RANK {
+			if src.RankStat.Atk == bp.MAX_RANK {
 				return nil
 			}
 			ok, err := omwrand.IsPercentageMet(20, GlobalContext.Rand)
 			if ok {
-				src.Rank.Atk += 1
+				src.RankStat.Atk += 1
 			}
 			return err
 		},
@@ -690,7 +700,7 @@ func NewCometPunch() Move {
 func NewPsychic() Move {
 	return Move{
 		OpponentAdditionalEffect:func(_ *Manager, target *bp.Pokemon) error {
-			if target.Rank.SpDef == bp.MIN_RANK {
+			if target.RankStat.SpDef == bp.MIN_RANK {
 				return nil
 			}
 
@@ -700,7 +710,7 @@ func NewPsychic() Move {
 
 			ok, err := omwrand.IsPercentageMet(10, GlobalContext.Rand)
 			if ok {
-				target.Rank.SpDef -= 1
+				target.RankStat.SpDef -= 1
 			}
 			return err
 		},
