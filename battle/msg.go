@@ -1,11 +1,74 @@
 package battle
 
-// import (
-// 	"fmt"
-// 	bp "github.com/sw965/bippa"
-// 	"strings"
-// 	"github.com/sw965/omw/fn"
-// )
+import (
+	"fmt"
+	bp "github.com/sw965/bippa"
+	//"strings"
+	//"github.com/sw965/omw/fn"
+)
+
+func GetHumanInfoMessageFunc(guestHumanTitle, guestHumanName string) func(bool) string {
+	return func(isHost bool) string {
+		if isHost {
+			return ""
+		}
+		return guestHumanTitle + "の " + guestHumanName + "は "
+	}
+}
+
+func GetHumanNameMessageFunc(guestHumanName string) func(bool) string {
+	return func(isHost bool) string {
+		if isHost {
+			return ""
+		}
+		return guestHumanName + "の "
+	}
+}
+
+// https://wiki.xn--rckteqa2e.com/wiki/%E3%83%A9%E3%83%B3%E3%82%AF%E8%A3%9C%E6%AD%A3
+func GetStandardRankFluctuationMessages(name bp.PokeName, v *bp.RankStat) []string {
+	ms := make([]string, 0, 5)
+	nameStr := name.ToString()
+
+	add := func(v bp.Rank, s string) {
+		if v == 1 {
+			m := fmt.Sprintf("%sの %sが 上がった", nameStr, s)
+			ms = append(ms, m)
+		}
+	
+		if v == 2 {
+			m := fmt.Sprintf("%sの %sが ぐーんと上がった", nameStr, s)
+			ms = append(ms, m)
+		}
+	
+		if v >= 3 {
+			m := fmt.Sprintf("%sの %sが ぐぐーんと上がった", nameStr, s)
+			ms = append(ms, m)
+		}
+
+		if v == -1 {
+			m := fmt.Sprintf("%sの %sが 下がった", nameStr, s)
+			ms = append(ms, m)
+		}
+
+		if v == -2 {
+			m := fmt.Sprintf("%sの %sが ぐーんと下がった", nameStr, s)
+			ms = append(ms, m)
+		}
+
+		if v <= -3 {
+			m := fmt.Sprintf("%sの %sが ぐぐーんと下がった", nameStr, s)
+			ms = append(ms, m)
+		}
+	}
+
+	add(v.Atk, "攻撃")
+	add(v.Def, "防御")
+	add(v.SpAtk, "特攻")
+	add(v.SpDef, "特防")
+	add(v.Speed, "素早さ")
+	return ms
+}
 
 // type Message string
 

@@ -5,6 +5,8 @@ package battle
  	bp "github.com/sw965/bippa"
 	omwrand "github.com/sw965/omw/math/rand"
 	"golang.org/x/exp/slices"
+	omwslices "github.com/sw965/omw/slices"
+	omwmath "github.com/sw965/omw/math"
 )
 
 const (
@@ -25,9 +27,6 @@ func (t *RemainingTurn) IsTrickRoomState() bool {
 }
 
 type Manager struct {
-	GuestHumanTitle string
-	GuestHumanName string
-
 	CurrentSelfLeadPokemons bp.Pokemons
 	CurrentSelfBenchPokemons  bp.Pokemons
 	CurrentOpponentLeadPokemons bp.Pokemons
@@ -42,13 +41,12 @@ type Manager struct {
 
 	CurrentSelfIsHost bool
 	HostViewMessage string
+
+	getHumanNameMessage func(bool) string
+	getHumanInfoMessage func(bool) string
 }
 
-func (m *Manager) IsSingle() bool {
-	return len(m.CurrentSelfLeadPokemons) == 1
-}
-
-func (m *Manager) Init() {
+func (m *Manager) Init(guestHumanTitle, guestHumanName string) {
 	for i := range m.CurrentSelfLeadPokemons {
 		m.CurrentSelfLeadPokemons[i].IsHost = true
 	}
@@ -57,6 +55,12 @@ func (m *Manager) Init() {
 		m.CurrentSelfBenchPokemons[i].IsHost = true
 	}
 	m.CurrentSelfIsHost = true
+	m.getHumanInfoMessage = GetHumanInfoMessageFunc(guestHumanTitle, guestHumanName)
+	m.getHumanNameMessage = GetHumanNameMessageFunc(guestHumanName)
+}
+
+func (m *Manager) IsSingle() bool {
+	return len(m.CurrentSelfLeadPokemons) == 1
 }
 
 func (m Manager) Clone() Manager {
@@ -78,6 +82,27 @@ func (m *Manager) SwapView() {
 
 func (m *Manager) IsTrickRoomState() bool {
 	return m.RemainingTurn.IsTrickRoomState()
+}
+
+func (m *Manager) ApplyDamageToBody(p *bp.Pokemon, dmg int) error {
+	if dmg < 0 {
+		return fmt.Errorf("ダメージは0以上でなければならない")
+	}
+	dmg = omwmath.Min(dmg, p.Stat.CurrentHP)
+	p.Stat.CurrentHP -= dmg
+
+	// https://wiki.xn--rckteqa2e.com/wiki/%E3%82%AA%E3%83%9C%E3%83%B3%E3%81%AE%E3%81%BF
+	halfMaxHP := int(float64(p.Stat.MaxHP) * 0.5)
+	sitrusBerryOK := p.Item == bp.SITRUS_BERRY && halfMaxHP >= p.Stat.CurrentHP
+	if sitrusBerryOK {
+		heal := int(float64(p.Stat.MaxHP) * 0.5)
+		err := p.ApplyHealToBody(heal)
+		if err != nil {
+			return err
+		}
+		m.HostViewMessage = m.getHumanNameMessage(p.IsHost) + p.Name.ToString() + "は オボンの実で 回復した！"
+	}
+	return nil
 }
 
 func (m *Manager) targetPokemonPointersForSingle(a *SoloAction) (bp.PokemonPointers, error) {
@@ -201,9 +226,9 @@ func (m *Manager) Switch(leadIdx, benchIdx int) error {
 	}
 
 	if m.CurrentSelfIsHost {
-		m.HostViewMessage = fmt.Sprintf("もどれ！ %s！", beforePokeNameStr)
+		m.HostViewMessage = "戻れ！ " + beforePokeNameStr
 	} else {
-		m.HostViewMessage = fmt.Sprintf("%sの %sは %sを 引っ込めた！", m.GuestHumanTitle, m.GuestHumanName, beforePokeNameStr)
+		m.HostViewMessage = m.getHumanInfoMessage(false) + beforePokeName.ToString() + " を 引っ込めた！"
 	}
 
 	GlobalContext.Observer(m)
@@ -214,40 +239,35 @@ func (m *Manager) Switch(leadIdx, benchIdx int) error {
 	afterPokeNameStr := afterPokeName.ToString()
 
 	if m.CurrentSelfIsHost {
-		m.HostViewMessage = fmt.Sprintf("ゆけっ！ %s！", afterPokeNameStr)
+		m.HostViewMessage = "行け！ " + afterPokeNameStr
 	} else {
-		m.HostViewMessage = fmt.Sprintf("%sの %sは %sを くりだした！", m.GuestHumanTitle, m.GuestHumanName, afterPokeNameStr)
+		m.HostViewMessage =  m.getHumanInfoMessage(false) + afterPokeNameStr + "を 繰り出した！"
 	}
 	GlobalContext.Observer(m)
 
 	if afterPokemon.Ability == bp.INTIMIDATE {
+		intimidateStr := bp.INTIMIDATE.ToString()
+		intimidateHumanNameMsg := m.getHumanNameMessage(m.CurrentSelfIsHost)
+		targetHumanNameMsg := m.getHumanNameMessage(!m.CurrentSelfIsHost)
+
 		for i := range m.CurrentOpponentLeadPokemons {
-			target := m.CurrentOpponentLeadPokemons[i]
+			target := &m.CurrentOpponentLeadPokemons[i]
 			if target.RankStat.Atk == bp.MIN_RANK {
 				continue
 			}
-
+			
 			targetPokeNameStr := target.Name.ToString()
 
 			if target.Ability == bp.CLEAR_BODY {
-				if m.CurrentSelfIsHost {
-					m.HostViewMessage = fmt.Sprintf("%sの %sの クリアボディで %sの いかくは きかなかった！", m.GuestHumanName, targetPokeNameStr, afterPokeNameStr)
-				} else {
-					m.HostViewMessage = fmt.Sprintf("%sの クリアボディで %sの %sの いかくは きかなかった！", targetPokeNameStr, m.GuestHumanName, afterPokeNameStr)
-				}
+				clearbodyStr := bp.CLEAR_BODY.ToString()
+				m.HostViewMessage = targetHumanNameMsg + targetPokeNameStr + "の " + clearbodyStr + "で " + intimidateHumanNameMsg + afterPokeNameStr + "の " + intimidateStr + "は きかなかった！"
 				GlobalContext.Observer(m)
 				continue
 			}
 
-			if target.RankStat.Atk != bp.MIN_RANK {
-				m.CurrentOpponentLeadPokemons[i].RankStat.Atk -= 1
-				if m.CurrentSelfIsHost {
-					m.HostViewMessage = fmt.Sprintf("%sの いかくで %sの %sの こうげきが さがった！", afterPokeNameStr, m.GuestHumanName, targetPokeNameStr)
-				} else {
-					m.HostViewMessage = fmt.Sprintf("%sの %sの いかくで %sの こうげきが さがった！", m.GuestHumanName, afterPokeNameStr, targetPokeNameStr)
-				}
-				GlobalContext.Observer(m)
-			}
+			m.CurrentOpponentLeadPokemons[i].RankStat.Atk -= 1
+			m.HostViewMessage = intimidateHumanNameMsg + afterPokeNameStr + "の " + intimidateStr + "で " + targetHumanNameMsg + targetPokeNameStr + "の こうげきが さがった！"
+			GlobalContext.Observer(m)
 		}
 	}
 	return nil
@@ -257,6 +277,40 @@ func (m *Manager) Switch(leadIdx, benchIdx int) error {
 // https://wiki.xn--rckteqa2e.com/wiki/%E3%82%BF%E3%83%BC%E3%83%B3#1.%E3%83%9D%E3%82%B1%E3%83%A2%E3%83%B3%E3%82%92%E7%B9%B0%E3%82%8A%E5%87%BA%E3%81%99
 
 func (m *Manager) TurnEnd() error {
+	leadPokemons := omwslices.Concat(m.CurrentSelfLeadPokemons.ToPointers(), m.CurrentOpponentLeadPokemons.ToPointers())
+	slices.SortFunc(leadPokemons, func(p1, p2 *bp.Pokemon) bool {
+		if p1.Stat.Speed > p2.Stat.Speed {
+			return !m.IsTrickRoomState()
+		} else if p1.Stat.Speed < p2.Stat.Speed {
+			return m.IsTrickRoomState()
+		} else {
+			return omwrand.Bool(GlobalContext.Rand)
+		}
+	})
+
+	if m.RemainingTurn.Weather > 0 {
+		m.RemainingTurn.Weather -= 1
+	}
+
+	if m.RemainingTurn.Weather == 0 {
+		if m.Weather == RAIN {
+			m.HostViewMessage = "雨が 降り止んだ！"
+		}
+		m.Weather = NORMAL_WEATHER
+	}
+
+	for _, p := range leadPokemons {
+		// https://wiki.xn--rckteqa2e.com/wiki/%E3%82%84%E3%81%91%E3%81%A9
+		if p.StatusAilment == bp.BURN {
+			dmg := int(float64(p.Stat.MaxHP) * 0.125)
+			dmg = omwmath.Max(dmg, 1)
+			err := m.ApplyDamageToBody(p, dmg)
+			if err != nil {
+				return err
+			}
+			m.HostViewMessage = m.getHumanNameMessage(p.IsHost) + p.Name.ToString() + "は " + bp.BURN.ToString() + " の ダメージを 受けている！"
+		}
+	}
 	return nil
 }
 

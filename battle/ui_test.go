@@ -9,9 +9,6 @@ import (
 
 func Test(t *testing.T) {
 	m := battle.Manager{
-		GuestHumanTitle:"ポケモントレーナー",
-		GuestHumanName:"メイ",
-
 		CurrentSelfLeadPokemons:bp.Pokemons{
 			bp.NewKusanagi2009Toxicroak(),
 			bp.NewKusanagi2009Empoleon(),
@@ -33,7 +30,7 @@ func Test(t *testing.T) {
 		},
 	}
 
-	m.Init()
+	m.Init("ポケモントレーナー", "メイ")
 	p2View := m.Clone()
 	p2View.SwapView()
 

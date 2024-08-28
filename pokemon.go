@@ -397,15 +397,6 @@ func (p *Pokemon) ApplyHealToBody(heal int) error {
 	return nil
 }
 
-func (p *Pokemon) ApplyDamageToBody(dmg int) error {
-	if dmg < 0 {
-		return fmt.Errorf("ダメージは0以上でなければならない")
-	}
-	dmg = omwmath.Min(dmg, p.Stat.CurrentHP)
-	p.Stat.CurrentHP -= dmg
-	return nil
-}
-
 func (p *Pokemon) IsTauntState() bool {
 	return p.RemainingTurnTauntState > 0
 }
@@ -572,7 +563,7 @@ func (s *PokemonStat) IsFullHP() bool {
 	return s.MaxHP == s.CurrentHP
 }
 
-func (s *PokemonStat) HPPercentage() float64 {
+func (s *PokemonStat) CurrentHPRatio() float64 {
 	return float64(s.CurrentHP) / float64(s.MaxHP)
 }
 

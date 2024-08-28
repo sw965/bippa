@@ -2,7 +2,6 @@ package battle
 
 import (
 	bp "github.com/sw965/bippa"
-	"math/rand"
 	"golang.org/x/exp/slices"
 	omwrand "github.com/sw965/omw/math/rand"
 )
@@ -35,7 +34,7 @@ func (a *SoloAction) ToggleIsSelf() {
 
 type SoloActions []SoloAction
 
-func (as SoloActions) SortByOrder(r *rand.Rand) {
+func (as SoloActions) SortByOrder(m *Manager) {
 	slices.SortFunc(as, func(a1, a2 SoloAction) bool {
 		a1Priority := a1.Priority()
 		a2Priority := a2.Priority()
@@ -47,11 +46,11 @@ func (as SoloActions) SortByOrder(r *rand.Rand) {
 			a1Speed := a1.Speed
 			a2Speed := a2.Speed
 			if a1Speed > a2Speed {
-				return true
+				return !m.IsTrickRoomState()
 			} else if a1Speed < a2Speed {
-				return false
+				return m.IsTrickRoomState()
 			} else {
-				return omwrand.Bool(r)
+				return omwrand.Bool(GlobalContext.Rand)
 			}
 		}
 	})

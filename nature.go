@@ -38,11 +38,12 @@ type EasyReadNaturedex map[string]NatureData
 
 func (e EasyReadNaturedex) From() (Naturedex, error) {
 	d := Naturedex{}
-	for k, v := range e {
+	for k, _ := range e {
 		n, err := StringToNature(k)
 		if err != nil {
 			return Naturedex{}, err
 		}
+		v := e[k]
 		d[n] = &v
 	}
 	return d, nil

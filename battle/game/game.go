@@ -1,7 +1,6 @@
 package game
 
 import (
-	"fmt"
 	//"github.com/sw965/crow/game/simultaneous"
 	"github.com/sw965/bippa/battle"
     bp "github.com/sw965/bippa"
@@ -90,23 +89,23 @@ func IsEnd(m *battle.Manager) (bool, []float64) {
 //条件
 //とりあえず、マネージャーもactionsも正しい前提。
 //いずれかのプレイヤーが行動するときに呼び出される関数
-func Push(manager battle.Manager, actions battle.Actions) (battle.Manager, error) {
-	manager = manager.Clone()
-	isSelfLeadAnyFainted := manager.CurrentSelfLeadPokemons.IsAnyFainted()
-	isOpponentLeadAnyFainted := manager.CurrentOpponentLeadPokemons.IsAnyFainted()
+func Push(m battle.Manager, actions battle.Actions) (battle.Manager, error) {
+	m = m.Clone()
+	isSelfLeadAnyFainted := m.CurrentSelfLeadPokemons.IsAnyFainted()
+	isOpponentLeadAnyFainted := m.CurrentOpponentLeadPokemons.IsAnyFainted()
 
 	soloActions := actions.ToSoloActions()
-	soloActions.SortByOrder(battle.GlobalContext.Rand)
+	soloActions.SortByOrder(&m)
 
 	if isSelfLeadAnyFainted || isOpponentLeadAnyFainted {
 		for _, soloAction := range soloActions {
 			var err error
 			if soloAction.IsSelf {
-				err = manager.Switch(soloAction.SrcIndex, soloAction.TargetIndex)
+				err = m.Switch(soloAction.SrcIndex, soloAction.TargetIndex)
 			} else {
-				manager.SwapView()
-				manager.Switch(soloAction.SrcIndex, soloAction.TargetIndex)
-				manager.SwapView()
+				m.SwapView()
+				m.Switch(soloAction.SrcIndex, soloAction.TargetIndex)
+				m.SwapView()
 			}
 			if err != nil {
 				return battle.Manager{}, err
@@ -117,34 +116,22 @@ func Push(manager battle.Manager, actions battle.Actions) (battle.Manager, error
 
 	for _, soloAction := range soloActions {
 		if !soloAction.IsSelf {
-			manager.SwapView()
+			m.SwapView()
 		}
 
-		srcPokemon := manager.GetHostLeadPokemons()[soloAction.SrcIndex]
-
 		if soloAction.MoveName != bp.EMPTY_MOVE_NAME {
-			if srcPokemon.IsFlinchState {
-				if soloAction.IsSelf {
-					manager.HostViewMessage = fmt.Sprintf("%sは ひるんで わざが だせない！", srcPokemon.Name.ToString())
-				} else {
-					manager.HostViewMessage = fmt.Sprintf("%sの %sは ひるんで わざが だせない！", manager.GuestHumanName, srcPokemon.Name.ToString())
-				}
-
-				battle.GlobalContext.Observer(&manager)
-				continue
-			}
 			move := battle.GetMove(soloAction.MoveName)
-			err := move.Run(&manager, &soloAction)
+			err := move.Run(&m, &soloAction)
 			if err != nil {
 				return battle.Manager{}, err
 			}
 		} else {
-			manager.Switch(soloAction.SrcIndex, soloAction.TargetIndex)
+			m.Switch(soloAction.SrcIndex, soloAction.TargetIndex)
 		}
 
 		if !soloAction.IsSelf {
-			manager.SwapView()
+			m.SwapView()
 		}
 	}
-	return manager, nil
+	return m, nil
 }
