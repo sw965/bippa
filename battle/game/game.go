@@ -1,27 +1,28 @@
 package game
 
 import (
-	//"github.com/sw965/crow/game/simultaneous"
+	"github.com/sw965/crow/game/simultaneous"
 	"github.com/sw965/bippa/battle"
     bp "github.com/sw965/bippa"
 	omwslices "github.com/sw965/omw/slices"
-	//"golang.org/x/exp/slices"
+	"golang.org/x/exp/slices"
 )
 
-// func Equal(m1, m2 *battle.Manager) bool {
-// 	return m1.SelfLeadPokemons.Equal(m2.SelfLeadPokemons) &&
-// 		m1.SelfBenchPokemons.Equal(m2.SelfBenchPokemons) &&
-// 		m1.OpponentLeadPokemons.Equal(m2.OpponentLeadPokemons) &&
-// 		m1.OpponentBenchPokemons.Equal(m2.OpponentBenchPokemons) &&
-// 		m1.Weather == m2.Weather &&
-// 		m1.RemainingTurnWeather == m2.RemainingTurnWeather &&
-// 		slices.Equal(m1.SelfFollowMePokemonPointers, m2.SelfFollowMePokemonPointers) &&
-// 		slices.Equal(m1.OpponentFollowMePokemonPointers, m2.OpponentFollowMePokemonPointers) &&
-// 		m1.RemainingTurnTrickRoom == m2.RemainingTurnTrickRoom &&
-// 		m1.IsSingle == m2.IsSingle &&
-// 		m1.Turn == m2.Turn &&
-// 		m1.IsPlayer1View == m2.IsPlayer1View
-// }
+func Equal(m1, m2 *battle.Manager) bool {
+	return m1.CurrentSelfLeadPokemons.Equal(m2.CurrentSelfLeadPokemons) &&
+		m1.CurrentSelfBenchPokemons.Equal(m2.CurrentSelfBenchPokemons) &&
+		m1.CurrentOpponentLeadPokemons.Equal(m2.CurrentOpponentLeadPokemons) &&
+		m1.CurrentOpponentBenchPokemons.Equal(m2.CurrentOpponentBenchPokemons) &&
+
+		slices.Equal(m1.CurrentSelfFollowMePokemonPointers, m2.CurrentSelfFollowMePokemonPointers) &&
+		slices.Equal(m1.CurrentOpponentFollowMePokemonPointers, m2.CurrentOpponentFollowMePokemonPointers) &&
+
+		m1.Weather == m2.Weather &&
+		m1.RemainingTurn == m2.RemainingTurn &&
+		m1.Turn == m2.Turn &&
+
+		m1.CurrentSelfIsHost == m2.CurrentSelfIsHost
+}
 
 func IsEnd(m *battle.Manager) (bool, []float64) {
 	self := omwslices.Concat(m.CurrentSelfLeadPokemons, m.CurrentSelfBenchPokemons)
@@ -41,54 +42,20 @@ func IsEnd(m *battle.Manager) (bool, []float64) {
 	}
 }
 
-// func LegalSeparateActions(m *battle.Manager) battle.ActionsSlice {
-// 	selfMove := m.CurrentSelfLegalMoveSoloActions()
-// 	selfSwitch := m.CurrentSelfLegalSwitchSoloActions()
-// 	self := omwslices.Concat(selfMove, selfSwitch)
+func LegalSeparateActions(m *battle.Manager) battle.ActionsSlice {
+	self := battle.NewLegalActions(m)
+	for i, a := range self {
+		for j := range a {
+			self[i][j].IsCurrentSelf = true
+		} 
+	}
 
-// 	opponentMove := m.CurrentOpponentLegalMoveSoloActions()
-// 	opponentSwitch := m.CurrentOpponentLegalSwitchSoloActions()
-// 	opponent := omwslices.Concat(opponentMove, opponentSwitch)
+	m.SwapView()
+	opponent := battle.NewLegalActions(m)
+	m.SwapView()
+	return battle.ActionsSlice{self, opponent}
+}
 
-// 	return battle.ActionsSlice{self.ToActions(), opponent.ToActions()}
-// }
-
-// func NewPushFunc(context *battle.Context) func(battle.Manager, battle.Actions) (battle.Manager, error) {
-// 	return func(m battle.Manager, actions battle.Actions) (battle.Manager, error) {
-// 		m = m.Clone()
-// 		soloActions := actions.ToSoloActions()
-// 		soloActions.SortByOrder(context.Rand)
-
-// 		m.ThisTurnSelfPlannedAction = actions[0]
-// 		m.ThisTurnOpponentPlannedAction = actions[1]
-
-// 		for _, soloAction := range soloActions {
-// 			if soloAction.IsSelfView {
-// 				m.SoloAction(&soloAction, context)
-// 			} else {
-// 				m.SwapView()
-// 				m.SoloAction(&soloAction, context)
-// 				m.SwapView()
-// 			}
-// 		}
-// 		m.Turn += 1
-// 		return m, nil
-// 	}
-// }
-
-// func New(context *battle.Context) simultaneous.Game[battle.Manager, battle.ActionsSlice, battle.Actions, battle.Action] {
-//     gm := simultaneous.Game[battle.Manager, battle.ActionsSlice, battle.Actions, battle.Action]{
-//         Equal:                Equal,
-//         IsEnd:                IsEnd,
-//         LegalSeparateActions: LegalSeparateActions,
-//         Push:                 NewPushFunc(context),
-//     }
-//     return gm
-// }
-
-//条件
-//とりあえず、マネージャーもactionsも正しい前提。
-//いずれかのプレイヤーが行動するときに呼び出される関数
 func Push(m battle.Manager, actions battle.Actions) (battle.Manager, error) {
 	m = m.Clone()
 	isSelfLeadAnyFainted := m.CurrentSelfLeadPokemons.IsAnyFainted()
@@ -100,7 +67,7 @@ func Push(m battle.Manager, actions battle.Actions) (battle.Manager, error) {
 	if isSelfLeadAnyFainted || isOpponentLeadAnyFainted {
 		for _, soloAction := range soloActions {
 			var err error
-			if soloAction.IsSelf {
+			if soloAction.IsCurrentSelf {
 				err = m.Switch(soloAction.SrcIndex, soloAction.TargetIndex)
 			} else {
 				m.SwapView()
@@ -111,11 +78,23 @@ func Push(m battle.Manager, actions battle.Actions) (battle.Manager, error) {
 				return battle.Manager{}, err
 			}
 		}
-		return battle.Manager{}, nil
+		return m, nil
+	}
+
+	//ふいうちの為の処理
+	for _, soloAction := range soloActions {
+		if !soloAction.IsMove() {
+			continue
+		}
+		if soloAction.IsCurrentSelf {
+			m.CurrentSelfLeadPokemons[soloAction.SrcIndex].ThisTurnPlannedUseMoveName = soloAction.MoveName
+		} else {
+			m.CurrentOpponentLeadPokemons[soloAction.SrcIndex].ThisTurnPlannedUseMoveName = soloAction.MoveName
+		}
 	}
 
 	for _, soloAction := range soloActions {
-		if !soloAction.IsSelf {
+		if !soloAction.IsCurrentSelf {
 			m.SwapView()
 		}
 
@@ -129,9 +108,20 @@ func Push(m battle.Manager, actions battle.Actions) (battle.Manager, error) {
 			m.Switch(soloAction.SrcIndex, soloAction.TargetIndex)
 		}
 
-		if !soloAction.IsSelf {
+		if !soloAction.IsCurrentSelf {
 			m.SwapView()
 		}
 	}
-	return m, nil
+	err := m.TurnEnd()
+	return m, err
+}
+
+func New(context *battle.Context) simultaneous.Game[battle.Manager, battle.ActionsSlice, battle.Actions, battle.Action] {
+    gm := simultaneous.Game[battle.Manager, battle.ActionsSlice, battle.Actions, battle.Action]{
+        Equal:                Equal,
+        IsEnd:                IsEnd,
+        LegalSeparateActions: LegalSeparateActions,
+        Push:                 Push,
+    }
+    return gm
 }

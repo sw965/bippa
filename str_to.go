@@ -162,7 +162,7 @@ func StringsToItems(ss []string) (Items, error) {
 }
 
 var STRING_TO_MOVE_NAME = map[string]MoveName{
-    "":              EMPTY_MOVE_NAME,
+    "なし":           EMPTY_MOVE_NAME,
     "10まんボルト":   THUNDERBOLT,
     "アームハンマー": HAMMER_ARM,
     "ストーンエッジ": STONE_EDGE,

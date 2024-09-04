@@ -277,6 +277,14 @@ func (m *Manager) Switch(leadIdx, benchIdx int) error {
 // https://wiki.xn--rckteqa2e.com/wiki/%E3%82%BF%E3%83%BC%E3%83%B3#1.%E3%83%9D%E3%82%B1%E3%83%A2%E3%83%B3%E3%82%92%E7%B9%B0%E3%82%8A%E5%87%BA%E3%81%99
 
 func (m *Manager) TurnEnd() error {
+	for i := range m.CurrentSelfLeadPokemons {
+		m.CurrentSelfBenchPokemons[i].ThisTurnPlannedUseMoveName = bp.EMPTY_MOVE_NAME
+	}
+
+	for i := range m.CurrentOpponentLeadPokemons {
+		m.CurrentOpponentLeadPokemons[i].ThisTurnPlannedUseMoveName = bp.EMPTY_MOVE_NAME
+	}
+
 	leadPokemons := omwslices.Concat(m.CurrentSelfLeadPokemons.ToPointers(), m.CurrentOpponentLeadPokemons.ToPointers())
 	slices.SortFunc(leadPokemons, func(p1, p2 *bp.Pokemon) bool {
 		if p1.Stat.Speed > p2.Stat.Speed {
