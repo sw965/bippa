@@ -148,8 +148,7 @@ type Move struct {
 func (move *Move) Run(m *Manager, action *SoloAction) error {
 	src := &m.CurrentSelfLeadPokemons[action.SrcIndex]
 	if src.IsFainted() {
-		s := fmt.Sprintf("%sは 瀕死状態なので、技を繰り出す事が出来ません。", src.Name.ToString())
-		return fmt.Errorf(s)
+		return nil
 	}
 
 	srcPokeNameStr := src.Name.ToString()

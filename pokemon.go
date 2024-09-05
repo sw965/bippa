@@ -470,6 +470,10 @@ func (ps Pokemons) IsAllFainted() bool {
 	return true
 }
 
+func (ps Pokemons) FaintedIndices() []int {
+	return omwslices.IndicesFunc(ps, func(p Pokemon) bool { return p.IsFainted() })
+}
+
 func (ps Pokemons) NotFaintedIndices() []int {
 	return omwslices.IndicesFunc(ps, func(p Pokemon) bool { return !p.IsFainted() })
 }

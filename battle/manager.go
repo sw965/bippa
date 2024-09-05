@@ -278,11 +278,13 @@ func (m *Manager) Switch(leadIdx, benchIdx int) error {
 
 func (m *Manager) TurnEnd() error {
 	for i := range m.CurrentSelfLeadPokemons {
-		m.CurrentSelfBenchPokemons[i].ThisTurnPlannedUseMoveName = bp.EMPTY_MOVE_NAME
+		m.CurrentSelfLeadPokemons[i].ThisTurnPlannedUseMoveName = bp.EMPTY_MOVE_NAME
+		m.CurrentSelfLeadPokemons[i].IsFlinchState = false
 	}
 
 	for i := range m.CurrentOpponentLeadPokemons {
 		m.CurrentOpponentLeadPokemons[i].ThisTurnPlannedUseMoveName = bp.EMPTY_MOVE_NAME
+		m.CurrentOpponentBenchPokemons[i].IsFlinchState = false
 	}
 
 	leadPokemons := omwslices.Concat(m.CurrentSelfLeadPokemons.ToPointers(), m.CurrentOpponentLeadPokemons.ToPointers())

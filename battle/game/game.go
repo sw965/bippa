@@ -1,6 +1,7 @@
 package game
 
 import (
+	"fmt"
 	"github.com/sw965/crow/game/simultaneous"
 	"github.com/sw965/bippa/battle"
     bp "github.com/sw965/bippa"
@@ -24,26 +25,30 @@ func Equal(m1, m2 *battle.Manager) bool {
 		m1.CurrentSelfIsHost == m2.CurrentSelfIsHost
 }
 
-func IsEnd(m *battle.Manager) (bool, []float64) {
+func IsEnd(m *battle.Manager) (bool, simultaneous.JointEval) {
 	self := omwslices.Concat(m.CurrentSelfLeadPokemons, m.CurrentSelfBenchPokemons)
 	opponent := omwslices.Concat(m.CurrentOpponentLeadPokemons, m.CurrentOpponentBenchPokemons)
 
-	isSelfAllFaint := self.IsAllFainted()
-	isOpponentAllFaint := opponent.IsAllFainted()
+	isSelfAllFainted := self.IsAllFainted()
+	isOpponentAllFainted := opponent.IsAllFainted()
 
-	if isSelfAllFaint && isOpponentAllFaint {
-		return true, []float64{0.5, 0.5}
-	} else if isSelfAllFaint {
-		return true, []float64{0.0, 1.0}
-	} else if isOpponentAllFaint {
-		return true, []float64{1.0, 0.0}
+	if isSelfAllFainted && isOpponentAllFainted {
+		return true, simultaneous.JointEval{0.5, 0.5}
+	} else if isSelfAllFainted {
+		return true, simultaneous.JointEval{0.0, 1.0}
+	} else if isOpponentAllFainted {
+		return true, simultaneous.JointEval{1.0, 0.0}
 	} else {
-		return false, []float64{}
+		return false, simultaneous.JointEval{}
 	}
 }
 
 func LegalSeparateActions(m *battle.Manager) battle.ActionsSlice {
 	self := battle.NewLegalActions(m)
+	if len(self) == 0 {
+		self = battle.Actions{battle.Action{}}
+	}
+
 	for i, a := range self {
 		for j := range a {
 			self[i][j].IsCurrentSelf = true
@@ -53,15 +58,25 @@ func LegalSeparateActions(m *battle.Manager) battle.ActionsSlice {
 	m.SwapView()
 	opponent := battle.NewLegalActions(m)
 	m.SwapView()
+	if len(opponent) == 0 {
+		opponent = battle.Actions{battle.Action{}}
+	}
+
+	if len(self) == 1 || len(opponent) == 1 {
+		fmt.Println(m.CurrentSelfLeadPokemons.IsAnyFainted(), m.CurrentOpponentLeadPokemons.IsAnyFainted())
+	}
 	return battle.ActionsSlice{self, opponent}
 }
 
 func Push(m battle.Manager, actions battle.Actions) (battle.Manager, error) {
 	m = m.Clone()
+	actions = actions.FilterByNotEmpty()
+
 	isSelfLeadAnyFainted := m.CurrentSelfLeadPokemons.IsAnyFainted()
 	isOpponentLeadAnyFainted := m.CurrentOpponentLeadPokemons.IsAnyFainted()
 
 	soloActions := actions.ToSoloActions()
+	soloActions = soloActions.FilterByNotEmpty()
 	soloActions.SortByOrder(&m)
 
 	if isSelfLeadAnyFainted || isOpponentLeadAnyFainted {
@@ -116,7 +131,7 @@ func Push(m battle.Manager, actions battle.Actions) (battle.Manager, error) {
 	return m, err
 }
 
-func New(context *battle.Context) simultaneous.Game[battle.Manager, battle.ActionsSlice, battle.Actions, battle.Action] {
+func New() simultaneous.Game[battle.Manager, battle.ActionsSlice, battle.Actions, battle.Action] {
     gm := simultaneous.Game[battle.Manager, battle.ActionsSlice, battle.Actions, battle.Action]{
         Equal:                Equal,
         IsEnd:                IsEnd,

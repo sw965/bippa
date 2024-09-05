@@ -1,6 +1,7 @@
 package battle
 
 import (
+	"fmt"
 	bp "github.com/sw965/bippa"
 	"golang.org/x/exp/slices"
 	omwrand "github.com/sw965/omw/math/rand"
@@ -37,6 +38,14 @@ func (a *SoloAction) Priority() int {
 type SoloActions []SoloAction
 
 func NewLegalSoloActions(m *Manager) SoloActions {
+	isSelfAnyFainted := m.CurrentSelfLeadPokemons.IsAnyFainted()
+	isOpponentAnyFainted := m.CurrentOpponentLeadPokemons.IsAnyFainted()
+
+	//相手だけ瀕死状態のポケモンがいるならば、自分は行動出来ない。
+	if !isSelfAnyFainted && isOpponentAnyFainted {
+		return SoloActions{}
+	}
+
 	if m.IsSingle() {
 		as := make(SoloActions, 0, bp.MAX_MOVESET_LENGTH + len(m.CurrentSelfBenchPokemons))
 		p := m.CurrentSelfLeadPokemons[0]
@@ -56,6 +65,18 @@ func NewLegalSoloActions(m *Manager) SoloActions {
 		return as
 	}
 
+	if isSelfAnyFainted {
+		as := make(SoloActions, 0, DOUBLE_BATTLE_NUM * DOUBLE_BATTLE_NUM)
+		for _, srcIdx := range m.CurrentSelfLeadPokemons.FaintedIndices() {
+			src := m.CurrentSelfLeadPokemons[srcIdx]
+			speed := src.Stat.Speed
+			for _, targetIdx := range m.CurrentSelfBenchPokemons.NotFaintedIndices() {
+				as = append(as, SoloAction{SrcIndex:srcIdx, TargetIndex:targetIdx, Speed:speed})
+			}
+		}
+		return as
+	}
+
 	as := make(SoloActions, 0, 128)
 	for _, srcIdx := range m.CurrentSelfLeadPokemons.NotFaintedIndices() {
 		src := m.CurrentSelfLeadPokemons[srcIdx]
@@ -70,7 +91,7 @@ func NewLegalSoloActions(m *Manager) SoloActions {
 			for _, targetIdx := range m.CurrentSelfLeadPokemons.NotFaintedIndices() {
 				as = append(as, SoloAction{MoveName:moveName, SrcIndex:srcIdx, TargetIndex:targetIdx, IsSelfLeadTarget:true, Speed:speed})
 			}
-			
+
 			//対象指定せずに、技を繰り出す。
 			as = append(as, SoloAction{MoveName:moveName, SrcIndex:srcIdx, TargetIndex:-1, Speed:speed})
 		}
@@ -82,37 +103,29 @@ func NewLegalSoloActions(m *Manager) SoloActions {
 	}
 
 	return fn.Filter(as, func(a SoloAction) bool {
-		isSwitch := !a.IsMove()
-		//先頭に、瀕死のポケモンが存在するならば、交代を強制する為、技を使う事は出来ない。
-		//!Switch であるという事は、技を使おうとしている。
-		if !isSwitch && m.CurrentSelfLeadPokemons.IsAnyFainted() {
-			return false
+		if a.IsMove() {
+			moveData := bp.MOVEDEX[a.MoveName]
+			switch moveData.Target {
+				case bp.NORMAL_TARGET:
+					//自分自身への攻撃は出来ない
+					if a.IsSelfLeadTarget {
+						return a.SrcIndex != a.TargetIndex
+					}
+					return a.TargetIndex != - 1
+				case bp.SELF_TARGET:
+					return a.SrcIndex == a.TargetIndex && a.IsSelfLeadTarget
+				/*
+					defaultは 下記のTargetを想定している。
+					OPPONENT_TWO_TARGET (いわなだれ 等)
+					OTHERS_TARGET (じばく/だいばくはつ 等)
+					ALL_TARGET (あまごい 等)
+					OPPONENT_RANDOM_ONE_TARGET (わるあがぎ 等)
+				*/
+				default:
+					return a.TargetIndex == -1
+			}
 		}
-
-		if isSwitch {
-			return true
-		}
-
-		moveData := bp.MOVEDEX[a.MoveName]
-		switch moveData.Target {
-			case bp.NORMAL_TARGET:
-				//自分自身への攻撃は出来ない
-				if a.IsSelfLeadTarget {
-					return a.SrcIndex != a.TargetIndex
-				}
-				return a.TargetIndex != - 1
-			case bp.SELF_TARGET:
-				return a.SrcIndex == a.TargetIndex && a.IsSelfLeadTarget
-			/*
-				defaultは 下記のTargetを想定している。
-				OPPONENT_TWO_TARGET (いわなだれ 等)
-				OTHERS_TARGET (じばく/だいばくはつ 等)
-				ALL_TARGET (あまごい 等)
-				OPPONENT_RANDOM_ONE_TARGET (わるあがぎ 等)
-			*/
-			default:
-				return a.TargetIndex == -1
-		}
+		return true
 	})
 }
 
@@ -138,9 +151,29 @@ func (as SoloActions) SortByOrder(m *Manager) {
 	})
 }
 
+func (as SoloActions) FilterByNotEmpty() SoloActions {
+	s := make(SoloActions, 0, len(as))
+	for _, a := range as {
+		if !a.IsEmpty() {
+			s = append(s, a)
+		}
+	}
+	return s
+}
+
 type SoloActionsSlice []SoloActions
 
 type Action [DOUBLE_BATTLE_NUM]SoloAction
+
+func (a *Action) IsEmpty() bool {
+	for _, solo := range a {
+		if !solo.IsEmpty() {
+			return false
+		}
+	}
+	return true
+}
+
 type Actions []Action
 
 func NewLegalActions(m *Manager) Actions {
@@ -153,6 +186,7 @@ func NewLegalActions(m *Manager) Actions {
 		return as
 	}
 
+	fmt.Println("len(soloActions) = ", len(soloActions))
 	soloActionsSlice := omwslices.Combination[SoloActionsSlice, SoloActions](soloActions, DOUBLE_BATTLE_NUM)
 	soloActionsSlice = fn.Filter(soloActionsSlice, func(soloActions SoloActions) bool {
 		firstSoloAction := soloActions[0]
@@ -180,6 +214,8 @@ func NewLegalActions(m *Manager) Actions {
 		return firstSoloAction.SrcIndex != secondSoloAction.SrcIndex
 	})
 
+	fmt.Println("len(soloActionsSlice) = ", len(soloActionsSlice))
+	fmt.Println("")
 	as := make(Actions, 0, 128)
 	for _, soloAs := range soloActionsSlice {
 		as = append(as, Action{soloAs[0], soloAs[1]})
@@ -195,6 +231,16 @@ func (as Actions) ToSoloActions() SoloActions {
 		}
 	}
 	return sas
+}
+
+func (as Actions) FilterByNotEmpty() Actions {
+	s := make(Actions, 0, len(as))
+	for _, a := range as {
+		if !a.IsEmpty() {
+			s = append(s, a)
+		}
+	}
+	return s
 }
 
 type ActionsSlice []Actions
