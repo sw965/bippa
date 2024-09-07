@@ -1,7 +1,7 @@
 package battle
 
 import (
-	"fmt"
+	//"fmt"
 	bp "github.com/sw965/bippa"
 	"golang.org/x/exp/slices"
 	omwrand "github.com/sw965/omw/math/rand"
@@ -38,41 +38,40 @@ func (a *SoloAction) Priority() int {
 type SoloActions []SoloAction
 
 func NewLegalSoloActions(m *Manager) SoloActions {
-	isSelfAnyFainted := m.CurrentSelfLeadPokemons.IsAnyFainted()
-	isOpponentAnyFainted := m.CurrentOpponentLeadPokemons.IsAnyFainted()
+	selfMustSwitch, opponentMustSwitch := m.MustSwitch()
 
-	//相手だけ瀕死状態のポケモンがいるならば、自分は行動出来ない。
-	if !isSelfAnyFainted && isOpponentAnyFainted {
+	//相手だけ交代しなければならない状態であれば、自分は行動出来ない。
+	if !selfMustSwitch && opponentMustSwitch {
 		return SoloActions{}
 	}
 
 	if m.IsSingle() {
 		as := make(SoloActions, 0, bp.MAX_MOVESET_LENGTH + len(m.CurrentSelfBenchPokemons))
-		p := m.CurrentSelfLeadPokemons[0]
-		speed := p.Stat.Speed
+		src := m.CurrentSelfLeadPokemons[0]
+		speed := src.Stat.Speed
 
-		//先頭のポケモンが瀕死状態ならば、技は使えない。
-		if !p.IsFainted() {
-			for _, moveName := range p.UsableMoveNames() {
+		//先頭のポケモンが瀕死状態ではないならば、技を使える。
+		if !src.IsFainted() {
+			for _, moveName := range src.UsableMoveNames() {
 				as = append(as, SoloAction{MoveName:moveName, Speed:speed})
 			}
 		}
 
-		//先頭のポケモンが気絶しているしていないに関係なく、交代は出来る。
+		//先頭のポケモンの瀕死状態の有無に関わらず、交代は出来る。
 		for _, idx := range m.CurrentSelfBenchPokemons.NotFaintedIndices() {
-			as = append(as, SoloAction{TargetIndex:idx, Speed:m.CurrentSelfBenchPokemons[idx].Stat.Speed})
+			as = append(as, SoloAction{TargetIndex:idx, Speed:speed})
 		}
 		return as
 	}
 
-	if isSelfAnyFainted {
-		as := make(SoloActions, 0, DOUBLE_BATTLE_NUM * DOUBLE_BATTLE_NUM)
-		for _, srcIdx := range m.CurrentSelfLeadPokemons.FaintedIndices() {
-			src := m.CurrentSelfLeadPokemons[srcIdx]
-			speed := src.Stat.Speed
-			for _, targetIdx := range m.CurrentSelfBenchPokemons.NotFaintedIndices() {
-				as = append(as, SoloAction{SrcIndex:srcIdx, TargetIndex:targetIdx, Speed:speed})
-			}
+	if selfMustSwitch {
+		as := make(SoloActions, 0, DOUBLE * DOUBLE)
+		//複数のポケモンが瀕死状態であっても、1匹ずつ交代する為、0番目のインデックスにアクセスする。
+		srcIdx := m.CurrentSelfLeadPokemons.FaintedIndices()[0]
+		src := m.CurrentSelfLeadPokemons[srcIdx]
+		speed := src.Stat.Speed
+		for _, targetIdx := range m.CurrentSelfBenchPokemons.NotFaintedIndices() {
+			as = append(as, SoloAction{SrcIndex:srcIdx, TargetIndex:targetIdx, Speed:speed})
 		}
 		return as
 	}
@@ -161,9 +160,19 @@ func (as SoloActions) FilterByNotEmpty() SoloActions {
 	return s
 }
 
+func (as SoloActions) FilterByEqualSrcIndex(idx int) SoloActions {
+	s := make(SoloActions, 0, len(as))
+	for _, a := range as {
+		if a.SrcIndex == idx {
+			s = append(s, a)
+		}
+	}
+	return s
+}
+
 type SoloActionsSlice []SoloActions
 
-type Action [DOUBLE_BATTLE_NUM]SoloAction
+type Action [DOUBLE]SoloAction
 
 func (a *Action) IsEmpty() bool {
 	for _, solo := range a {
@@ -186,45 +195,49 @@ func NewLegalActions(m *Manager) Actions {
 		return as
 	}
 
-	fmt.Println("len(soloActions) = ", len(soloActions))
-	soloActionsSlice := omwslices.Combination[SoloActionsSlice, SoloActions](soloActions, DOUBLE_BATTLE_NUM)
-	soloActionsSlice = fn.Filter(soloActionsSlice, func(soloActions SoloActions) bool {
-		firstSoloAction := soloActions[0]
-		secondSoloAction := soloActions[1]
+	groupedSoloActionsSliceBySrcIdx := make(SoloActionsSlice, DOUBLE)
+	for i := 0; i < DOUBLE; i++ {
+		groupedSoloActionsSliceBySrcIdx[i] = soloActions.FilterByEqualSrcIndex(i)
+	}
 
-		if secondSoloAction.IsEmpty() {
-			return true
+	for srcIdx, soloActions := range groupedSoloActionsSliceBySrcIdx {
+		if len(soloActions) == 0 {
+			groupedSoloActionsSliceBySrcIdx[srcIdx] = SoloActions{SoloAction{SrcIndex:srcIdx}}
 		}
+	}
 
-		isFirstSwitch := !firstSoloAction.IsMove()
-		isSecondSwitch := !secondSoloAction.IsMove()
+	soloActionsSlice := omwslices.CartesianProduct[SoloActionsSlice](groupedSoloActionsSliceBySrcIdx...)
+	soloActionsSlice = fn.Filter(soloActionsSlice, func(soloActions SoloActions) bool {
+		first := soloActions[0]
+		second := soloActions[1]
 
-		if isFirstSwitch && isSecondSwitch {
+		isFirstSwitch := !first.IsMove()
+		isSecondSwitch := !second.IsMove()
+
+		if isFirstSwitch && !first.IsEmpty() && isSecondSwitch && !second.IsEmpty() {
 			/*
 				自分の先頭のポケモン (ドクロッグ, エンペルト)
 				自分の控えのポケモン (カビゴン, ボーマンダ)
 				ドクロッグ → カビゴンと交代
 				エンペルト → カビゴンと交代
-				という風に、同じポケモンに交代する事は出来ない。
+				みたいに、同じポケモンに交代する事は出来ない。
 			*/
-			if firstSoloAction.TargetIndex == secondSoloAction.TargetIndex {
+			if first.TargetIndex == second.TargetIndex {
 				return false
 			}
 		}
-		return firstSoloAction.SrcIndex != secondSoloAction.SrcIndex
+		return true
 	})
 
-	fmt.Println("len(soloActionsSlice) = ", len(soloActionsSlice))
-	fmt.Println("")
-	as := make(Actions, 0, 128)
-	for _, soloAs := range soloActionsSlice {
-		as = append(as, Action{soloAs[0], soloAs[1]})
+	as := make(Actions, len(soloActionsSlice))
+	for i, soloActions := range soloActionsSlice {
+		as[i] = Action{soloActions[0], soloActions[1]}
 	}
 	return as
 }
 
 func (as Actions) ToSoloActions() SoloActions {
-	sas := make(SoloActions, 0, len(as) * DOUBLE_BATTLE_NUM)
+	sas := make(SoloActions, 0, len(as) * DOUBLE)
 	for _, a := range as {
 		for _, soloAction := range a {
 			sas = append(sas, soloAction)

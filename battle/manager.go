@@ -9,14 +9,6 @@ package battle
 	omwmath "github.com/sw965/omw/math"
 )
 
-const (
-	PLAYER_NUM = 2
-	LEAD_NUM = 1
-	BENCH_NUM = 2
-	FIGHTERS_NUM = LEAD_NUM + BENCH_NUM
-	DOUBLE_BATTLE_NUM = 2
-)
-
 type RemainingTurn struct {
 	Weather int
 	TrickRoom int
@@ -42,8 +34,8 @@ type Manager struct {
 	CurrentSelfIsHost bool
 	HostViewMessage string
 
-	getHumanNameMessage func(bool) string
-	getHumanInfoMessage func(bool) string
+	GetHumanNameMessage func(bool) string
+	GetHumanInfoMessage func(bool) string
 }
 
 func (m *Manager) Init(guestHumanTitle, guestHumanName string) {
@@ -55,8 +47,8 @@ func (m *Manager) Init(guestHumanTitle, guestHumanName string) {
 		m.CurrentSelfBenchPokemons[i].IsHost = true
 	}
 	m.CurrentSelfIsHost = true
-	m.getHumanInfoMessage = GetHumanInfoMessageFunc(guestHumanTitle, guestHumanName)
-	m.getHumanNameMessage = GetHumanNameMessageFunc(guestHumanName)
+	m.GetHumanInfoMessage = GetHumanInfoMessageFunc(guestHumanTitle, guestHumanName)
+	m.GetHumanNameMessage = GetHumanNameMessageFunc(guestHumanName)
 }
 
 func (m *Manager) IsSingle() bool {
@@ -91,6 +83,10 @@ func (m *Manager) ApplyDamageToBody(p *bp.Pokemon, dmg int) error {
 	dmg = omwmath.Min(dmg, p.Stat.CurrentHP)
 	p.Stat.CurrentHP -= dmg
 
+	if p.Stat.CurrentHP <= 0 {
+		return nil
+	}
+
 	// https://wiki.xn--rckteqa2e.com/wiki/%E3%82%AA%E3%83%9C%E3%83%B3%E3%81%AE%E3%81%BF
 	halfMaxHP := int(float64(p.Stat.MaxHP) * 0.5)
 	sitrusBerryOK := p.Item == bp.SITRUS_BERRY && halfMaxHP >= p.Stat.CurrentHP
@@ -100,7 +96,7 @@ func (m *Manager) ApplyDamageToBody(p *bp.Pokemon, dmg int) error {
 		if err != nil {
 			return err
 		}
-		m.HostViewMessage = m.getHumanNameMessage(p.IsHost) + p.Name.ToString() + "は オボンの実で 回復した！"
+		m.HostViewMessage = m.GetHumanNameMessage(p.IsHost) + p.Name.ToString() + "は オボンの実で 回復した！"
 	}
 	return nil
 }
@@ -109,10 +105,6 @@ func (m *Manager) targetPokemonPointersForSingle(a *SoloAction) (bp.PokemonPoint
 	moveData := bp.MOVEDEX[a.MoveName]
 	notFainted := m.CurrentOpponentLeadPokemons.ToPointers().FilterByNotFainted()
 	switch moveData.Target {
-		case bp.NORMAL_TARGET:
-			return notFainted, nil
-		case bp.OPPONENT_TWO_TARGET:
-			return notFainted, nil
 		// 攻撃するポケモンは、瀕死ではない事が前提なので、瀕死のチェックはしない。
 		case bp.SELF_TARGET:
 			if a.SrcIndex != a.TargetIndex {
@@ -120,50 +112,66 @@ func (m *Manager) targetPokemonPointersForSingle(a *SoloAction) (bp.PokemonPoint
 				return bp.PokemonPointers{}, fmt.Errorf(m)
 			}
 			return bp.PokemonPointers{&m.CurrentSelfLeadPokemons[0]}, nil
-		case bp.OTHERS_TARGET:
-			return notFainted, nil
-		case bp.OPPONENT_RANDOM_ONE_TARGET:
+		case bp.ALL_TARGET:
+			return bp.PokemonPointers{}, nil
+
+		/*
+			defaultは 下記のTargetを想定している。
+			NORMAL_TARGET (10まんボルト 等)
+			OPPONENT_TWO_TARGET (いわなだれ 等)
+			OTHERS_TARGET (じばく / だいばくはつ 等)
+			OPPONENT_RANDOM_ONE_TARGET (わるあがぎ 等)
+		*/
+		default:
 			return notFainted, nil
 	}
-	// ALL_TARGET の場合
-	return bp.PokemonPointers{}, nil
 }
 
 func (m *Manager) targetPokemonPointersForDoubleNormalTarget(a *SoloAction) bp.PokemonPointers {
 	followMe := m.CurrentOpponentFollowMePokemonPointers.FilterByNotFainted()
 	if len(followMe) != 0 {
 		// https://wiki.xn--rckteqa2e.com/wiki/%E3%81%93%E3%81%AE%E3%82%86%E3%81%B3%E3%81%A8%E3%81%BE%E3%82%8C
-		// 複数ポケモンがちゅうもくのまと状態である場合、最初のポケモンが優先される。
+		// 複数ポケモンがちゅうもくのまと状態である場合、最初にちゅうもくのまと状態になったポケモンが優先される。
 		return bp.PokemonPointers{followMe[0]}
 	}
 
 	//味方への攻撃
 	if a.IsSelfLeadTarget {
-		ally := m.CurrentSelfLeadPokemons[a.TargetIndex]
+		ally := &m.CurrentSelfLeadPokemons[a.TargetIndex]
 		// https://wiki.xn--rckteqa2e.com/wiki/%E3%83%80%E3%83%96%E3%83%AB%E3%83%90%E3%83%88%E3%83%AB
 		//攻撃対象の味方が既に瀕死ならば、ランダムに相手を攻撃する。(第4世代)
 		if ally.IsFainted() {
 			ps := m.CurrentOpponentLeadPokemons.ToPointers().FilterByNotFainted()
+			fmt.Println("みかたへのこうげきですで", len(ps))
 			if len(ps) == 0 {
 				return bp.PokemonPointers{}
 			}
+			fmt.Println("次", len(omwrand.Sample(ps, 1, GlobalContext.Rand)))
 			return omwrand.Sample(ps, 1, GlobalContext.Rand)
 		}
-		return bp.PokemonPointers{&m.CurrentSelfLeadPokemons[a.TargetIndex]}
+		return bp.PokemonPointers{ally}
 	}
 
 	//相手への攻撃
-	target := m.CurrentOpponentLeadPokemons[a.TargetIndex]
+	target := &m.CurrentOpponentLeadPokemons[a.TargetIndex]
 	if target.IsFainted() {
 		otherI := map[int]int{0:1, 1:0}[a.TargetIndex]
 		//攻撃対象の相手が既に瀕死ならば、もう片方のポケモンを攻撃対象にする。
-		other := m.CurrentOpponentLeadPokemons[otherI]
+		other := &m.CurrentOpponentLeadPokemons[otherI]
 		if other.IsFainted() {
 			return bp.PokemonPointers{}
 		}
-		return bp.PokemonPointers{&other}						
+		return bp.PokemonPointers{other}						
 	}
-	return bp.PokemonPointers{&target}
+	return bp.PokemonPointers{target}
+}
+
+func (m *Manager) targetPokemonPointersForDoubleOthersTarget(a *SoloAction) bp.PokemonPointers {
+	allyI := map[int]int{0:1, 1:0}[a.SrcIndex]
+	ally := &m.CurrentSelfLeadPokemons[allyI]
+	left := &m.CurrentOpponentLeadPokemons[0]
+	right := &m.CurrentOpponentLeadPokemons[1]
+	return bp.PokemonPointers{ally, left, right}.FilterByNotFainted()
 }
 
 func (m *Manager) targetPokemonPointersForDoubleRandomOneTarget() bp.PokemonPointers {
@@ -172,14 +180,6 @@ func (m *Manager) targetPokemonPointersForDoubleRandomOneTarget() bp.PokemonPoin
 		return bp.PokemonPointers{}
 	}
 	return omwrand.Sample(ps, 1, GlobalContext.Rand)
-}
-
-func (m *Manager) targetPokemonPointersForDoubleOthersTarget(a *SoloAction) bp.PokemonPointers {
-	allyI := map[int]int{0:1, 1:0}[a.SrcIndex]
-	ally := m.CurrentSelfLeadPokemons[allyI]
-	left := m.CurrentOpponentLeadPokemons[0]
-	right := m.CurrentOpponentLeadPokemons[1]
-	return bp.PokemonPointers{&ally, &left, &right}.FilterByNotFainted()
 }
 
 func (m *Manager) targetPokemonPointersForDouble(a *SoloAction) (bp.PokemonPointers, error) {
@@ -217,7 +217,7 @@ func (m *Manager) TargetPokemonPointers(a *SoloAction) (bp.PokemonPointers, erro
 // https://wiki.xn--rckteqa2e.com/wiki/%E3%82%BF%E3%83%BC%E3%83%B3#%E3%82%BF%E3%83%BC%E3%83%B3%E3%81%AE%E8%A9%B3%E7%B4%B0
 
 func (m *Manager) Switch(leadIdx, benchIdx int) error {
-	beforePokeName := m.CurrentSelfLeadPokemons[benchIdx].Name
+	beforePokeName := m.CurrentSelfLeadPokemons[leadIdx].Name
 	beforePokeNameStr := beforePokeName.ToString()
 
 	if m.CurrentSelfBenchPokemons[benchIdx].IsFainted() {
@@ -228,11 +228,13 @@ func (m *Manager) Switch(leadIdx, benchIdx int) error {
 	if m.CurrentSelfIsHost {
 		m.HostViewMessage = "戻れ！ " + beforePokeNameStr
 	} else {
-		m.HostViewMessage = m.getHumanInfoMessage(false) + beforePokeName.ToString() + " を 引っ込めた！"
+		m.HostViewMessage = m.GetHumanInfoMessage(false) + beforePokeName.ToString() + " を 引っ込めた！"
 	}
 
 	GlobalContext.Observer(m)
 	m.CurrentSelfLeadPokemons[leadIdx], m.CurrentSelfBenchPokemons[benchIdx] = m.CurrentSelfBenchPokemons[benchIdx], m.CurrentSelfLeadPokemons[leadIdx]
+	m.CurrentSelfBenchPokemons[benchIdx].TurnCount = 0
+	m.CurrentSelfBenchPokemons[benchIdx].RankStat = bp.RankStat{}
 
 	afterPokemon := m.CurrentSelfLeadPokemons[leadIdx]
 	afterPokeName := afterPokemon.Name
@@ -241,14 +243,14 @@ func (m *Manager) Switch(leadIdx, benchIdx int) error {
 	if m.CurrentSelfIsHost {
 		m.HostViewMessage = "行け！ " + afterPokeNameStr
 	} else {
-		m.HostViewMessage =  m.getHumanInfoMessage(false) + afterPokeNameStr + "を 繰り出した！"
+		m.HostViewMessage =  m.GetHumanInfoMessage(false) + afterPokeNameStr + "を 繰り出した！"
 	}
 	GlobalContext.Observer(m)
 
 	if afterPokemon.Ability == bp.INTIMIDATE {
 		intimidateStr := bp.INTIMIDATE.ToString()
-		intimidateHumanNameMsg := m.getHumanNameMessage(m.CurrentSelfIsHost)
-		targetHumanNameMsg := m.getHumanNameMessage(!m.CurrentSelfIsHost)
+		intimidateHumanNameMsg := m.GetHumanNameMessage(m.CurrentSelfIsHost)
+		targetHumanNameMsg := m.GetHumanNameMessage(!m.CurrentSelfIsHost)
 
 		for i := range m.CurrentOpponentLeadPokemons {
 			target := &m.CurrentOpponentLeadPokemons[i]
@@ -273,6 +275,18 @@ func (m *Manager) Switch(leadIdx, benchIdx int) error {
 	return nil
 }
 
+func (m *Manager) MustSwitch() (bool, bool) {
+	must := func(lead, bench bp.Pokemons) bool {
+		if !lead.IsAnyFainted() {
+			return false
+		}
+		return !bench.IsAllFainted()
+	}
+	self := must(m.CurrentSelfLeadPokemons, m.CurrentSelfBenchPokemons)
+	opponent := must(m.CurrentOpponentLeadPokemons, m.CurrentOpponentBenchPokemons)
+	return self, opponent
+}
+
 // https://latest.pokewiki.net/%E3%83%90%E3%83%88%E3%83%AB%E4%B8%AD%E3%81%AE%E5%87%A6%E7%90%86%E3%81%AE%E9%A0%86%E7%95%AA
 // https://wiki.xn--rckteqa2e.com/wiki/%E3%82%BF%E3%83%BC%E3%83%B3#1.%E3%83%9D%E3%82%B1%E3%83%A2%E3%83%B3%E3%82%92%E7%B9%B0%E3%82%8A%E5%87%BA%E3%81%99
 
@@ -280,11 +294,13 @@ func (m *Manager) TurnEnd() error {
 	for i := range m.CurrentSelfLeadPokemons {
 		m.CurrentSelfLeadPokemons[i].ThisTurnPlannedUseMoveName = bp.EMPTY_MOVE_NAME
 		m.CurrentSelfLeadPokemons[i].IsFlinchState = false
+		m.CurrentSelfLeadPokemons[i].IsProtectState = false
 	}
 
 	for i := range m.CurrentOpponentLeadPokemons {
 		m.CurrentOpponentLeadPokemons[i].ThisTurnPlannedUseMoveName = bp.EMPTY_MOVE_NAME
-		m.CurrentOpponentBenchPokemons[i].IsFlinchState = false
+		m.CurrentOpponentLeadPokemons[i].IsFlinchState = false
+		m.CurrentOpponentLeadPokemons[i].IsProtectState = false
 	}
 
 	leadPokemons := omwslices.Concat(m.CurrentSelfLeadPokemons.ToPointers(), m.CurrentOpponentLeadPokemons.ToPointers())
@@ -318,9 +334,18 @@ func (m *Manager) TurnEnd() error {
 			if err != nil {
 				return err
 			}
-			m.HostViewMessage = m.getHumanNameMessage(p.IsHost) + p.Name.ToString() + "は " + bp.BURN.ToString() + " の ダメージを 受けている！"
+			m.HostViewMessage = m.GetHumanNameMessage(p.IsHost) + p.Name.ToString() + "は " + bp.BURN.ToString() + " の ダメージを 受けている！"
 		}
 	}
+
+	for i := range m.CurrentSelfLeadPokemons {
+		m.CurrentSelfLeadPokemons[i].TurnCount += 1
+	}
+
+	for i := range m.CurrentOpponentLeadPokemons {
+		m.CurrentOpponentLeadPokemons[i].TurnCount += 1
+	}
+
 	return nil
 }
 

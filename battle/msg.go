@@ -52,12 +52,12 @@ func GetStandardRankFluctuationMessages(name bp.PokeName, v *bp.RankStat) []stri
 		}
 
 		if v == -2 {
-			m := fmt.Sprintf("%sの %sが ぐーんと下がった", nameStr, s)
+			m := fmt.Sprintf("%sの %sが がくんと下がった", nameStr, s)
 			ms = append(ms, m)
 		}
 
 		if v <= -3 {
-			m := fmt.Sprintf("%sの %sが ぐぐーんと下がった", nameStr, s)
+			m := fmt.Sprintf("%sの %sが がくーんと下がった", nameStr, s)
 			ms = append(ms, m)
 		}
 	}

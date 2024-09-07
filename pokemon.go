@@ -176,6 +176,7 @@ type Pokemon struct {
 
 	Types Types
 	StatusAilment StatusAilment
+	SleepTurn int
 	RankStat RankStat
 
 	IsFlinchState bool
@@ -331,6 +332,10 @@ func (p *Pokemon) Equal(other *Pokemon) bool {
 		return false
 	}
 
+	if p.SleepTurn != other.SleepTurn {
+		return false
+	}
+
 	if p.RankStat != other.RankStat {
 		return false
 	}
@@ -434,6 +439,22 @@ func (p *Pokemon) ToEasyRead() EasyReadPokemon {
 
 type Pokemons []Pokemon
 
+func (ps Pokemons) Names() PokeNames {
+	names := make(PokeNames, len(ps))
+	for i, p := range ps {
+		names[i] = p.Name
+	}
+	return names
+}
+
+func (ps Pokemons) CurrentHPs() []int {
+	hps := make([]int, len(ps))
+	for i, p := range ps {
+		hps[i] = p.Stat.CurrentHP
+	}
+	return hps
+}
+
 func (ps Pokemons) Clone() Pokemons {
 	c := make(Pokemons, len(ps))
 	for i, p := range ps {
@@ -497,7 +518,10 @@ func (ps Pokemons) ToEasyRead() EasyReadPokemons {
 type PokemonPointers []*Pokemon
 
 func (ps PokemonPointers) SortBySpeed() {
+	fmt.Println("len(ps) = ", len(ps))
 	slices.SortFunc(ps, func(p1, p2 *Pokemon) bool {
+		fmt.Println("SortedBySpeed")
+		fmt.Println("sortedBySpeed stat", p1.Stat, p2.Stat)
 		return p1.Stat.Speed > p2.Stat.Speed
 	})
 }

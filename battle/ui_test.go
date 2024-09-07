@@ -49,14 +49,14 @@ func Test(t *testing.T) {
 				TargetIndex:1,
 				IsSelfLeadTarget:true,
 				Speed:m.CurrentOpponentLeadPokemons[1].Stat.Speed,
-				IsSelf:false,
+				IsCurrentSelf:false,
 			},
 			
 			battle.SoloAction{
 				MoveName:bp.TRICK_ROOM,
 				SrcIndex:0,
 				Speed:m.CurrentOpponentLeadPokemons[0].Stat.Speed,
-				IsSelf:false,
+				IsCurrentSelf:false,
 			},
 		},
 
@@ -66,7 +66,7 @@ func Test(t *testing.T) {
 				SrcIndex:0,
 				TargetIndex:0,
 				Speed:m.CurrentOpponentLeadPokemons[0].Stat.Speed,
-				IsSelf:true,
+				IsCurrentSelf:true,
 			},
 
 			// battle.SoloAction{
@@ -80,7 +80,7 @@ func Test(t *testing.T) {
 				MoveName:bp.SURF,
 				SrcIndex:1,
 				Speed:m.CurrentSelfLeadPokemons[1].Stat.Speed,
-				IsSelf:true,
+				IsCurrentSelf:true,
 			},
 		},
 	}

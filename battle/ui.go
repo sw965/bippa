@@ -32,7 +32,26 @@ func (ui *ObserverUI) LastManager(isPlayer1View bool) Manager {
 	}
 }
 
-func (ui *ObserverUI) Observer(current *Manager) {
-	//lastManager := ui.LastManager(current.CurrentSelfIsHost)
-	fmt.Println(current.HostViewMessage)
+func (ui *ObserverUI) Observer(m *Manager) {
+	selfIsHost := m.CurrentSelfIsHost
+	if !selfIsHost {
+		m.SwapView()
+	}
+
+	fmt.Println(
+		"self",
+		m.CurrentSelfLeadPokemons.Names().ToStrings(), m.CurrentSelfLeadPokemons.CurrentHPs(),
+		m.CurrentSelfBenchPokemons.Names().ToStrings(), m.CurrentSelfBenchPokemons.CurrentHPs(),
+	)
+
+	fmt.Println(
+		"opponent",
+		m.CurrentOpponentLeadPokemons.Names().ToStrings(), m.CurrentOpponentLeadPokemons.CurrentHPs(),
+		m.CurrentOpponentBenchPokemons.Names().ToStrings(), m.CurrentOpponentBenchPokemons.CurrentHPs(),
+	)
+
+	if !selfIsHost {
+		m.SwapView()
+	}
+	fmt.Println(m.HostViewMessage)
 }

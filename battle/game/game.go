@@ -61,25 +61,23 @@ func LegalSeparateActions(m *battle.Manager) battle.ActionsSlice {
 	if len(opponent) == 0 {
 		opponent = battle.Actions{battle.Action{}}
 	}
-
-	if len(self) == 1 || len(opponent) == 1 {
-		fmt.Println(m.CurrentSelfLeadPokemons.IsAnyFainted(), m.CurrentOpponentLeadPokemons.IsAnyFainted())
-	}
 	return battle.ActionsSlice{self, opponent}
 }
 
 func Push(m battle.Manager, actions battle.Actions) (battle.Manager, error) {
 	m = m.Clone()
 	actions = actions.FilterByNotEmpty()
-
-	isSelfLeadAnyFainted := m.CurrentSelfLeadPokemons.IsAnyFainted()
-	isOpponentLeadAnyFainted := m.CurrentOpponentLeadPokemons.IsAnyFainted()
+	if len(actions) == 0 {
+		return battle.Manager{}, fmt.Errorf("両プレイヤーのActionが、Action.IsEmpty() == true である為、処理を続行出来ません。")
+	}
 
 	soloActions := actions.ToSoloActions()
 	soloActions = soloActions.FilterByNotEmpty()
 	soloActions.SortByOrder(&m)
 
-	if isSelfLeadAnyFainted || isOpponentLeadAnyFainted {
+	selfMustSwitch, opponentMustSwitch := m.MustSwitch()
+
+	if selfMustSwitch || opponentMustSwitch {
 		for _, soloAction := range soloActions {
 			var err error
 			if soloAction.IsCurrentSelf {
@@ -128,6 +126,8 @@ func Push(m battle.Manager, actions battle.Actions) (battle.Manager, error) {
 		}
 	}
 	err := m.TurnEnd()
+	fmt.Println("ターン終了")
+	fmt.Println("")
 	return m, err
 }
 

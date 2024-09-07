@@ -15,6 +15,7 @@ type MoveData struct {
     PriorityRank int
     CriticalRank CriticalRank
     Target MoveTarget
+	CanProtect bool
 	CanSubstitute bool
 }
 
@@ -38,6 +39,8 @@ func (m *MoveData) ToEasyRead() EasyReadMoveData {
 		PriorityRank:m.PriorityRank,
 		CriticalRank:m.CriticalRank,
 		Target:m.Target.ToString(),
+		CanProtect:m.CanProtect,
+		CanSubstitute:m.CanSubstitute,
 	}
 }
 
@@ -51,21 +54,22 @@ type EasyReadMoveData struct {
 	PriorityRank int
 	CriticalRank CriticalRank
 	Target       string
+	CanProtect bool
 	CanSubstitute bool
 }
 
-func (m *EasyReadMoveData) From() (MoveData, error) {
-	t, err := StringToType(m.Type)
+func (e *EasyReadMoveData) From() (MoveData, error) {
+	t, err := StringToType(e.Type)
 	if err != nil {
 		return MoveData{}, err
 	}
 
-	category, err := StringToMoveCategory(m.Category)
+	category, err := StringToMoveCategory(e.Category)
 	if err != nil {
 		return MoveData{}, err
 	}
 
-	target, err := StringToMoveTarget(m.Target)
+	target, err := StringToMoveTarget(e.Target)
 	if err != nil {
 		return MoveData{}, err
 	}
@@ -73,14 +77,15 @@ func (m *EasyReadMoveData) From() (MoveData, error) {
 	return MoveData{
 		Type:t,
 		Category:category,
-		Power:m.Power,
-		Accuracy:m.Accuracy,
-		BasePP:m.BasePP,
-		IsContact:m.IsContact,
-		PriorityRank:m.PriorityRank,
-		CriticalRank:m.CriticalRank,
+		Power:e.Power,
+		Accuracy:e.Accuracy,
+		BasePP:e.BasePP,
+		IsContact:e.IsContact,
+		PriorityRank:e.PriorityRank,
+		CriticalRank:e.CriticalRank,
 		Target:target,
-		CanSubstitute:m.CanSubstitute,
+		CanProtect:e.CanProtect,
+		CanSubstitute:e.CanSubstitute,
 	}, nil
 }
 

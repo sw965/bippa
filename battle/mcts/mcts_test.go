@@ -31,6 +31,15 @@ func Test(t *testing.T) {
 		},
 	}
 	m.Init("四天王", "カトレア")
+	p2View := m.Clone()
+	p2View.SwapView()
+	
+	ui := battle.ObserverUI{
+		LastP1ViewManager:m,
+		LastP2ViewManager:p2View,
+	}
+	battle.GlobalContext.Observer = ui.Observer
+
 	m.CurrentSelfLeadPokemons[0].Stat.CurrentHP = 0
 
 	r := omwrand.NewMt19937()
