@@ -12,6 +12,6 @@ func (w Weather) ToString() string {
 		case RAIN:
 			return "雨"
 		default:
-			return ""
+			return "無天候"
 	}
 }

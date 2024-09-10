@@ -7,21 +7,21 @@ import (
 	//"github.com/sw965/omw/fn"
 )
 
-func GetHumanInfoMessageFunc(guestHumanTitle, guestHumanName string) func(bool) string {
+func GetTrainerInfoMessageFunc(guestTrainerTitle, guestTrainerName string) func(bool) string {
 	return func(isHost bool) string {
 		if isHost {
 			return ""
 		}
-		return guestHumanTitle + "の " + guestHumanName + "は "
+		return guestTrainerTitle + "の " + guestTrainerName + "は "
 	}
 }
 
-func GetHumanNameMessageFunc(guestHumanName string) func(bool) string {
+func GetTrainerNameMessageFunc(guestTrainerName string) func(bool) string {
 	return func(isHost bool) string {
 		if isHost {
 			return ""
 		}
-		return guestHumanName + "の "
+		return guestTrainerName + "の "
 	}
 }
 
@@ -128,42 +128,42 @@ func GetStandardRankFluctuationMessages(name bp.PokeName, v *bp.RankStat) []stri
 // }
 
 // type MessageMaker struct {
-// 	HostHumanTitle bp.HumanTitle
-// 	HostHumanName bp.HumanName
-// 	GuestHumanTitle bp.HumanTitle
-// 	GuestHumanName bp.HumanName
+// 	HostTrainerTitle bp.TrainerTitle
+// 	HostTrainerName bp.TrainerName
+// 	GuestTrainerTitle bp.TrainerTitle
+// 	GuestTrainerName bp.TrainerName
 // 	IsHostView bool
 // }
 
 // func NewMessageMaker(m *Manager) MessageMaker {
 // 	return MessageMaker{
-// 		HumanTitle:m.OpponentHumanTitle,
-// 		HumanName:m.OpponentHumanName,
+// 		TrainerTitle:m.OpponentTrainerTitle,
+// 		TrainerName:m.OpponentTrainerName,
 // 		IsHostView:m.IsHostView,
 // 	}
 // }
 
-// func (mm *MessageMaker) GetCurrentSelfHumanName() HumanName {
+// func (mm *MessageMaker) GetCurrentSelfTrainerName() TrainerName {
 // 	if mm.IsHostView {
-// 		return mm.HostHumanName
+// 		return mm.HostTrainerName
 // 	} else {
-// 		return mm.GuestHumanName
+// 		return mm.GuestTrainerName
 // 	}
 // }
 
 // func (mm *MessageMaker) SelfFullName() (Message, Message) {
-// 	return Message(mm.OpponentHumanName)
+// 	return Message(mm.OpponentTrainerName)
 // }
 
 // func (mm *MessageMaker) OpponentFullName() (Message, Message) {
-// 	return Message(mm.OpponentHumanTitle) + "の " + Message(mm.OpponentHumanName)
+// 	return Message(mm.OpponentTrainerTitle) + "の " + Message(mm.OpponentTrainerName)
 // }
 
-// func (mm *MessageMaker) OpponentHumanNamePrefix() Message {
+// func (mm *MessageMaker) OpponentTrainerNamePrefix() Message {
 // 	if mm.IsHostView {
 // 		return ""
 // 	} else {
-// 		return Message(mm.OpponentHumanName) + "の "
+// 		return Message(mm.OpponentTrainerName) + "の "
 // 	}
 // }
 
@@ -171,14 +171,14 @@ func GetStandardRankFluctuationMessages(name bp.PokeName, v *bp.RankStat) []stri
 // 	pokeNameStr := pokeName.ToString()
 // 	moveNameStr := moveName.ToString()
 
-// 	var hostHumanName bp.HumanName
-// 	var guestHumanName bp.HumanName
+// 	var hostTrainerName bp.TrainerName
+// 	var guestTrainerName bp.TrainerName
 
 // 	if isHost {
 // 		hostPrefix = ""
-// 		guestPrefix = mm.HostHumanName + "の "
+// 		guestPrefix = mm.HostTrainerName + "の "
 // 	} else {
-// 		hostPrefix = mm.GuestHumanName + "の "
+// 		hostPrefix = mm.GuestTrainerName + "の "
 // 		guestPrefix = ""
 // 	}
 
@@ -190,7 +190,7 @@ func GetStandardRankFluctuationMessages(name bp.PokeName, v *bp.RankStat) []stri
 
 // func (mm *MessageMaker) NoEffective(pokeName bp.PokeName) Message {
 // 	m := fmt.Sprintf("%sには ", pokeName.ToString())
-//     return mm.HumanNamePrefix() + Message(m) + "こうかが ない ようだ..."
+//     return mm.TrainerNamePrefix() + Message(m) + "こうかが ない ようだ..."
 // }
 
 // func (mm *MessageMaker) TypeEffective(pokeName bp.PokeName, effective bp.TypeEffective) Message {
@@ -199,20 +199,20 @@ func GetStandardRankFluctuationMessages(name bp.PokeName, v *bp.RankStat) []stri
 // 			return ""
 // 		case bp.SUPER_EFFECTIVE:
 // 			m := fmt.Sprintf("%sに 効果は バツグンだ！", pokeName.ToString())
-// 			return mm.HumanNamePrefix() + Message(m)
+// 			return mm.TrainerNamePrefix() + Message(m)
 // 		case bp.NOT_VERY_EFFECTIVE:
 // 			m := fmt.Sprintf("%sに 効果は いまひとつだ", pokeName.ToString())
-// 			return mm.HumanNamePrefix() + Message(m)
+// 			return mm.TrainerNamePrefix() + Message(m)
 // 		case bp.NO_EFFECTIVE:
 // 			m := fmt.Sprintf("%sには こうかが ない ようだ", pokeName.ToString())
-// 			return mm.HumanNamePrefix() + Message(m)
+// 			return mm.TrainerNamePrefix() + Message(m)
 // 	}
 // 	return ""
 // }
 
 // func (mm *MessageMaker) Recoil(pokeName bp.PokeName) Message {
 // 	m := fmt.Sprintf("%sは 攻撃の 反動を 受けた", pokeName.ToString())
-// 	return mm.HumanNamePrefix() + Message(m)
+// 	return mm.TrainerNamePrefix() + Message(m)
 // }
 
 // func (mm *MessageMaker) Go(pokeName bp.PokeName) Message {
@@ -235,72 +235,72 @@ func GetStandardRankFluctuationMessages(name bp.PokeName, v *bp.RankStat) []stri
 
 // func (mm *MessageMaker) Faint(pokeName bp.PokeName) Message {
 // 	m := fmt.Sprintf("%s は 倒れた！", pokeName.ToString())
-// 	return mm.HumanNamePrefix() + Message(m)
+// 	return mm.TrainerNamePrefix() + Message(m)
 // }
 
 // func (mm *MessageMaker) Paralysis(pokeName bp.PokeName) Message {
 // 	m := fmt.Sprintf("%sは まひして わざが でにくくなった！", pokeName.ToString())
-// 	return mm.HumanNamePrefix() + Message(m)
+// 	return mm.TrainerNamePrefix() + Message(m)
 // }
 
 // func (mm *MessageMaker) ParalysisLock(pokeName bp.PokeName) Message {
 // 	m := fmt.Sprintf("%sは しびれてうごけない！", pokeName.ToString())
-// 	return mm.HumanNamePrefix() + Message(m)
+// 	return mm.TrainerNamePrefix() + Message(m)
 // }
 
 // func (mm *MessageMaker) Burn(pokeName bp.PokeName) Message {
 // 	m := fmt.Sprintf("%sは やけどをおった！", pokeName.ToString())
-// 	return mm.HumanNamePrefix() + Message(m)
+// 	return mm.TrainerNamePrefix() + Message(m)
 // }
 
 // func (mm *MessageMaker) BurnDamage(pokeName bp.PokeName) Message {
 // 	m := fmt.Sprintf("%sは やけどの ダメージを うけている！", pokeName.ToString())
-// 	return mm.HumanNamePrefix() + Message(m)
+// 	return mm.TrainerNamePrefix() + Message(m)
 // }
 
 // func (mm *MessageMaker) Sleep(pokeName bp.PokeName) Message {
 // 	m := fmt.Sprintf("%sは ねむってしまった！", pokeName.ToString())
-// 	return mm.HumanNamePrefix() + Message(m)
+// 	return mm.TrainerNamePrefix() + Message(m)
 // }
 
 // func (mm *MessageMaker) SleepLock(pokeName bp.PokeName) Message {
 // 	m := fmt.Sprintf("%sは ぐうぐう ねむっている", pokeName.ToString())
-// 	return mm.HumanNamePrefix() + Message(m)
+// 	return mm.TrainerNamePrefix() + Message(m)
 // }
 
 // func (mm *MessageMaker) SleepCured(pokeName bp.PokeName) Message {
 // 	m := fmt.Sprintf("%sは ", pokeName.ToString())
-// 	return mm.HumanNamePrefix() + Message(m) + NewSleepCuredMessage()
+// 	return mm.TrainerNamePrefix() + Message(m) + NewSleepCuredMessage()
 // }
 
 // func (mm *MessageMaker) Freeze(pokeName bp.PokeName) Message {
 // 	m := fmt.Sprintf("%sは こおりついた！", pokeName.ToString())
-// 	return mm.HumanNamePrefix() + Message(m)
+// 	return mm.TrainerNamePrefix() + Message(m)
 // }
 
 // func (mm *MessageMaker) FreezeLock(pokeName bp.PokeName) Message {
 // 	m := fmt.Sprintf("%sは こおって しまって うごかない！", pokeName.ToString())
-// 	return mm.HumanNamePrefix() + Message(m)
+// 	return mm.TrainerNamePrefix() + Message(m)
 // }
 
 // func (mm *MessageMaker) FreezeCured(pokeName bp.PokeName) Message {
 // 	m := fmt.Sprintf("%sの ", pokeName.ToString())
-// 	return mm.HumanNamePrefix() + Message(m) + NewFreezeCuredMessage()
+// 	return mm.TrainerNamePrefix() + Message(m) + NewFreezeCuredMessage()
 // }
 
 // func (mm *MessageMaker) IntimidateAndClearBody(iName, cName bp.PokeName) Message {
 // 	m := fmt.Sprintf("%sの クリアボディで %sの いかくは きかなかった！", cName.ToString(), iName.ToString())
-// 	return mm.HumanNamePrefix() + Message(m)
+// 	return mm.TrainerNamePrefix() + Message(m)
 // }
 
 // func (mm *MessageMaker) ChestoBerry(pokeName bp.PokeName) Message {
 // 	m := fmt.Sprintf("%sは カゴのみで ", pokeName.ToString())
-// 	return mm.HumanNamePrefix() + Message(m) + NewSleepCuredMessage()
+// 	return mm.TrainerNamePrefix() + Message(m) + NewSleepCuredMessage()
 // }
 
 // func (mm *MessageMaker) LumBerry(pokeName bp.PokeName, status bp.StatusAilment) Message {
 // 	m := fmt.Sprintf("%sは ラムのみで", pokeName.ToString())
-// 	return mm.HumanNamePrefix() + Message(m) + NewStatusAilmentCuredMessage(status)
+// 	return mm.TrainerNamePrefix() + Message(m) + NewStatusAilmentCuredMessage(status)
 // }
 
 // func (mm *MessageMaker) TrickRoom(pokeName bp.PokeName, distort bool) Message {
@@ -310,29 +310,29 @@ func GetStandardRankFluctuationMessages(name bp.PokeName, v *bp.RankStat) []stri
 // 	} else {
 // 		m = fmt.Sprintf("%sは じくうを もどした！", pokeName.ToString())
 // 	}
-// 	return mm.HumanNamePrefix() + Message(m)
+// 	return mm.TrainerNamePrefix() + Message(m)
 // }
 
 // func (mm *MessageMaker) FollowMe(pokeName bp.PokeName) Message {
 // 	m := fmt.Sprintf("%sは ちゅうもくの まとになった！", pokeName.ToString())
-// 	return mm.HumanNamePrefix() + Message(m)
+// 	return mm.TrainerNamePrefix() + Message(m)
 // }
 
 // func (mm *MessageMaker) BellyDrum(pokeName bp.PokeName) Message {
 // 	m := fmt.Sprintf("%sは たいりょくを けずって パワーぜんかいに なった！", pokeName.ToString())
-// 	return mm.HumanNamePrefix() + Message(m)
+// 	return mm.TrainerNamePrefix() + Message(m)
 // }
 
 // func (mm *MessageMaker) Taunt(pokeName bp.PokeName) Message {
 // 	m := fmt.Sprintf("%sは ちょうはつに のってしまった！", pokeName.ToString())
-// 	return mm.HumanNamePrefix() + Message(m)
+// 	return mm.TrainerNamePrefix() + Message(m)
 // }
 
 // func (mm *MessageMaker) Intimidate(src, target bp.PokeName) Message {
 // 	if mm.IsSelf {
-// 		return Message(fmt.Sprintf("%sの いかくで %sの %sの こうげきが さがった！", src.ToString(), mm.HumanName, target.ToString()))
+// 		return Message(fmt.Sprintf("%sの いかくで %sの %sの こうげきが さがった！", src.ToString(), mm.TrainerName, target.ToString()))
 // 	} else {
-// 		return Message(fmt.Sprintf("%sの %sの いかくで %sの こうげきがさがった！", mm.HumanName, src.ToString(), target.ToString()))
+// 		return Message(fmt.Sprintf("%sの %sの いかくで %sの こうげきがさがった！", mm.TrainerName, src.ToString(), target.ToString()))
 // 	}
 // }
 

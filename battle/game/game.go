@@ -126,8 +126,6 @@ func Push(m battle.Manager, actions battle.Actions) (battle.Manager, error) {
 		}
 	}
 	err := m.TurnEnd()
-	fmt.Println("ターン終了")
-	fmt.Println("")
 	return m, err
 }
 

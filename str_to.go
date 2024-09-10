@@ -161,6 +161,25 @@ func StringsToItems(ss []string) (Items, error) {
 	return fn.MapWithError[Items](ss, StringToItem)
 }
 
+var STRING_TO_STATUS_AILMENT = map[string]StatusAilment{
+	"":EMPTY_STATUS_AILMENT,
+	"ねむり":SLEEP,
+	"まひ":PARALYSIS,
+	"どく":NORMAL_POISON,
+	"もうどく":BAD_POISON,
+	"やけど":BURN,
+	"こおり":FREEZE,
+}
+
+func StringToStatusAilment(s string) (StatusAilment, error) {
+	if sa, ok := STRING_TO_STATUS_AILMENT[s]; !ok {
+		msg := fmt.Sprintf("%s は STRING_TO_STATUS_AILMENT に含まれていない為、StatusAilmentに変換出来ません。", s)
+		return sa, fmt.Errorf(msg)
+	} else {
+		return sa, nil
+	}
+}
+
 var STRING_TO_MOVE_NAME = map[string]MoveName{
     "なし":           EMPTY_MOVE_NAME,
     "10まんボルト":   THUNDERBOLT,

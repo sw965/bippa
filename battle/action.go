@@ -35,6 +35,38 @@ func (a *SoloAction) Priority() int {
 	}
 }
 
+func (a *SoloAction) ToEasyRead() EasyReadSoloAction {
+	return EasyReadSoloAction{
+		MoveName:a.MoveName.ToString(),
+		SrcIndex:a.SrcIndex,
+		TargetIndex:a.TargetIndex,
+		IsSelfLeadTarget:a.IsSelfLeadTarget,
+		Speed:a.Speed,
+		IsCurrentSelf:a.IsCurrentSelf,
+	}
+}
+
+type EasyReadSoloAction struct {
+	MoveName string
+	SrcIndex int
+	TargetIndex int
+	IsSelfLeadTarget bool
+	Speed int
+	IsCurrentSelf bool
+}
+
+func (e *EasyReadSoloAction) From() (SoloAction, error) {
+	moveName, err := bp.StringToMoveName(e.MoveName)
+	return SoloAction{
+		MoveName:moveName,
+		SrcIndex:e.SrcIndex,
+		TargetIndex:e.TargetIndex,
+		IsSelfLeadTarget:e.IsSelfLeadTarget,
+		Speed:e.Speed,
+		IsCurrentSelf:e.IsCurrentSelf,
+	}, err
+} 
+
 type SoloActions []SoloAction
 
 func NewLegalSoloActions(m *Manager) SoloActions {
@@ -183,6 +215,28 @@ func (a *Action) IsEmpty() bool {
 	return true
 }
 
+func (a *Action) ToEasyRead() EasyReadAction {
+	e := EasyReadAction{}
+	for i, soloAction := range a {
+		e[i] = soloAction.ToEasyRead()
+	}
+	return e
+}
+
+type EasyReadAction [DOUBLE]EasyReadSoloAction
+
+func (e *EasyReadAction) From() (Action, error) {
+	var err error
+	a := Action{}
+	for i, solo := range e {
+		a[i], err = solo.From()
+		if err != nil {
+			return Action{}, err
+		}
+	}
+	return a, nil
+}
+
 type Actions []Action
 
 func NewLegalActions(m *Manager) Actions {
@@ -256,4 +310,24 @@ func (as Actions) FilterByNotEmpty() Actions {
 	return s
 }
 
+func (as Actions) ToEasyRead() EasyReadActions {
+	es := make(EasyReadActions, len(as))
+	for i, a := range as {
+		es[i] = a.ToEasyRead()
+	}
+	return es
+}
+
+type EasyReadActions []EasyReadAction
+
 type ActionsSlice []Actions
+
+func (ass ActionsSlice) ToEasyRead() EasyReadActionsSlice {
+	ess := make(EasyReadActionsSlice, len(ass))
+	for i, as := range ass {
+		ess[i] = as.ToEasyRead()
+	}
+	return ess
+}
+
+type EasyReadActionsSlice []EasyReadActions

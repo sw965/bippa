@@ -180,14 +180,14 @@ type Pokemon struct {
 	RankStat RankStat
 
 	IsFlinchState bool
-
 	RemainingTurnTauntState int
 	IsProtectState bool
 	ProtectConsecutiveSuccess int
 	SubstituteHP int
 
-	//場に出てから経過したターンをカウントする。ねこだましなどに使う。
+	//場に出てから経過したターンをカウントする。ねこだまし用。
 	TurnCount int
+	//繰り出そうとしている技を保持する。ふいうち用。
 	ThisTurnPlannedUseMoveName MoveName
 	IsHost bool
 }
@@ -371,17 +371,17 @@ func (p *Pokemon) Equal(other *Pokemon) bool {
 }
 
 func (p *Pokemon) UsableMoveNames() MoveNames {
-	ns := fn.Filter[MoveNames](p.MoveNames, func(n MoveName) bool { return p.Moveset[n].Current > 0 })
+	mns := fn.Filter[MoveNames](p.MoveNames, func(mn MoveName) bool { return p.Moveset[mn].Current > 0 })
 	if p.IsTauntState() {
-		ns = fn.Filter[MoveNames](p.MoveNames, func(n MoveName) bool {
-			moveData := MOVEDEX[n]
+		mns = fn.Filter[MoveNames](mns, func(mn MoveName) bool {
+			moveData := MOVEDEX[mn]
 			return moveData.Category != STATUS
 		})
 	}
-	if len(ns) == 0 {
-		ns = MoveNames{STRUGGLE}
+	if len(mns) == 0 {
+		mns = MoveNames{STRUGGLE}
 	}
-	return ns
+	return mns
 }
 
 func (p *Pokemon) IsFullHP() bool {
@@ -423,7 +423,10 @@ func (p *Pokemon) ToEasyRead() EasyReadPokemon {
 	return EasyReadPokemon{
 		Name:p.Name.ToString(),
 		Level:p.Level,
+
 		Nature:p.Nature.ToString(),
+		Ability:p.Ability.ToString(),
+		Item:p.Item.ToString(),
 
 		MoveNames:p.MoveNames.ToStrings(),
 		PointUps:p.PointUps,
@@ -434,6 +437,19 @@ func (p *Pokemon) ToEasyRead() EasyReadPokemon {
 		Stat:p.Stat,
 
 		Types:p.Types.ToStrings(),
+		StatusAilment:p.StatusAilment.ToString(),
+		SleepTurn:p.SleepTurn,
+		RankStat:p.RankStat,
+
+		IsFlinchState:p.IsFlinchState,
+		RemainingTurnTauntState:p.RemainingTurnTauntState,
+		IsProtectState:p.IsProtectState,
+		ProtectConsecutiveSuccess:p.ProtectConsecutiveSuccess,
+		SubstituteHP:p.SubstituteHP,
+
+		TurnCount:p.TurnCount,
+		ThisTurnPlannedUseMoveName:p.ThisTurnPlannedUseMoveName.ToString(),
+		IsHost:p.IsHost,
 	}
 }
 
@@ -518,10 +534,7 @@ func (ps Pokemons) ToEasyRead() EasyReadPokemons {
 type PokemonPointers []*Pokemon
 
 func (ps PokemonPointers) SortBySpeed() {
-	fmt.Println("len(ps) = ", len(ps))
 	slices.SortFunc(ps, func(p1, p2 *Pokemon) bool {
-		fmt.Println("SortedBySpeed")
-		fmt.Println("sortedBySpeed stat", p1.Stat, p2.Stat)
 		return p1.Stat.Speed > p2.Stat.Speed
 	})
 }
@@ -598,7 +611,10 @@ func (s *PokemonStat) CurrentHPRatio() float64 {
 type EasyReadPokemon struct {
 	Name string
 	Level Level
+
 	Nature string
+	Ability string
+	Item string
 
 	MoveNames []string
 	PointUps PointUps
@@ -609,8 +625,19 @@ type EasyReadPokemon struct {
 	Stat PokemonStat
 
 	Types []string
-	StatusAilment StatusAilment
+	StatusAilment string
+	SleepTurn int
 	RankStat RankStat
+
+	IsFlinchState bool
+	RemainingTurnTauntState int
+	IsProtectState bool
+	ProtectConsecutiveSuccess int
+	SubstituteHP int
+
+	TurnCount int
+	ThisTurnPlannedUseMoveName string
+	IsHost bool
 }
 
 func (e *EasyReadPokemon) From() (Pokemon, error) {
@@ -620,6 +647,16 @@ func (e *EasyReadPokemon) From() (Pokemon, error) {
 	}
 
 	nature, err := StringToNature(e.Nature)
+	if err != nil {
+		return Pokemon{}, err
+	}
+
+	ability, err := StringToAbility(e.Ability)
+	if err != nil {
+		return Pokemon{}, err
+	}
+
+	item, err := StringToItem(e.Item)
 	if err != nil {
 		return Pokemon{}, err
 	}
@@ -639,10 +676,23 @@ func (e *EasyReadPokemon) From() (Pokemon, error) {
 		return Pokemon{}, err
 	}
 
+	statusAilment, err := StringToStatusAilment(e.StatusAilment)
+	if err != nil {
+		return Pokemon{}, err
+	}
+
+	thisTurnPlannedUseMoveName, err := StringToMoveName(e.ThisTurnPlannedUseMoveName)
+	if err != nil {
+		return Pokemon{}, err
+	}
+
 	return Pokemon{
 		Name:pokeName,
 		Level:e.Level,
+
 		Nature:nature,
+		Ability:ability,
+		Item:item,
 
 		MoveNames:moveNames,
 		PointUps:e.PointUps,
@@ -653,8 +703,19 @@ func (e *EasyReadPokemon) From() (Pokemon, error) {
 		Stat:e.Stat,
 
 		Types:types,
-		StatusAilment:e.StatusAilment,
+		StatusAilment:statusAilment,
+		SleepTurn:e.SleepTurn,
 		RankStat:e.RankStat,
+
+		IsFlinchState:e.IsFlinchState,
+		RemainingTurnTauntState:e.RemainingTurnTauntState,
+		IsProtectState:e.IsProtectState,
+		ProtectConsecutiveSuccess:e.ProtectConsecutiveSuccess,
+		SubstituteHP:e.SubstituteHP,
+
+		TurnCount:e.TurnCount,
+		ThisTurnPlannedUseMoveName:thisTurnPlannedUseMoveName,
+		IsHost:e.IsHost,
 	}, nil
 }
 

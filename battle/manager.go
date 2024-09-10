@@ -34,11 +34,11 @@ type Manager struct {
 	CurrentSelfIsHost bool
 	HostViewMessage string
 
-	GetHumanNameMessage func(bool) string
-	GetHumanInfoMessage func(bool) string
+	GetTrainerNameMessage func(bool) string `json:"-"`
+	GetTrainerInfoMessage func(bool) string `json:"-"`
 }
 
-func (m *Manager) Init(guestHumanTitle, guestHumanName string) {
+func (m *Manager) Init(guestTrainerTitle, guestTrainerName string) {
 	for i := range m.CurrentSelfLeadPokemons {
 		m.CurrentSelfLeadPokemons[i].IsHost = true
 	}
@@ -47,8 +47,8 @@ func (m *Manager) Init(guestHumanTitle, guestHumanName string) {
 		m.CurrentSelfBenchPokemons[i].IsHost = true
 	}
 	m.CurrentSelfIsHost = true
-	m.GetHumanInfoMessage = GetHumanInfoMessageFunc(guestHumanTitle, guestHumanName)
-	m.GetHumanNameMessage = GetHumanNameMessageFunc(guestHumanName)
+	m.GetTrainerInfoMessage = GetTrainerInfoMessageFunc(guestTrainerTitle, guestTrainerName)
+	m.GetTrainerNameMessage = GetTrainerNameMessageFunc(guestTrainerName)
 }
 
 func (m *Manager) IsSingle() bool {
@@ -82,6 +82,7 @@ func (m *Manager) ApplyDamageToBody(p *bp.Pokemon, dmg int) error {
 	}
 	dmg = omwmath.Min(dmg, p.Stat.CurrentHP)
 	p.Stat.CurrentHP -= dmg
+	GlobalContext.Observer(m)
 
 	if p.Stat.CurrentHP <= 0 {
 		return nil
@@ -91,12 +92,14 @@ func (m *Manager) ApplyDamageToBody(p *bp.Pokemon, dmg int) error {
 	halfMaxHP := int(float64(p.Stat.MaxHP) * 0.5)
 	sitrusBerryOK := p.Item == bp.SITRUS_BERRY && halfMaxHP >= p.Stat.CurrentHP
 	if sitrusBerryOK {
+		p.Item = bp.EMPTY_ITEM
 		heal := int(float64(p.Stat.MaxHP) * 0.5)
 		err := p.ApplyHealToBody(heal)
 		if err != nil {
 			return err
 		}
-		m.HostViewMessage = m.GetHumanNameMessage(p.IsHost) + p.Name.ToString() + "は オボンの実で 回復した！"
+		m.HostViewMessage = m.GetTrainerNameMessage(p.IsHost) + p.Name.ToString() + "は オボンの実で 回復した！"
+		GlobalContext.Observer(m)
 	}
 	return nil
 }
@@ -142,11 +145,9 @@ func (m *Manager) targetPokemonPointersForDoubleNormalTarget(a *SoloAction) bp.P
 		//攻撃対象の味方が既に瀕死ならば、ランダムに相手を攻撃する。(第4世代)
 		if ally.IsFainted() {
 			ps := m.CurrentOpponentLeadPokemons.ToPointers().FilterByNotFainted()
-			fmt.Println("みかたへのこうげきですで", len(ps))
 			if len(ps) == 0 {
 				return bp.PokemonPointers{}
 			}
-			fmt.Println("次", len(omwrand.Sample(ps, 1, GlobalContext.Rand)))
 			return omwrand.Sample(ps, 1, GlobalContext.Rand)
 		}
 		return bp.PokemonPointers{ally}
@@ -228,7 +229,7 @@ func (m *Manager) Switch(leadIdx, benchIdx int) error {
 	if m.CurrentSelfIsHost {
 		m.HostViewMessage = "戻れ！ " + beforePokeNameStr
 	} else {
-		m.HostViewMessage = m.GetHumanInfoMessage(false) + beforePokeName.ToString() + " を 引っ込めた！"
+		m.HostViewMessage = m.GetTrainerInfoMessage(false) + beforePokeName.ToString() + " を 引っ込めた！"
 	}
 
 	GlobalContext.Observer(m)
@@ -243,14 +244,14 @@ func (m *Manager) Switch(leadIdx, benchIdx int) error {
 	if m.CurrentSelfIsHost {
 		m.HostViewMessage = "行け！ " + afterPokeNameStr
 	} else {
-		m.HostViewMessage =  m.GetHumanInfoMessage(false) + afterPokeNameStr + "を 繰り出した！"
+		m.HostViewMessage =  m.GetTrainerInfoMessage(false) + afterPokeNameStr + "を 繰り出した！"
 	}
 	GlobalContext.Observer(m)
 
 	if afterPokemon.Ability == bp.INTIMIDATE {
 		intimidateStr := bp.INTIMIDATE.ToString()
-		intimidateHumanNameMsg := m.GetHumanNameMessage(m.CurrentSelfIsHost)
-		targetHumanNameMsg := m.GetHumanNameMessage(!m.CurrentSelfIsHost)
+		intimidateTrainerNameMsg := m.GetTrainerNameMessage(m.CurrentSelfIsHost)
+		targetTrainerNameMsg := m.GetTrainerNameMessage(!m.CurrentSelfIsHost)
 
 		for i := range m.CurrentOpponentLeadPokemons {
 			target := &m.CurrentOpponentLeadPokemons[i]
@@ -262,13 +263,13 @@ func (m *Manager) Switch(leadIdx, benchIdx int) error {
 
 			if target.Ability == bp.CLEAR_BODY {
 				clearbodyStr := bp.CLEAR_BODY.ToString()
-				m.HostViewMessage = targetHumanNameMsg + targetPokeNameStr + "の " + clearbodyStr + "で " + intimidateHumanNameMsg + afterPokeNameStr + "の " + intimidateStr + "は きかなかった！"
+				m.HostViewMessage = targetTrainerNameMsg + targetPokeNameStr + "の " + clearbodyStr + "で " + intimidateTrainerNameMsg + afterPokeNameStr + "の " + intimidateStr + "は きかなかった！"
 				GlobalContext.Observer(m)
 				continue
 			}
 
 			m.CurrentOpponentLeadPokemons[i].RankStat.Atk -= 1
-			m.HostViewMessage = intimidateHumanNameMsg + afterPokeNameStr + "の " + intimidateStr + "で " + targetHumanNameMsg + targetPokeNameStr + "の こうげきが さがった！"
+			m.HostViewMessage = intimidateTrainerNameMsg + afterPokeNameStr + "の " + intimidateStr + "で " + targetTrainerNameMsg + targetPokeNameStr + "の こうげきが さがった！"
 			GlobalContext.Observer(m)
 		}
 	}
@@ -334,7 +335,7 @@ func (m *Manager) TurnEnd() error {
 			if err != nil {
 				return err
 			}
-			m.HostViewMessage = m.GetHumanNameMessage(p.IsHost) + p.Name.ToString() + "は " + bp.BURN.ToString() + " の ダメージを 受けている！"
+			m.HostViewMessage = m.GetTrainerNameMessage(p.IsHost) + p.Name.ToString() + "は " + bp.BURN.ToString() + " の ダメージを 受けている！"
 		}
 	}
 
@@ -351,28 +352,30 @@ func (m *Manager) TurnEnd() error {
 
 func (m *Manager) ToEasyRead() EasyReadManager {
 	return EasyReadManager{
-		SelfLeadPokemons:m.CurrentSelfLeadPokemons.ToEasyRead(),
-		SelfBenchPokemons:m.CurrentSelfBenchPokemons.ToEasyRead(),
+		CurrentSelfLeadPokemons:m.CurrentSelfLeadPokemons.ToEasyRead(),
+		CurrentSelfBenchPokemons:m.CurrentSelfBenchPokemons.ToEasyRead(),
 
-		OpponentLeadPokemons:m.CurrentOpponentLeadPokemons.ToEasyRead(),
-		OpponentBenchPokemons:m.CurrentOpponentBenchPokemons.ToEasyRead(),
+		CurrentOpponentLeadPokemons:m.CurrentOpponentLeadPokemons.ToEasyRead(),
+		CurrentOpponentBenchPokemons:m.CurrentOpponentBenchPokemons.ToEasyRead(),
 
-		Turn:m.Turn,
 		Weather:m.Weather.ToString(),
 		RemainingTurn:m.RemainingTurn,
+
+		Turn:m.Turn,
+		CurrentSelfIsHost:m.CurrentSelfIsHost,
 	}
 }
 
 type EasyReadManager struct {
-	SelfLeadPokemons bp.EasyReadPokemons
-	SelfBenchPokemons bp.EasyReadPokemons
+	CurrentSelfLeadPokemons bp.EasyReadPokemons
+	CurrentSelfBenchPokemons bp.EasyReadPokemons
 
-	OpponentLeadPokemons bp.EasyReadPokemons
-	OpponentBenchPokemons bp.EasyReadPokemons
-
-	Turn int
-	IsHostView bool
+	CurrentOpponentLeadPokemons bp.EasyReadPokemons
+	CurrentOpponentBenchPokemons bp.EasyReadPokemons
 
 	Weather string
 	RemainingTurn RemainingTurn
+
+	Turn int
+	CurrentSelfIsHost bool
 }
