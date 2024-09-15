@@ -140,6 +140,7 @@ func StringsToAbilities(ss []string) (Abilities, error) {
 }
 
 var STRING_TO_ITEM = map[string]Item{
+	"":EMPTY_ITEM,
 	"イバンのみ":IAPAPA_BERRY,
 	"オボンのみ":SITRUS_BERRY,
 	"カゴのみ":CHESTO_BERRY,
@@ -181,7 +182,7 @@ func StringToStatusAilment(s string) (StatusAilment, error) {
 }
 
 var STRING_TO_MOVE_NAME = map[string]MoveName{
-    "なし":           EMPTY_MOVE_NAME,
+    "":           EMPTY_MOVE_NAME,
     "10まんボルト":   THUNDERBOLT,
     "アームハンマー": HAMMER_ARM,
     "ストーンエッジ": STONE_EDGE,

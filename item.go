@@ -33,4 +33,12 @@ var ALL_ITEMS = func() Items {
 		panic(err)
 	}
 	return is
+}()
+
+func (is Items) ToStrings() []string {
+	ss := make([]string, len(is))
+	for i, item := range is {
+		ss[i] = item.ToString()
+	}
+	return ss
 }

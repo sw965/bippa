@@ -43,7 +43,7 @@ func IsEnd(m *battle.Manager) (bool, simultaneous.JointEval) {
 	}
 }
 
-func LegalSeparateActions(m *battle.Manager) battle.ActionsSlice {
+func SeparateLegalActions(m *battle.Manager) battle.ActionsSlice {
 	self := battle.NewLegalActions(m)
 	if len(self) == 0 {
 		self = battle.Actions{battle.Action{}}
@@ -130,11 +130,11 @@ func Push(m battle.Manager, actions battle.Actions) (battle.Manager, error) {
 }
 
 func New() simultaneous.Game[battle.Manager, battle.ActionsSlice, battle.Actions, battle.Action] {
-    gm := simultaneous.Game[battle.Manager, battle.ActionsSlice, battle.Actions, battle.Action]{
+    g := simultaneous.Game[battle.Manager, battle.ActionsSlice, battle.Actions, battle.Action]{
         Equal:                Equal,
         IsEnd:                IsEnd,
-        LegalSeparateActions: LegalSeparateActions,
+        SeparateLegalActions: SeparateLegalActions,
         Push:                 Push,
     }
-    return gm
+    return g
 }

@@ -21,20 +21,6 @@ type PokeData struct {
 	Learnset MoveNames
 }
 
-func (p *PokeData) ToEasyRead() EasyReadPokeData {
-	return EasyReadPokeData{
-		Types:p.Types.ToStrings(),
-		BaseHP:p.BaseHP,
-		BaseAtk:p.BaseAtk,
-		BaseDef:p.BaseDef,
-		BaseSpAtk:p.BaseSpAtk,
-		BaseSpDef:p.BaseSpDef,
-		BaseSpeed:p.BaseSpeed,
-		Abilities:p.Abilities.ToStrings(),
-		Learnset:p.Learnset.ToStrings(),
-	}
-}
-
 func LoadPokeData(name PokeName) (PokeData, error) {
 	if _, ok := POKE_NAME_TO_STRING[name]; !ok {
 		msg := fmt.Sprintf("%s が POKE_NAME_TO_STRING の中に存在しない", name.ToString())
@@ -49,26 +35,18 @@ func LoadPokeData(name PokeName) (PokeData, error) {
 	return buff.From()
 }
 
-type Pokedex map[PokeName]*PokeData
-
-var POKEDEX = func() Pokedex {
-	d := Pokedex{}
-	for _, name := range ALL_POKE_NAMES {
-		data, err := LoadPokeData(name)
-		if err != nil {
-			panic(err)
-		}
-		d[name] = &data
+func (p *PokeData) ToEasyRead() EasyReadPokeData {
+	return EasyReadPokeData{
+		Types:p.Types.ToStrings(),
+		BaseHP:p.BaseHP,
+		BaseAtk:p.BaseAtk,
+		BaseDef:p.BaseDef,
+		BaseSpAtk:p.BaseSpAtk,
+		BaseSpDef:p.BaseSpDef,
+		BaseSpeed:p.BaseSpeed,
+		Abilities:p.Abilities.ToStrings(),
+		Learnset:p.Learnset.ToStrings(),
 	}
-	return d
-}()
-
-func (p Pokedex) ToEasyRead() EasyReadPokedex {
-	e := EasyReadPokedex{}
-	for k, v := range p {
-		e[k.ToString()] = v.ToEasyRead()
-	}
-	return e
 }
 
 type EasyReadPokeData struct {
@@ -110,6 +88,28 @@ func (e *EasyReadPokeData) From() (PokeData, error) {
 		Abilities:abilities,
 		Learnset:learnset,
 	}, nil
+}
+
+type Pokedex map[PokeName]*PokeData
+
+var POKEDEX = func() Pokedex {
+	d := Pokedex{}
+	for _, name := range ALL_POKE_NAMES {
+		data, err := LoadPokeData(name)
+		if err != nil {
+			panic(err)
+		}
+		d[name] = &data
+	}
+	return d
+}()
+
+func (p Pokedex) ToEasyRead() EasyReadPokedex {
+	e := EasyReadPokedex{}
+	for k, v := range p {
+		e[k.ToString()] = v.ToEasyRead()
+	}
+	return e
 }
 
 type EasyReadPokedex map[string]EasyReadPokeData
@@ -371,7 +371,8 @@ func (p *Pokemon) Equal(other *Pokemon) bool {
 }
 
 func (p *Pokemon) UsableMoveNames() MoveNames {
-	mns := fn.Filter[MoveNames](p.MoveNames, func(mn MoveName) bool { return p.Moveset[mn].Current > 0 })
+	fmt.Println(p == nil, p.Moveset == nil, p.MoveNames == nil)
+	mns := fn.Filter[MoveNames](p.MoveNames.FilterByNotEmpty(), func(mn MoveName) bool { return p.Moveset[mn].Current > 0 })
 	if p.IsTauntState() {
 		mns = fn.Filter[MoveNames](mns, func(mn MoveName) bool {
 			moveData := MOVEDEX[mn]
@@ -451,96 +452,6 @@ func (p *Pokemon) ToEasyRead() EasyReadPokemon {
 		ThisTurnPlannedUseMoveName:p.ThisTurnPlannedUseMoveName.ToString(),
 		IsHost:p.IsHost,
 	}
-}
-
-type Pokemons []Pokemon
-
-func (ps Pokemons) Names() PokeNames {
-	names := make(PokeNames, len(ps))
-	for i, p := range ps {
-		names[i] = p.Name
-	}
-	return names
-}
-
-func (ps Pokemons) CurrentHPs() []int {
-	hps := make([]int, len(ps))
-	for i, p := range ps {
-		hps[i] = p.Stat.CurrentHP
-	}
-	return hps
-}
-
-func (ps Pokemons) Clone() Pokemons {
-	c := make(Pokemons, len(ps))
-	for i, p := range ps {
-		c[i] = p.Clone()
-	}
-	return c
-}
-
-func (ps Pokemons) Equal(other Pokemons) bool {
-	for i, p1 := range ps {
-		p2 := other[i]
-		if !p1.Equal(&p2) {
-			return false
-		}
-	}
-	return true
-}
-
-func (ps Pokemons) IsAnyFainted() bool {
-	for _, p := range ps {
-		if p.IsFainted() {
-			return true
-		}
-	}
-	return false
-}
-
-func (ps Pokemons) IsAllFainted() bool {
-	for _, p := range ps {
-		if !p.IsFainted() {
-			return false
-		}
-	}
-	return true
-}
-
-func (ps Pokemons) FaintedIndices() []int {
-	return omwslices.IndicesFunc(ps, func(p Pokemon) bool { return p.IsFainted() })
-}
-
-func (ps Pokemons) NotFaintedIndices() []int {
-	return omwslices.IndicesFunc(ps, func(p Pokemon) bool { return !p.IsFainted() })
-}
-
-func (ps Pokemons) ToPointers() PokemonPointers {
-	pps := make(PokemonPointers, len(ps))
-	for i := range ps {
-		pps[i] = &ps[i]
-	}
-	return pps
-}
-
-func (ps Pokemons) ToEasyRead() EasyReadPokemons {
-	es := make(EasyReadPokemons, len(ps))
-	for i, p := range ps {
-		es[i] = p.ToEasyRead()
-	}
-	return es
-}
-
-type PokemonPointers []*Pokemon
-
-func (ps PokemonPointers) SortBySpeed() {
-	slices.SortFunc(ps, func(p1, p2 *Pokemon) bool {
-		return p1.Stat.Speed > p2.Stat.Speed
-	})
-}
-
-func (ps PokemonPointers) FilterByNotFainted() PokemonPointers {
-	return fn.Filter(ps, func(p *Pokemon) bool { return !p.IsFainted() })
 }
 
 type PokemonEachStatCalculator struct {
@@ -717,6 +628,96 @@ func (e *EasyReadPokemon) From() (Pokemon, error) {
 		ThisTurnPlannedUseMoveName:thisTurnPlannedUseMoveName,
 		IsHost:e.IsHost,
 	}, nil
+}
+
+type Pokemons []Pokemon
+
+func (ps Pokemons) Names() PokeNames {
+	names := make(PokeNames, len(ps))
+	for i, p := range ps {
+		names[i] = p.Name
+	}
+	return names
+}
+
+func (ps Pokemons) CurrentHPs() []int {
+	hps := make([]int, len(ps))
+	for i, p := range ps {
+		hps[i] = p.Stat.CurrentHP
+	}
+	return hps
+}
+
+func (ps Pokemons) Clone() Pokemons {
+	c := make(Pokemons, len(ps))
+	for i, p := range ps {
+		c[i] = p.Clone()
+	}
+	return c
+}
+
+func (ps Pokemons) Equal(other Pokemons) bool {
+	for i, p1 := range ps {
+		p2 := other[i]
+		if !p1.Equal(&p2) {
+			return false
+		}
+	}
+	return true
+}
+
+func (ps Pokemons) IsAnyFainted() bool {
+	for _, p := range ps {
+		if p.IsFainted() {
+			return true
+		}
+	}
+	return false
+}
+
+func (ps Pokemons) IsAllFainted() bool {
+	for _, p := range ps {
+		if !p.IsFainted() {
+			return false
+		}
+	}
+	return true
+}
+
+func (ps Pokemons) FaintedIndices() []int {
+	return omwslices.IndicesFunc(ps, func(p Pokemon) bool { return p.IsFainted() })
+}
+
+func (ps Pokemons) NotFaintedIndices() []int {
+	return omwslices.IndicesFunc(ps, func(p Pokemon) bool { return !p.IsFainted() })
+}
+
+func (ps Pokemons) ToPointers() PokemonPointers {
+	pps := make(PokemonPointers, len(ps))
+	for i := range ps {
+		pps[i] = &ps[i]
+	}
+	return pps
+}
+
+func (ps Pokemons) ToEasyRead() EasyReadPokemons {
+	es := make(EasyReadPokemons, len(ps))
+	for i, p := range ps {
+		es[i] = p.ToEasyRead()
+	}
+	return es
+}
+
+type PokemonPointers []*Pokemon
+
+func (ps PokemonPointers) SortBySpeed() {
+	slices.SortFunc(ps, func(p1, p2 *Pokemon) bool {
+		return p1.Stat.Speed > p2.Stat.Speed
+	})
+}
+
+func (ps PokemonPointers) FilterByNotFainted() PokemonPointers {
+	return fn.Filter(ps, func(p *Pokemon) bool { return !p.IsFainted() })
 }
 
 type EasyReadPokemons []EasyReadPokemon

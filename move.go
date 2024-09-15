@@ -161,6 +161,16 @@ func (mns MoveNames) ToStrings() []string {
 	return ss
 }
 
+func (mns MoveNames) FilterByNotEmpty() MoveNames {
+	n := make(MoveNames, 0, len(mns))
+	for _, mn := range mns {
+		if mn != EMPTY_MOVE_NAME {
+			n = append(n, mn)
+		}
+	}
+	return n
+}
+
 type MoveNamesSlice []MoveNames
 
 type MoveCategory int

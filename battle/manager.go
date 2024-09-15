@@ -363,7 +363,18 @@ func (m *Manager) ToEasyRead() EasyReadManager {
 
 		Turn:m.Turn,
 		CurrentSelfIsHost:m.CurrentSelfIsHost,
+		HostViewMessage:m.HostViewMessage,
 	}
+}
+
+type Managers []Manager
+
+func (ms Managers) ToEasyRead() EasyReadManagers {
+	es := make(EasyReadManagers, len(ms))
+	for i, m := range ms {
+		es[i] = m.ToEasyRead()
+	}
+	return es
 }
 
 type EasyReadManager struct {
@@ -373,9 +384,18 @@ type EasyReadManager struct {
 	CurrentOpponentLeadPokemons bp.EasyReadPokemons
 	CurrentOpponentBenchPokemons bp.EasyReadPokemons
 
+	/*
+		CurrentSelfFollowMePokemonPointers
+		CurrentOpponentFollowMePokemonPointers
+		上記の二つは今の所不要。
+	*/
+
 	Weather string
 	RemainingTurn RemainingTurn
 
 	Turn int
 	CurrentSelfIsHost bool
+	HostViewMessage string
 }
+
+type EasyReadManagers []EasyReadManager
