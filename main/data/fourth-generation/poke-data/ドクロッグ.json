@@ -3,6 +3,7 @@
         "どく",
         "かくとう"
     ],
+    "genders":["♂", "♀"],
     "baseHP": 83,
     "baseAtk": 106,
     "baseDef": 65,

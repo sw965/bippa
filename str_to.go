@@ -31,6 +31,25 @@ func StringsToPokeNames(ss []string) (PokeNames, error) {
 	return fn.MapWithError[PokeNames](ss, StringToPokeName)
 }
 
+var STRING_TO_GENDER = map[string]Gender{
+	"不明":UNKNOWN,
+	"♂":MALE,
+	"♀":FEMALE,
+}
+
+func StringToGender(s string) (Gender, error) {
+	if gender, ok := STRING_TO_GENDER[s]; !ok {
+		msg := fmt.Sprintf("%s は STRING_TO_GENDER に含まれていない為、Genderに変換出来ません。", s)
+		return UNKNOWN, fmt.Errorf(msg)
+	} else {
+		return gender, nil
+	}
+}
+
+func StringsToGenders(ss []string) (Genders, error) {
+	return fn.MapWithError[Genders](ss, StringToGender)
+}
+
 var STRING_TO_TYPE = map[string]Type{
 	"ノーマル":NORMAL,
 	"ほのお":FIRE,

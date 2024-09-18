@@ -3,6 +3,7 @@
         "ドラゴン",
         "ひこう"
     ],
+    "genders":["♂", "♀"],
     "baseHP": 95,
     "baseAtk": 135,
     "baseDef": 80,

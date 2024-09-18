@@ -3,6 +3,7 @@
         "はがね",
         "エスパー"
     ],
+    "genders":["不明"],
     "baseHP": 67,
     "baseAtk": 89,
     "baseDef": 116,

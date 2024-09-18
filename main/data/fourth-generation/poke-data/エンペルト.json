@@ -3,6 +3,7 @@
         "みず",
         "はがね"
     ],
+    "genders":["♂", "♀"],
     "baseHP": 84,
     "baseAtk": 86,
     "baseDef": 88,

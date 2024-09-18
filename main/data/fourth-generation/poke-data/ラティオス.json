@@ -3,6 +3,7 @@
         "ドラゴン",
         "エスパー"
     ],
+    "genders":["♂"],
     "baseHP": 80,
     "baseAtk": 90,
     "baseDef": 80,

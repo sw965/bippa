@@ -2,6 +2,7 @@
     "types": [
         "ノーマル"
     ],
+    "genders":["♂", "♀"],
     "baseHP": 55,
     "baseAtk": 20,
     "baseDef": 35,

@@ -11,6 +11,7 @@ import (
 
 type PokeData struct {
 	Types Types
+	Genders Genders
 	BaseHP int
 	BaseAtk int
 	BaseDef int
@@ -38,6 +39,7 @@ func LoadPokeData(name PokeName) (PokeData, error) {
 func (p *PokeData) ToEasyRead() EasyReadPokeData {
 	return EasyReadPokeData{
 		Types:p.Types.ToStrings(),
+		Genders:p.Genders.ToStrings(),
 		BaseHP:p.BaseHP,
 		BaseAtk:p.BaseAtk,
 		BaseDef:p.BaseDef,
@@ -51,6 +53,7 @@ func (p *PokeData) ToEasyRead() EasyReadPokeData {
 
 type EasyReadPokeData struct {
 	Types []string
+	Genders []string
 	BaseHP int
 	BaseAtk int
 	BaseDef int
@@ -67,6 +70,11 @@ func (e *EasyReadPokeData) From() (PokeData, error) {
 		return PokeData{}, err
 	}
 
+	genders, err := StringsToGenders(e.Genders)
+	if err != nil {
+		return PokeData{}, err
+	}
+
 	abilities, err := StringsToAbilities(e.Abilities)
 	if err != nil {
 		return PokeData{}, err
@@ -79,6 +87,7 @@ func (e *EasyReadPokeData) From() (PokeData, error) {
 
 	return PokeData{
 		Types:types,
+		Genders:genders,
 		BaseHP:e.BaseHP,
 		BaseAtk:e.BaseAtk,
 		BaseDef:e.BaseDef,
@@ -160,6 +169,7 @@ type PokeNamesSlice []PokeNames
 
 type Pokemon struct {
 	Name PokeName
+	Gender Gender
 	Level Level
 
 	Nature Nature
@@ -192,7 +202,7 @@ type Pokemon struct {
 	IsHost bool
 }
 
-func NewPokemon(name PokeName, level Level, nature Nature, ability Ability, item Item, moveNames MoveNames, pointUps PointUps, iv *IndividualStat, ev *EffortStat) (Pokemon, error) {
+func NewPokemon(name PokeName, gender Gender, level Level, nature Nature, ability Ability, item Item, moveNames MoveNames, pointUps PointUps, iv *IndividualStat, ev *EffortStat) (Pokemon, error) {
 	if name == EMPTY_POKE_NAME {
 		return Pokemon{}, nil
 	}
@@ -211,9 +221,13 @@ func NewPokemon(name PokeName, level Level, nature Nature, ability Ability, item
 		PointUps:make(PointUps, 0, MAX_MOVESET_LENGTH),
 	}
 	p.Name = name
+	err := p.SetGender(gender)
+	if err != nil {
+		return Pokemon{}, err
+	}
 	p.Level = level
 	p.Nature = nature
-	err := p.SetAbility(ability)
+	err = p.SetAbility(ability)
 	if err != nil {
 		return Pokemon{}, err
 	}
@@ -230,6 +244,16 @@ func NewPokemon(name PokeName, level Level, nature Nature, ability Ability, item
 	p.Types = POKEDEX[name].Types
 	err = p.UpdateStat()
 	return p, err
+}
+
+func (p *Pokemon) SetGender(g Gender) error {
+	genders := POKEDEX[p.Name].Genders
+	if !slices.Contains(genders, g) {
+		msg := fmt.Sprintf("性別が %s の %sは 存在しない", g.ToString(), p.Name.ToString())
+		return fmt.Errorf(msg)
+	}
+	p.Gender = g
+	return nil
 }
 
 func (p *Pokemon) SetAbility(a Ability) error {
@@ -423,6 +447,7 @@ func (p *Pokemon) ApplyDamageToSubstitute(dmg int) error {
 func (p *Pokemon) ToEasyRead() EasyReadPokemon {
 	return EasyReadPokemon{
 		Name:p.Name.ToString(),
+		Gender:p.Gender.ToString(),
 		Level:p.Level,
 
 		Nature:p.Nature.ToString(),
@@ -521,6 +546,7 @@ func (s *PokemonStat) CurrentHPRatio() float64 {
 
 type EasyReadPokemon struct {
 	Name string
+	Gender string
 	Level Level
 
 	Nature string
@@ -553,6 +579,11 @@ type EasyReadPokemon struct {
 
 func (e *EasyReadPokemon) From() (Pokemon, error) {
 	pokeName, err := StringToPokeName(e.Name)
+	if err != nil {
+		return Pokemon{}, err
+	}
+
+	gender, err := StringToGender(e.Gender)
 	if err != nil {
 		return Pokemon{}, err
 	}
@@ -599,6 +630,7 @@ func (e *EasyReadPokemon) From() (Pokemon, error) {
 
 	return Pokemon{
 		Name:pokeName,
+		Gender:gender,
 		Level:e.Level,
 
 		Nature:nature,
@@ -738,7 +770,7 @@ func (es EasyReadPokemons) From() (Pokemons, error) {
 // https://matsu-1129.hatenadiary.org/entry/20090308/1236586122
 func NewRomanStan2009Gyarados() Pokemon {
 	p, err := NewPokemon(
-		GYARADOS, STANDARD_LEVEL, JOLLY, INTIMIDATE, WACAN_BERRY,
+		GYARADOS, MALE, STANDARD_LEVEL, JOLLY, INTIMIDATE, WACAN_BERRY,
 		MoveNames{WATERFALL, STONE_EDGE, THUNDER_WAVE, PROTECT},
 		MAX_POINT_UPS,
 		&MAX_INDIVIDUAL_STAT,
@@ -755,7 +787,7 @@ func NewMoruhu2007Snorlax() Pokemon {
 	iv := MAX_INDIVIDUAL_STAT.Clone()
 	iv.Speed = MAX_INDIVIDUAL
 	p, err := NewPokemon(
-		SNORLAX, STANDARD_LEVEL, RELAXED, THICK_FAT, SITRUS_BERRY,
+		SNORLAX, FEMALE, STANDARD_LEVEL, RELAXED, THICK_FAT, SITRUS_BERRY,
 		MoveNames{RETURN, FIRE_PUNCH, BELLY_DRUM, SUBSTITUTE},
 		MAX_POINT_UPS,
 		&iv, &HB252_D4,
@@ -771,7 +803,7 @@ func NewMoruhu2008Snorlax() Pokemon {
 	iv := MAX_INDIVIDUAL_STAT.Clone()
 	iv.Speed = MIN_INDIVIDUAL
 	p, err := NewPokemon(
-		SNORLAX, STANDARD_LEVEL, RELAXED, THICK_FAT, SITRUS_BERRY,
+		SNORLAX, FEMALE, STANDARD_LEVEL, RELAXED, THICK_FAT, SITRUS_BERRY,
 		MoveNames{RETURN, FIRE_PUNCH, BELLY_DRUM, PROTECT},
 		MAX_POINT_UPS,
 		&iv, &HB252_D4,
@@ -788,7 +820,7 @@ func NewRomanStan2009Snorlax() Pokemon {
 	iv := MAX_INDIVIDUAL_STAT.Clone()
 	iv.Speed = MIN_INDIVIDUAL
 	p, err := NewPokemon(
-		SNORLAX, STANDARD_LEVEL, BRAVE, THICK_FAT, SITRUS_BERRY,
+		SNORLAX, FEMALE, STANDARD_LEVEL, BRAVE, THICK_FAT, SITRUS_BERRY,
 		MoveNames{RETURN, CRUNCH, SELF_DESTRUCT, PROTECT},
 		MAX_POINT_UPS,
 		&iv, &EffortStat{HP:204, Atk:52, Def:156, SpDef:96},
@@ -803,7 +835,7 @@ func NewRomanStan2009Snorlax() Pokemon {
 // https://detail.chiebukuro.yahoo.co.jp/qa/question_detail/q1267938327
 func NewKusanagi2009Snorlax() Pokemon {
 	p, err := NewPokemon(
-		SNORLAX, STANDARD_LEVEL, BRAVE, THICK_FAT, SITRUS_BERRY,
+		SNORLAX, FEMALE, STANDARD_LEVEL, BRAVE, THICK_FAT, SITRUS_BERRY,
 		MoveNames{RETURN, CRUNCH, SELF_DESTRUCT, PROTECT},
 		MAX_POINT_UPS,
 		&MAX_INDIVIDUAL_STAT,
@@ -818,7 +850,7 @@ func NewKusanagi2009Snorlax() Pokemon {
 //ドーブル
 func NewMoruhu2007Smeargle() Pokemon {
 	p, err := NewPokemon(
-		SMEARGLE, MIN_LEVEL, BRAVE, OWN_TEMPO, FOCUS_SASH,
+		SMEARGLE, FEMALE, MIN_LEVEL, BRAVE, OWN_TEMPO, FOCUS_SASH,
 		MoveNames{FAKE_OUT, FOLLOW_ME, DARK_VOID, ENDEAVOR},
 		MAX_POINT_UPS,
 		&MIN_INDIVIDUAL_STAT, &EffortStat{},
@@ -838,7 +870,7 @@ func NewMoruhu2008Smeargle() Pokemon {
 // https://detail.chiebukuro.yahoo.co.jp/qa/question_detail/q1267938327
 func NewKusanagiSalamence2009() Pokemon {
 	p, err := NewPokemon(
-		SALAMENCE, STANDARD_LEVEL, MODEST, INTIMIDATE, SITRUS_BERRY,
+		SALAMENCE, FEMALE, STANDARD_LEVEL, MODEST, INTIMIDATE, SITRUS_BERRY,
 		MoveNames{DRACO_METEOR, HEAT_WAVE, RAIN_DANCE, PROTECT},
 		MAX_POINT_UPS,
 		&MAX_INDIVIDUAL_STAT, &EffortStat{HP:20, SpAtk:236, Speed:252},
@@ -854,7 +886,7 @@ func NewMoruhu2007Metagross() Pokemon {
 	iv := MAX_INDIVIDUAL_STAT.Clone()
 	iv.Speed = MIN_INDIVIDUAL
 	p, err := NewPokemon(
-		METAGROSS, STANDARD_LEVEL, BRAVE, CLEAR_BODY, LUM_BERRY,
+		METAGROSS, FEMALE, STANDARD_LEVEL, BRAVE, CLEAR_BODY, LUM_BERRY,
 		MoveNames{EARTHQUAKE, BULLET_PUNCH, ROCK_SLIDE, RECOVER},
 		MAX_POINT_UPS,
 		&iv, &EffortStat{HP:MAX_EFFORT, Def:128, SpDef:128},
@@ -870,7 +902,7 @@ func NewMoruhu2008Metagross() Pokemon {
 	iv := MAX_INDIVIDUAL_STAT.Clone()
 	iv.Speed = MIN_INDIVIDUAL
 	p, err := NewPokemon(
-		METAGROSS, STANDARD_LEVEL, BRAVE, CLEAR_BODY, LUM_BERRY,
+		METAGROSS, UNKNOWN, STANDARD_LEVEL, BRAVE, CLEAR_BODY, LUM_BERRY,
 		MoveNames{HAMMER_ARM, BULLET_PUNCH, ROCK_SLIDE, RECOVER},
 		MAX_POINT_UPS,
 		&iv, &EffortStat{HP:MAX_EFFORT, Def:128, SpDef:128},
@@ -885,7 +917,7 @@ func NewMoruhu2008Metagross() Pokemon {
 // https://matsu-1129.hatenadiary.org/entry/20090308/1236586122
 func NewRomanStan2009Metagross() Pokemon {
 	p, err := NewPokemon(
-		METAGROSS, STANDARD_LEVEL, ADAMANT, CLEAR_BODY, LUM_BERRY,
+		METAGROSS, UNKNOWN, STANDARD_LEVEL, ADAMANT, CLEAR_BODY, LUM_BERRY,
 		MoveNames{COMET_PUNCH, BULLET_PUNCH, EARTHQUAKE, PROTECT},
 		MAX_POINT_UPS,
 		&MAX_INDIVIDUAL_STAT, &EffortStat{HP:236, Atk:36, Def:4, SpDef:172, Speed:60},
@@ -902,7 +934,7 @@ func NewRomanStan2009Latios() Pokemon {
 	iv := MAX_INDIVIDUAL_STAT.Clone()
 	iv.Atk = MIN_INDIVIDUAL
 	p, err := NewPokemon(
-		LATIOS, STANDARD_LEVEL, TIMID, LEVITATE, FOCUS_SASH,
+		LATIOS, MALE, STANDARD_LEVEL, TIMID, LEVITATE, FOCUS_SASH,
 		MoveNames{DRACO_METEOR, THUNDERBOLT, RAIN_DANCE, PROTECT},
 		MAX_POINT_UPS,
 		&iv, &CS252_H4,
@@ -919,7 +951,7 @@ func NewKusanagi2009Empoleon() Pokemon {
 	iv := MAX_INDIVIDUAL_STAT.Clone()
 	iv.Atk = MIN_INDIVIDUAL
 	pokemon, err := NewPokemon(
-		EMPOLEON, STANDARD_LEVEL, MODEST, TORRENT, WACAN_BERRY,
+		EMPOLEON, FEMALE, STANDARD_LEVEL, MODEST, TORRENT, WACAN_BERRY,
 		MoveNames{HYDRO_PUMP, SURF, ICY_WIND, PROTECT},
 		MAX_POINT_UPS,
 		&iv, &EffortStat{HP:68, Def:12, SpAtk:252, SpDef:4, Speed:172},
@@ -935,7 +967,7 @@ func NewMoruhu2007Bronzong() Pokemon {
 	iv := MAX_INDIVIDUAL_STAT.Clone()
 	iv.Speed = MIN_INDIVIDUAL
 	p, err := NewPokemon(
-		BRONZONG, STANDARD_LEVEL, SASSY, HEATPROOF, CHESTO_BERRY,
+		BRONZONG, UNKNOWN, STANDARD_LEVEL, SASSY, HEATPROOF, CHESTO_BERRY,
 		MoveNames{GYRO_BALL, EXPLOSION, TRICK_ROOM, HYPNOSIS},
 		MAX_POINT_UPS,
 		&iv, &HD252_B4,
@@ -952,7 +984,7 @@ func NewMoruhu2008Bronzong() Pokemon {
 	iv.Atk = MIN_INDIVIDUAL
 	iv.Speed = MIN_INDIVIDUAL
 	p, err := NewPokemon(
-		BRONZONG, STANDARD_LEVEL, SASSY, HEATPROOF, CHESTO_BERRY,
+		BRONZONG, UNKNOWN, STANDARD_LEVEL, SASSY, HEATPROOF, CHESTO_BERRY,
 		MoveNames{PSYCHIC, EXPLOSION, TRICK_ROOM, HYPNOSIS},
 		MAX_POINT_UPS,
 		&iv, &HD252_B4,
@@ -967,7 +999,7 @@ func NewMoruhu2008Bronzong() Pokemon {
 // https://detail.chiebukuro.yahoo.co.jp/qa/question_detail/q1267938327
 func NewKusanagi2009Toxicroak() Pokemon {
 	p, err := NewPokemon(
-		TOXICROAK, STANDARD_LEVEL, ADAMANT, DRY_SKIN, FOCUS_SASH,
+		TOXICROAK, FEMALE, STANDARD_LEVEL, ADAMANT, DRY_SKIN, FOCUS_SASH,
 		MoveNames{CROSS_CHOP, SUCKER_PUNCH, FAKE_OUT, TAUNT},
 		MAX_POINT_UPS,
 		&MAX_INDIVIDUAL_STAT, &AS252_B4,
