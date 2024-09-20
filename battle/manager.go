@@ -231,13 +231,14 @@ func (m *Manager) Switch(leadIdx, benchIdx int) error {
 	} else {
 		m.HostViewMessage = m.GetTrainerInfoMessage(false) + beforePokeName.ToString() + " を 引っ込めた！"
 	}
-
 	GlobalContext.Observer(m)
-	m.CurrentSelfLeadPokemons[leadIdx], m.CurrentSelfBenchPokemons[benchIdx] = m.CurrentSelfBenchPokemons[benchIdx], m.CurrentSelfLeadPokemons[leadIdx]
-	m.CurrentSelfBenchPokemons[benchIdx].TurnCount = 0
-	m.CurrentSelfBenchPokemons[benchIdx].RankStat = bp.RankStat{}
 
-	afterPokemon := m.CurrentSelfLeadPokemons[leadIdx]
+	tmp := m.CurrentSelfLeadPokemons[leadIdx]
+	//UIの為に、一度空にする。
+	m.CurrentSelfLeadPokemons[leadIdx] = bp.Pokemon{}
+	GlobalContext.Observer(m)
+
+	afterPokemon := m.CurrentSelfBenchPokemons[benchIdx]
 	afterPokeName := afterPokemon.Name
 	afterPokeNameStr := afterPokeName.ToString()
 
@@ -246,6 +247,12 @@ func (m *Manager) Switch(leadIdx, benchIdx int) error {
 	} else {
 		m.HostViewMessage =  m.GetTrainerInfoMessage(false) + afterPokeNameStr + "を 繰り出した！"
 	}
+	GlobalContext.Observer(m)
+
+	m.CurrentSelfLeadPokemons[leadIdx] = tmp
+	m.CurrentSelfLeadPokemons[leadIdx], m.CurrentSelfBenchPokemons[benchIdx] = m.CurrentSelfBenchPokemons[benchIdx], m.CurrentSelfLeadPokemons[leadIdx]
+	m.CurrentSelfBenchPokemons[benchIdx].TurnCount = 0
+	m.CurrentSelfBenchPokemons[benchIdx].RankStat = bp.RankStat{}
 	GlobalContext.Observer(m)
 
 	if afterPokemon.Ability == bp.INTIMIDATE {
@@ -336,6 +343,7 @@ func (m *Manager) TurnEnd() error {
 				return err
 			}
 			m.HostViewMessage = m.GetTrainerNameMessage(p.IsHost) + p.Name.ToString() + "は " + bp.BURN.ToString() + " の ダメージを 受けている！"
+			GlobalContext.Observer(m)
 		}
 	}
 

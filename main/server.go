@@ -8,7 +8,6 @@ import (
 	"github.com/sw965/bippa/battle"
 	"github.com/sw965/bippa/battle/game"
     "encoding/json"
-	omwslices "github.com/sw965/omw/slices"
 )
 
 func parseAndConvQuery[T, U any](query string, from func(U) (T, error)) (T, error) {
@@ -181,7 +180,7 @@ func battleCommandHandler(w http.ResponseWriter, r *http.Request) {
 		case "push":
 			from := func(e *battle.EasyReadAction) (battle.Action, error) { return e.From() }
 
-			playerActionQuery := r.URL.Query().Get("ai_action")
+			playerActionQuery := r.URL.Query().Get("player_action")
 			if playerActionQuery == "" {
 				err := fmt.Errorf("player_actionが空である為、pushを実行出来ません。")
 				http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -210,14 +209,19 @@ func battleCommandHandler(w http.ResponseWriter, r *http.Request) {
 				return			
 			}
 
+			fmt.Println("actionQuery", playerAction.ToEasyRead(), aiAction.ToEasyRead())
+
 			ms := make(battle.Managers, 0, 256)
 			ms = append(ms, battleManager.Clone())
 			battle.GlobalContext.Observer = func(m *battle.Manager) {
-				ms = append(ms, *m)
+				c := m.Clone()
+				if !c.CurrentSelfIsHost {
+					c.SwapView()
+				}
+				ms = append(ms, c)
 			}
-
+			
 			nextBattleManager, err := game.Push(battleManager, battle.Actions{playerAction, aiAction})
-			fmt.Println(err, playerAction.ToEasyRead(), aiAction.ToEasyRead())
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
@@ -225,10 +229,6 @@ func battleCommandHandler(w http.ResponseWriter, r *http.Request) {
 
 			battle.GlobalContext.Observer = battle.EmptyObserver
 			battleManager = nextBattleManager
-			end := omwslices.End(ms)
-			if !game.Equal(&battleManager, &end) {
-				panic("ロジックが合わない")
-			}
 			response, err := json.Marshal(ms.ToEasyRead())
 			w.Write(response)
 	}

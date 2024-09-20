@@ -1,7 +1,6 @@
 package battle
 
 import (
-	//"fmt"
 	bp "github.com/sw965/bippa"
 	"golang.org/x/exp/slices"
 	omwrand "github.com/sw965/omw/math/rand"

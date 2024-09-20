@@ -308,6 +308,10 @@ func (p *Pokemon) Equal(other *Pokemon) bool {
 		return false
 	}
 
+	if p.Gender != other.Gender {
+		return false
+	}
+	
 	if p.Level != other.Level {
 		return false
 	}

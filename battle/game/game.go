@@ -84,7 +84,7 @@ func Push(m battle.Manager, actions battle.Actions) (battle.Manager, error) {
 				err = m.Switch(soloAction.SrcIndex, soloAction.TargetIndex)
 			} else {
 				m.SwapView()
-				m.Switch(soloAction.SrcIndex, soloAction.TargetIndex)
+				err = m.Switch(soloAction.SrcIndex, soloAction.TargetIndex)
 				m.SwapView()
 			}
 			if err != nil {
@@ -111,14 +111,16 @@ func Push(m battle.Manager, actions battle.Actions) (battle.Manager, error) {
 			m.SwapView()
 		}
 
+		var err error
 		if soloAction.MoveName != bp.EMPTY_MOVE_NAME {
 			move := battle.GetMove(soloAction.MoveName)
-			err := move.Run(&m, &soloAction)
-			if err != nil {
-				return battle.Manager{}, err
-			}
+			err = move.Run(&m, &soloAction)
 		} else {
-			m.Switch(soloAction.SrcIndex, soloAction.TargetIndex)
+			err = m.Switch(soloAction.SrcIndex, soloAction.TargetIndex)
+		}
+
+		if err != nil {
+			return battle.Manager{}, err
 		}
 
 		if !soloAction.IsCurrentSelf {
