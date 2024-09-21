@@ -136,9 +136,14 @@ func battleInitHandle(w http.ResponseWriter, r *http.Request) {
 		CurrentOpponentLeadPokemons:aiLeadPokemons,
 		CurrentOpponentBenchPokemons:aiBenchPokemons,
 	}
+
+	ms := make(battle.Managers, 0, 128)
+	battle.GlobalContext.Observer = func(m *battle.Manager) {
+		ms = append(ms, m.Clone())
+	}
 	battleManager.Init(aiTrainerTitle, aiTrainerName)
 
-	response, err := json.Marshal("ok")
+	response, err := json.Marshal(ms.ToEasyRead())
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -158,7 +163,6 @@ func battleQueryHandler(w http.ResponseWriter, r *http.Request) {
 		case "separate_legal_actions":
 			response, err = json.Marshal(game.SeparateLegalActions(&battleManager).ToEasyRead())
 	}
-
     if err != nil {
         http.Error(w, err.Error(), http.StatusInternalServerError)
         return

@@ -12,7 +12,7 @@ func GetTrainerInfoMessageFunc(guestTrainerTitle, guestTrainerName string) func(
 		if isHost {
 			return ""
 		}
-		return guestTrainerTitle + "の " + guestTrainerName + "は "
+		return guestTrainerTitle + "の " + guestTrainerName
 	}
 }
 

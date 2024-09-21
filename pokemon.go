@@ -199,6 +199,9 @@ type Pokemon struct {
 	TurnCount int
 	//繰り出そうとしている技を保持する。ふいうち用。
 	ThisTurnPlannedUseMoveName MoveName
+
+	//主に、いかくや天候特性などに用いる。
+	IsAfterSwitch bool
 	IsHost bool
 }
 
@@ -479,6 +482,8 @@ func (p *Pokemon) ToEasyRead() EasyReadPokemon {
 
 		TurnCount:p.TurnCount,
 		ThisTurnPlannedUseMoveName:p.ThisTurnPlannedUseMoveName.ToString(),
+
+		IsAfterSwitch:p.IsAfterSwitch,
 		IsHost:p.IsHost,
 	}
 }
@@ -578,6 +583,8 @@ type EasyReadPokemon struct {
 
 	TurnCount int
 	ThisTurnPlannedUseMoveName string
+	
+	IsAfterSwitch bool
 	IsHost bool
 }
 
@@ -726,6 +733,12 @@ func (ps Pokemons) FaintedIndices() []int {
 
 func (ps Pokemons) NotFaintedIndices() []int {
 	return omwslices.IndicesFunc(ps, func(p Pokemon) bool { return !p.IsFainted() })
+}
+
+func (ps Pokemons) SortBySpeed() {
+	slices.SortFunc(ps, func(p1, p2 Pokemon) bool {
+		return p1.Stat.Speed > p2.Stat.Speed
+	})
 }
 
 func (ps Pokemons) ToPointers() PokemonPointers {

@@ -42,13 +42,121 @@ func (m *Manager) Init(guestTrainerTitle, guestTrainerName string) {
 	for i := range m.CurrentSelfLeadPokemons {
 		m.CurrentSelfLeadPokemons[i].IsHost = true
 	}
-
+	
 	for i := range m.CurrentSelfBenchPokemons {
 		m.CurrentSelfBenchPokemons[i].IsHost = true
 	}
+
 	m.CurrentSelfIsHost = true
 	m.GetTrainerInfoMessage = GetTrainerInfoMessageFunc(guestTrainerTitle, guestTrainerName)
 	m.GetTrainerNameMessage = GetTrainerNameMessageFunc(guestTrainerName)
+
+	selfLead := m.CurrentSelfLeadPokemons.Clone()
+	opponentLead := m.CurrentOpponentLeadPokemons.Clone()
+
+	for i := range m.CurrentSelfLeadPokemons {
+		//UIの為に、一度空にする。
+		m.CurrentSelfLeadPokemons[i] = bp.Pokemon{}
+	}
+	for i := range m.CurrentOpponentLeadPokemons {
+		//UIの為に、一度空にする。
+		m.CurrentOpponentLeadPokemons[i] = bp.Pokemon{}
+	}
+	GlobalContext.Observer(m)
+
+	m.HostViewMessage = m.GetTrainerInfoMessage(false) + "が 勝負を 仕掛けてきた！"
+	GlobalContext.Observer(m)
+
+	guestFirstGoMsg := m.GetTrainerNameMessage(false) + "は "
+	if m.IsSingle() {
+		guestFirstGoMsg += opponentLead[0].Name.ToString() + " を繰り出した！"
+	} else {
+		guestFirstGoMsg += opponentLead[0].Name.ToString() + "と " + opponentLead[1].Name.ToString() + "を 繰り出した！"
+	}
+	m.HostViewMessage = guestFirstGoMsg
+	GlobalContext.Observer(m)
+
+	for i := range opponentLead {
+		m.CurrentOpponentLeadPokemons[i] = opponentLead[i]
+	}
+	GlobalContext.Observer(m)
+
+	hostFirstGoMsg := "ゆけっ！ "
+	for i := range selfLead {
+		hostFirstGoMsg += selfLead[i].Name.ToString() + "！"
+		if len(selfLead) != (i-1) {
+			hostFirstGoMsg += " "
+		}
+	}
+	m.HostViewMessage = hostFirstGoMsg
+	GlobalContext.Observer(m)
+
+	for i := range selfLead {
+		m.CurrentSelfLeadPokemons[i] = selfLead[i]
+	}
+	GlobalContext.Observer(m)
+	
+	for i := range selfLead {
+		m.CurrentSelfLeadPokemons[i].IsAfterSwitch = true
+	}
+	for i := range opponentLead {
+		m.CurrentOpponentLeadPokemons[i].IsAfterSwitch = true
+	}
+
+	m.Intimidate()
+
+	for i := range selfLead {
+		m.CurrentSelfLeadPokemons[i].IsAfterSwitch = false
+	}
+	for i := range opponentLead {
+		m.CurrentOpponentLeadPokemons[i].IsAfterSwitch = false
+	}
+}
+
+//いかく
+//https://wiki.xn--rckteqa2e.com/wiki/%E3%81%84%E3%81%8B%E3%81%8F
+func (m *Manager) Intimidate() {
+	intimidateStr := bp.INTIMIDATE.ToString()
+	leadPokemons := omwslices.Concat(m.CurrentSelfLeadPokemons.ToPointers(), m.CurrentOpponentLeadPokemons.ToPointers())
+	leadPokemons.SortBySpeed()
+
+	for _, src := range leadPokemons {
+		if src.Ability != bp.INTIMIDATE || !src.IsAfterSwitch {
+			continue
+		}
+
+		intimidateTrainerNameMsg := m.GetTrainerNameMessage(src.IsHost)
+		intimidatePokeNameStr := src.Name.ToString()
+		targetTrainerNameMsg := m.GetTrainerNameMessage(!src.IsHost)
+
+		/*
+			ダブルバトル・トリプルバトルで複数の相手を対象に取る場合、第四世代では素早さが高い順に攻撃を下げていく。
+			第五世代以降は素早さに関係なく相手から見て左側のポケモンから順に攻撃を下げていく。
+		*/
+		for _, target := range leadPokemons {
+			//味方へのいかくをしないように。
+			if src.IsHost != target.IsHost {
+				continue
+			}
+
+			if target.RankStat.Atk == bp.MIN_RANK {
+				continue
+			}
+			
+			targetPokeNameStr := target.Name.ToString()
+	
+			if target.Ability == bp.CLEAR_BODY {
+				clearbodyStr := bp.CLEAR_BODY.ToString()
+				m.HostViewMessage = targetTrainerNameMsg + targetPokeNameStr + "の " + clearbodyStr + "で " + intimidateTrainerNameMsg + intimidatePokeNameStr + "の " + intimidateStr + "は きかなかった！"
+				GlobalContext.Observer(m)
+				continue
+			}
+	
+			target.RankStat.Atk -= 1
+			m.HostViewMessage = intimidateTrainerNameMsg + intimidatePokeNameStr + "の " + intimidateStr + "で " + targetTrainerNameMsg + targetPokeNameStr + "の こうげきが さがった！"
+			GlobalContext.Observer(m)
+		}
+	}
 }
 
 func (m *Manager) IsSingle() bool {
@@ -229,7 +337,7 @@ func (m *Manager) Switch(leadIdx, benchIdx int) error {
 	if m.CurrentSelfIsHost {
 		m.HostViewMessage = "戻れ！ " + beforePokeNameStr
 	} else {
-		m.HostViewMessage = m.GetTrainerInfoMessage(false) + beforePokeName.ToString() + " を 引っ込めた！"
+		m.HostViewMessage = m.GetTrainerInfoMessage(false) + "は " + beforePokeName.ToString() + " を 引っ込めた！"
 	}
 	GlobalContext.Observer(m)
 
@@ -245,7 +353,7 @@ func (m *Manager) Switch(leadIdx, benchIdx int) error {
 	if m.CurrentSelfIsHost {
 		m.HostViewMessage = "行け！ " + afterPokeNameStr
 	} else {
-		m.HostViewMessage =  m.GetTrainerInfoMessage(false) + afterPokeNameStr + "を 繰り出した！"
+		m.HostViewMessage =  m.GetTrainerInfoMessage(false) + "は " + afterPokeNameStr + "を 繰り出した！"
 	}
 	GlobalContext.Observer(m)
 
@@ -255,31 +363,7 @@ func (m *Manager) Switch(leadIdx, benchIdx int) error {
 	m.CurrentSelfBenchPokemons[benchIdx].RankStat = bp.RankStat{}
 	GlobalContext.Observer(m)
 
-	if afterPokemon.Ability == bp.INTIMIDATE {
-		intimidateStr := bp.INTIMIDATE.ToString()
-		intimidateTrainerNameMsg := m.GetTrainerNameMessage(m.CurrentSelfIsHost)
-		targetTrainerNameMsg := m.GetTrainerNameMessage(!m.CurrentSelfIsHost)
-
-		for i := range m.CurrentOpponentLeadPokemons {
-			target := &m.CurrentOpponentLeadPokemons[i]
-			if target.RankStat.Atk == bp.MIN_RANK {
-				continue
-			}
-			
-			targetPokeNameStr := target.Name.ToString()
-
-			if target.Ability == bp.CLEAR_BODY {
-				clearbodyStr := bp.CLEAR_BODY.ToString()
-				m.HostViewMessage = targetTrainerNameMsg + targetPokeNameStr + "の " + clearbodyStr + "で " + intimidateTrainerNameMsg + afterPokeNameStr + "の " + intimidateStr + "は きかなかった！"
-				GlobalContext.Observer(m)
-				continue
-			}
-
-			m.CurrentOpponentLeadPokemons[i].RankStat.Atk -= 1
-			m.HostViewMessage = intimidateTrainerNameMsg + afterPokeNameStr + "の " + intimidateStr + "で " + targetTrainerNameMsg + targetPokeNameStr + "の こうげきが さがった！"
-			GlobalContext.Observer(m)
-		}
-	}
+	m.Intimidate()
 	return nil
 }
 
