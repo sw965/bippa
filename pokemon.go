@@ -176,7 +176,7 @@ type Pokemon struct {
 	Ability Ability
 	Item Item
 
-	MoveNames MoveNames
+	LearnedMoveNames MoveNames
 	PointUps PointUps
 	Moveset Moveset
 
@@ -220,7 +220,7 @@ func NewPokemon(name PokeName, gender Gender, level Level, nature Nature, abilit
 	}
 
 	p := Pokemon{
-		MoveNames:make(MoveNames, 0, MAX_MOVESET_LENGTH),
+		LearnedMoveNames:make(MoveNames, 0, MAX_MOVESET_LENGTH),
 		PointUps:make(PointUps, 0, MAX_MOVESET_LENGTH),
 	}
 	p.Name = name
@@ -276,7 +276,7 @@ func (p *Pokemon) SetInMoveset(k MoveName, up PointUp) error {
 	if !slices.Contains(POKEDEX[p.Name].Learnset, k) {
 		return fmt.Errorf("%s は %s を 覚えません。", p.Name.ToString(), k.ToString())
 	}
-	p.MoveNames = append(p.MoveNames, k)
+	p.LearnedMoveNames = append(p.LearnedMoveNames, k)
 	p.PointUps = append(p.PointUps, up)
 	pp := NewPowerPoint(MOVEDEX[k].BasePP, up)
 	p.Moveset[k] = &pp
@@ -298,7 +298,7 @@ func (p *Pokemon) UpdateStat() error {
 }
 
 func (p Pokemon) Clone() Pokemon {
-	p.MoveNames = slices.Clone(p.MoveNames)
+	p.LearnedMoveNames = slices.Clone(p.LearnedMoveNames)
 	p.PointUps = slices.Clone(p.PointUps)
 	p.Types = slices.Clone(p.Types)
 	p.Moveset = p.Moveset.Clone()
@@ -331,7 +331,7 @@ func (p *Pokemon) Equal(other *Pokemon) bool {
 		return false
 	}
 
-	if !slices.Equal(p.MoveNames, other.MoveNames) {
+	if !slices.Equal(p.LearnedMoveNames, other.LearnedMoveNames) {
 		return false
 	}
 
@@ -402,8 +402,7 @@ func (p *Pokemon) Equal(other *Pokemon) bool {
 }
 
 func (p *Pokemon) UsableMoveNames() MoveNames {
-	fmt.Println(p == nil, p.Moveset == nil, p.MoveNames == nil)
-	mns := fn.Filter[MoveNames](p.MoveNames.FilterByNotEmpty(), func(mn MoveName) bool { return p.Moveset[mn].Current > 0 })
+	mns := fn.Filter[MoveNames](p.LearnedMoveNames.FilterByNotEmpty(), func(mn MoveName) bool { return p.Moveset[mn].Current > 0 })
 	if p.IsTauntState() {
 		mns = fn.Filter[MoveNames](mns, func(mn MoveName) bool {
 			moveData := MOVEDEX[mn]
@@ -461,7 +460,7 @@ func (p *Pokemon) ToEasyRead() EasyReadPokemon {
 		Ability:p.Ability.ToString(),
 		Item:p.Item.ToString(),
 
-		MoveNames:p.MoveNames.ToStrings(),
+		LearnedMoveNames:p.LearnedMoveNames.ToStrings(),
 		PointUps:p.PointUps,
 		Moveset:p.Moveset.ToEasyRead(),
 
@@ -562,7 +561,7 @@ type EasyReadPokemon struct {
 	Ability string
 	Item string
 
-	MoveNames []string
+	LearnedMoveNames []string
 	PointUps PointUps
 	Moveset EasyReadMoveset
 
@@ -614,7 +613,7 @@ func (e *EasyReadPokemon) From() (Pokemon, error) {
 		return Pokemon{}, err
 	}
 
-	moveNames, err := fn.MapWithError[MoveNames](e.MoveNames, StringToMoveName)
+	learnedMoveNames, err := fn.MapWithError[MoveNames](e.LearnedMoveNames, StringToMoveName)
 	if err != nil {
 		return Pokemon{}, err
 	}
@@ -648,7 +647,7 @@ func (e *EasyReadPokemon) From() (Pokemon, error) {
 		Ability:ability,
 		Item:item,
 
-		MoveNames:moveNames,
+		LearnedMoveNames:learnedMoveNames,
 		PointUps:e.PointUps,
 		Moveset:moveset,
 

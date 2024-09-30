@@ -4,10 +4,12 @@ import (
     "fmt"
 	"net/http"
 	"net/url"
+    "encoding/json"
     bp "github.com/sw965/bippa"
 	"github.com/sw965/bippa/battle"
 	"github.com/sw965/bippa/battle/game"
-    "encoding/json"
+	"github.com/sw965/crow/mcts/duct"
+	battleMCTS "github.com/sw965/bippa/battle/mcts"
 )
 
 func parseAndConvQuery[T, U any](query string, from func(U) (T, error)) (T, error) {
@@ -157,6 +159,7 @@ func battleQueryHandler(w http.ResponseWriter, r *http.Request) {
 
 	var response []byte
 	queryType, err := url.QueryUnescape(r.URL.Query().Get("query_type"))
+
 	switch queryType {
 		case "battle":
 			response, err = json.Marshal(battleManager.ToEasyRead())
@@ -213,16 +216,14 @@ func battleCommandHandler(w http.ResponseWriter, r *http.Request) {
 				return			
 			}
 
-			fmt.Println("actionQuery", playerAction.ToEasyRead(), aiAction.ToEasyRead())
-
 			ms := make(battle.Managers, 0, 256)
 			ms = append(ms, battleManager.Clone())
 			battle.GlobalContext.Observer = func(m *battle.Manager) {
-				c := m.Clone()
-				if !c.CurrentSelfIsHost {
-					c.SwapView()
+				mv := m.Clone()
+				if !mv.CurrentSelfIsHost {
+					mv.SwapView()
 				}
-				ms = append(ms, c)
+				ms = append(ms, mv)
 			}
 			
 			nextBattleManager, err := game.Push(battleManager, battle.Actions{playerAction, aiAction})
@@ -238,6 +239,79 @@ func battleCommandHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+var battleMCTSearcher duct.MCTS[battle.Manager, battle.ActionsSlice, battle.Actions, battle.Action] 
+
+func battleMCTSInitHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+    w.Header().Set("Content-Type", "application/json")
+
+	cQuery := r.URL.Query().Get("c")
+	if cQuery == "" {
+		err := fmt.Errorf("cが空である為、pushを実行出来ません。")
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	c, err := parseAndConvQuery(cQuery, func(c float64) (float64, error) { return c, nil })
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return			
+	}
+
+	battleMCTSearcher = battleMCTS.New(c)
+	response, err := json.Marshal(fmt.Sprintf("c = %v", c))
+	if err != nil {
+        http.Error(w, err.Error(), http.StatusInternalServerError)
+        return
+    }
+	w.Write(response)
+}
+
+func battleMCTSQueryHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+    w.Header().Set("Content-Type", "application/json")
+
+	queryType, err := url.QueryUnescape(r.URL.Query().Get("query_type"))
+    if err != nil {
+        http.Error(w, err.Error(), http.StatusInternalServerError)
+        return
+    }
+
+	var response []byte
+	switch queryType {
+		case "joint_action":
+			simulationNumQuery := r.URL.Query().Get("simulation_num")
+			if simulationNumQuery == "" {
+				err := fmt.Errorf("simulation_numが空である為、joint_actionを取得出来ません。")
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+
+			simulationNum, err := parseAndConvQuery(simulationNumQuery, func(n int) (int, error) { return n, nil })
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return			
+			}
+
+			rootNode := battleMCTSearcher.NewNode(&battleManager)
+			fmt.Println(fmt.Sprintf("バトルのモンテカルロ木探索を実行します。試行回数 = %d", simulationNum))
+			err = battleMCTSearcher.Run(simulationNum, rootNode, battle.GlobalContext.Rand)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			fmt.Println("バトルのモンテカルロ木探索の実行が完了しました。")
+
+			jointAction := rootNode.SeparateUCBManager.JointActionByMaxTrial(battle.GlobalContext.Rand)
+			response, err = json.Marshal(jointAction.ToEasyRead())
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+	}
+	w.Write(response)
+}
+
 func main() {
 	server := http.Server{
         Addr:":8080",
@@ -248,6 +322,8 @@ func main() {
 	http.HandleFunc("/battle_init/", battleInitHandle)
 	http.HandleFunc("/battle_query/", battleQueryHandler)
 	http.HandleFunc("/battle_command/", battleCommandHandler)
+	http.HandleFunc("/battle_mcts_init/", battleMCTSInitHandler)
+	http.HandleFunc("/battle_mcts_query/", battleMCTSQueryHandler)
 
     fmt.Println("サーバーが起動しました。")
 	err := server.ListenAndServe()

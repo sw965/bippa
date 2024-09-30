@@ -130,7 +130,7 @@ func (m *Manager) Intimidate() {
 		targetTrainerNameMsg := m.GetTrainerNameMessage(!src.IsHost)
 
 		/*
-			ダブルバトル・トリプルバトルで複数の相手を対象に取る場合、第四世代では素早さが高い順に攻撃を下げていく。
+			ダブルバトルで複数の相手を対象に取る場合、第四世代では素早さが高い順に攻撃を下げていく。
 			第五世代以降は素早さに関係なく相手から見て左側のポケモンから順に攻撃を下げていく。
 		*/
 		for _, target := range leadPokemons {
