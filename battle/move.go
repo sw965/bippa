@@ -598,7 +598,7 @@ func NewFollowMe() Move {
 			if src != target {
 				return fmt.Errorf("このゆびとまれ は 技を繰り出したポケモン と 対象になるポケモン の アドレスが 一致していなければならない。")
 			}
-			m.CurrentSelfFollowMePokemonPointers = append(m.CurrentSelfFollowMePokemonPointers, src)
+			m.CurrentSelfAttentionPokemonPointers = append(m.CurrentSelfAttentionPokemonPointers, src)
 			m.HostViewMessage = m.GetTrainerNameMessage(src.IsHost) + src.Name.ToString() + " は ちゅうもくのまとになった！"
 			GlobalContext.Observer(m)
 			return nil

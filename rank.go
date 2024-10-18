@@ -20,8 +20,8 @@ const (
 )
 
 type RankStat struct {
-	Atk Rank
-	Def Rank
+	Atk   Rank
+	Def   Rank
 	SpAtk Rank
 	SpDef Rank
 	Speed Rank

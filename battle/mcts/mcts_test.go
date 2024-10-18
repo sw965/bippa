@@ -1,32 +1,32 @@
 package mcts_test
 
 import (
-	"testing"
 	"fmt"
 	bp "github.com/sw965/bippa"
-	omwrand "github.com/sw965/omw/math/rand"
 	"github.com/sw965/bippa/battle"
 	"github.com/sw965/bippa/battle/mcts"
+	omwrand "github.com/sw965/omw/math/rand"
+	"testing"
 )
 
 func Test(t *testing.T) {
 	m := battle.Manager{
-		CurrentSelfLeadPokemons:bp.Pokemons{
+		CurrentSelfLeadPokemons: bp.Pokemons{
 			bp.NewKusanagi2009Toxicroak(),
 			bp.NewKusanagi2009Empoleon(),
 		},
 
-		CurrentSelfBenchPokemons:bp.Pokemons{
+		CurrentSelfBenchPokemons: bp.Pokemons{
 			bp.NewKusanagi2009Snorlax(),
 			bp.NewKusanagiSalamence2009(),
 		},
 
-		CurrentOpponentLeadPokemons:bp.Pokemons{
+		CurrentOpponentLeadPokemons: bp.Pokemons{
 			bp.NewMoruhu2007Bronzong(),
 			bp.NewMoruhu2007Smeargle(),
 		},
 
-		CurrentOpponentBenchPokemons:bp.Pokemons{
+		CurrentOpponentBenchPokemons: bp.Pokemons{
 			bp.NewMoruhu2007Snorlax(),
 			bp.NewMoruhu2007Metagross(),
 		},
@@ -34,7 +34,7 @@ func Test(t *testing.T) {
 	m.Init("四天王", "カトレア")
 	// p2View := m.Clone()
 	// p2View.SwapView()
-	
+
 	// ui := battle.ObserverUI{
 	// 	LastP1ViewManager:m,
 	// 	LastP2ViewManager:p2View,
@@ -43,12 +43,15 @@ func Test(t *testing.T) {
 	battle.GlobalContext.DamageRandBonuses = []float64{1.0}
 	r := omwrand.NewMt19937()
 
-	mctSearch := mcts.New()
-	mctSearch.SetRandomPlayoutLeafNodeJointEvalFunc(r)
+	mctSearch := mcts.New(5.0)
 
 	//NewNodePointerという命名に変更すべき？
-	rootNode := mctSearch.NewNode(&m)
-	err := mctSearch.Run(25600, rootNode, r)
+	rootNode, err := mctSearch.NewNode(&m)
+	if err != nil {
+		panic(err)
+	}
+
+	err = mctSearch.Run(25600, rootNode, r)
 	if err != nil {
 		panic(err)
 	}

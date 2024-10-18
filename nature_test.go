@@ -1,9 +1,9 @@
 package bippa_test
 
 import (
-	"testing"
 	"fmt"
 	bp "github.com/sw965/bippa"
+	"testing"
 )
 
 func TestNATUREDEX(t *testing.T) {

@@ -5,8 +5,8 @@ import (
 )
 
 type NatureData struct {
-	AtkBonus NatureBonus
-	DefBonus NatureBonus
+	AtkBonus   NatureBonus
+	DefBonus   NatureBonus
 	SpAtkBonus NatureBonus
 	SpDefBonus NatureBonus
 	SpeedBonus NatureBonus
@@ -52,41 +52,41 @@ func (e EasyReadNaturedex) From() (Naturedex, error) {
 type Nature int
 
 const (
-    EMPTY_NATURE Nature = iota
-    LONELY               // さみしがり
-    ADAMANT              // いじっぱり
-    NAUGHTY              // やんちゃ
-    BRAVE                // ゆうかん
+	EMPTY_NATURE Nature = iota
+	LONELY              // さみしがり
+	ADAMANT             // いじっぱり
+	NAUGHTY             // やんちゃ
+	BRAVE               // ゆうかん
 
-    BOLD                 // ずぶとい
-    IMPISH               // わんぱく
-    LAX                  // のうてんき
-    RELAXED              // のんき
+	BOLD    // ずぶとい
+	IMPISH  // わんぱく
+	LAX     // のうてんき
+	RELAXED // のんき
 
-    MODEST               // ひかえめ
-    MILD                 // おっとり
-    RASH                 // うっかりや
-    QUIET                // れいせい
+	MODEST // ひかえめ
+	MILD   // おっとり
+	RASH   // うっかりや
+	QUIET  // れいせい
 
-    CALM                 // おだやか
-    GENTLE               // おとなしい
-    CAREFUL              // しんちょう
-    SASSY                // なまいき
+	CALM    // おだやか
+	GENTLE  // おとなしい
+	CAREFUL // しんちょう
+	SASSY   // なまいき
 
-    TIMID                // おくびょう
-    HASTY                // せっかち
-    JOLLY                // ようき
-    NAIVE                // むじゃき
+	TIMID // おくびょう
+	HASTY // せっかち
+	JOLLY // ようき
+	NAIVE // むじゃき
 
-    BASHFUL              // てれや
-    HARDY                // がんばりや
-    DOCILE               // すなお
-    QUIRKY               // きまぐれ
-    SERIOUS              // まじめ
+	BASHFUL // てれや
+	HARDY   // がんばりや
+	DOCILE  // すなお
+	QUIRKY  // きまぐれ
+	SERIOUS // まじめ
 )
 
 func (n Nature) ToString() string {
-    return NATURE_TO_STRING[n]
+	return NATURE_TO_STRING[n]
 }
 
 type Natures []Nature
@@ -105,17 +105,17 @@ var ALL_NATURES = func() Natures {
 }()
 
 func (ns Natures) ToStrings() []string {
-    ret := make([]string, len(ns))
-    for i, n := range ns {
-        ret[i] = n.ToString()
-    } 
-    return ret
+	ret := make([]string, len(ns))
+	for i, n := range ns {
+		ret[i] = n.ToString()
+	}
+	return ret
 }
 
 type NatureBonus float64
 
 const (
-	GOOD_NATURE_BONUS = 1.1
+	GOOD_NATURE_BONUS    = 1.1
 	NEUTRAL_NATURE_BONUS = 1.0
-	BAD_NATURE_BONUS = 0.9
+	BAD_NATURE_BONUS     = 0.9
 )

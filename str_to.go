@@ -6,16 +6,16 @@ import (
 )
 
 var STRING_TO_POKE_NAME = map[string]PokeName{
-    "":          EMPTY_POKE_NAME,
-    "ギャラドス": GYARADOS,
-    "カビゴン":   SNORLAX,
-    "ドーブル":   SMEARGLE,
-    "ボーマンダ": SALAMENCE,
-    "メタグロス": METAGROSS,
-    "ラティオス": LATIOS,
-    "エンペルト": EMPOLEON,
-    "ドータクン": BRONZONG,
-    "ドクロッグ": TOXICROAK,
+	"":      EMPTY_POKE_NAME,
+	"ギャラドス": GYARADOS,
+	"カビゴン":  SNORLAX,
+	"ドーブル":  SMEARGLE,
+	"ボーマンダ": SALAMENCE,
+	"メタグロス": METAGROSS,
+	"ラティオス": LATIOS,
+	"エンペルト": EMPOLEON,
+	"ドータクン": BRONZONG,
+	"ドクロッグ": TOXICROAK,
 }
 
 func StringToPokeName(s string) (PokeName, error) {
@@ -32,9 +32,9 @@ func StringsToPokeNames(ss []string) (PokeNames, error) {
 }
 
 var STRING_TO_GENDER = map[string]Gender{
-	"不明":UNKNOWN,
-	"♂":MALE,
-	"♀":FEMALE,
+	"不明": UNKNOWN,
+	"♂":  MALE,
+	"♀":  FEMALE,
 }
 
 func StringToGender(s string) (Gender, error) {
@@ -51,24 +51,24 @@ func StringsToGenders(ss []string) (Genders, error) {
 }
 
 var STRING_TO_TYPE = map[string]Type{
-	"ノーマル":NORMAL,
-	"ほのお":FIRE,
-	"みず":WATER,
-	"くさ":GRASS,
-	"でんき":ELECTRIC,
-	"こおり":ICE,
-	"かくとう":FIGHTING,
-	"どく":POISON,
-	"じめん":GROUND,
-	"ひこう":FLYING,
-	"エスパー":PSYCHIC_TYPE,
-	"むし":BUG,
-	"いわ":ROCK,
-	"ゴースト":GHOST,
-	"ドラゴン":DRAGON,
-	"あく":DARK,
-	"はがね":STEEL,
-	"フェアリー":FAIRY,
+	"ノーマル":  NORMAL,
+	"ほのお":   FIRE,
+	"みず":    WATER,
+	"くさ":    GRASS,
+	"でんき":   ELECTRIC,
+	"こおり":   ICE,
+	"かくとう":  FIGHTING,
+	"どく":    POISON,
+	"じめん":   GROUND,
+	"ひこう":   FLYING,
+	"エスパー":  PSYCHIC_TYPE,
+	"むし":    BUG,
+	"いわ":    ROCK,
+	"ゴースト":  GHOST,
+	"ドラゴン":  DRAGON,
+	"あく":    DARK,
+	"はがね":   STEEL,
+	"フェアリー": FAIRY,
 }
 
 func StringToType(s string) (Type, error) {
@@ -85,37 +85,37 @@ func StringsToTypes(ss []string) (Types, error) {
 }
 
 var STRING_TO_NATURE = map[string]Nature{
-    ""         : EMPTY_NATURE,
-    "さみしがり": LONELY,
-    "いじっぱり": ADAMANT,
-    "やんちゃ":   NAUGHTY,
-    "ゆうかん":   BRAVE,
+	"":      EMPTY_NATURE,
+	"さみしがり": LONELY,
+	"いじっぱり": ADAMANT,
+	"やんちゃ":  NAUGHTY,
+	"ゆうかん":  BRAVE,
 
-    "ずぶとい":   BOLD,
-    "わんぱく":   IMPISH,
-    "のうてんき": LAX,
-    "のんき":     RELAXED,
+	"ずぶとい":  BOLD,
+	"わんぱく":  IMPISH,
+	"のうてんき": LAX,
+	"のんき":   RELAXED,
 
-    "ひかえめ":   MODEST,
-    "おっとり":   MILD,
-    "うっかりや": RASH,
-    "れいせい":   QUIET,
+	"ひかえめ":  MODEST,
+	"おっとり":  MILD,
+	"うっかりや": RASH,
+	"れいせい":  QUIET,
 
-    "おだやか":   CALM,
-    "おとなしい": GENTLE,
-    "しんちょう": CAREFUL,
-    "なまいき":   SASSY,
+	"おだやか":  CALM,
+	"おとなしい": GENTLE,
+	"しんちょう": CAREFUL,
+	"なまいき":  SASSY,
 
-    "おくびょう": TIMID,
-    "せっかち":   HASTY,
-    "ようき":     JOLLY,
-    "むじゃき":   NAIVE,
+	"おくびょう": TIMID,
+	"せっかち":  HASTY,
+	"ようき":   JOLLY,
+	"むじゃき":  NAIVE,
 
-    "てれや":     BASHFUL,
-    "がんばりや": HARDY,
-    "すなお":     DOCILE,
-    "きまぐれ":   QUIRKY,
-    "まじめ":     SERIOUS,
+	"てれや":   BASHFUL,
+	"がんばりや": HARDY,
+	"すなお":   DOCILE,
+	"きまぐれ":  QUIRKY,
+	"まじめ":   SERIOUS,
 }
 
 func StringToNature(s string) (Nature, error) {
@@ -132,17 +132,17 @@ func StringsToNatures(ss []string) (Natures, error) {
 }
 
 var STRING_TO_ABILITY = map[string]Ability{
-    "げきりゅう":TORRENT,
-    "めんえき": IMMUNITY,
-    "あついしぼう": THICK_FAT,
-    "いかく": INTIMIDATE,
-    "ふゆう": LEVITATE,
-	"たいねつ":HEATPROOF,
-    "マイペース": OWN_TEMPO,
-    "テクニシャン": TECHNICIAN,
-    "きけんよち": ANTICIPATION,
-    "かんそうはだ": DRY_SKIN,
-    "クリアボディ": CLEAR_BODY,
+	"げきりゅう":  TORRENT,
+	"めんえき":   IMMUNITY,
+	"あついしぼう": THICK_FAT,
+	"いかく":    INTIMIDATE,
+	"ふゆう":    LEVITATE,
+	"たいねつ":   HEATPROOF,
+	"マイペース":  OWN_TEMPO,
+	"テクニシャン": TECHNICIAN,
+	"きけんよち":  ANTICIPATION,
+	"かんそうはだ": DRY_SKIN,
+	"クリアボディ": CLEAR_BODY,
 }
 
 func StringToAbility(s string) (Ability, error) {
@@ -159,13 +159,13 @@ func StringsToAbilities(ss []string) (Abilities, error) {
 }
 
 var STRING_TO_ITEM = map[string]Item{
-	"":EMPTY_ITEM,
-	"イバンのみ":IAPAPA_BERRY,
-	"オボンのみ":SITRUS_BERRY,
-	"カゴのみ":CHESTO_BERRY,
-	"きあいのタスキ":FOCUS_SASH,
-	"ソクノのみ":WACAN_BERRY,
-	"ラムのみ":LUM_BERRY,
+	"":        EMPTY_ITEM,
+	"イバンのみ":   IAPAPA_BERRY,
+	"オボンのみ":   SITRUS_BERRY,
+	"カゴのみ":    CHESTO_BERRY,
+	"きあいのタスキ": FOCUS_SASH,
+	"ソクノのみ":   WACAN_BERRY,
+	"ラムのみ":    LUM_BERRY,
 }
 
 func StringToItem(s string) (Item, error) {
@@ -182,13 +182,13 @@ func StringsToItems(ss []string) (Items, error) {
 }
 
 var STRING_TO_STATUS_AILMENT = map[string]StatusAilment{
-	"":EMPTY_STATUS_AILMENT,
-	"ねむり":SLEEP,
-	"まひ":PARALYSIS,
-	"どく":NORMAL_POISON,
-	"もうどく":BAD_POISON,
-	"やけど":BURN,
-	"こおり":FREEZE,
+	"":     EMPTY_STATUS_AILMENT,
+	"ねむり":  SLEEP,
+	"まひ":   PARALYSIS,
+	"どく":   NORMAL_POISON,
+	"もうどく": BAD_POISON,
+	"やけど":  BURN,
+	"こおり":  FREEZE,
 }
 
 func StringToStatusAilment(s string) (StatusAilment, error) {
@@ -201,44 +201,44 @@ func StringToStatusAilment(s string) (StatusAilment, error) {
 }
 
 var STRING_TO_MOVE_NAME = map[string]MoveName{
-    "":           EMPTY_MOVE_NAME,
-    "10まんボルト":   THUNDERBOLT,
-    "アームハンマー": HAMMER_ARM,
-    "ストーンエッジ": STONE_EDGE,
-    "なみのり":      SURF,
-    "れいとうビーム":  ICE_BEAM,
-    "わるあがき":    STRUGGLE,
-    "あまごい":      RAIN_DANCE,
-    "いわなだれ":    ROCK_SLIDE,
-    "おんがえし":    RETURN,
-    "かみくだく":    CRUNCH,
-    "がむしゃら":    ENDEAVOR,
-    "こごえるかぜ":  ICY_WIND,
-    "このゆびとまれ": FOLLOW_ME,
-    "さいみんじゅつ": HYPNOSIS,
-    "じこあんじ":    RECOVER,
-    "じしん":        EARTHQUAKE,
-    "じばく":        SELF_DESTRUCT,
-    "たきのぼり":    WATERFALL,
-    "だいばくはつ":  EXPLOSION,
-    "ちょうはつ":    TAUNT,
-    "でんじは":      THUNDER_WAVE,
-    "ねこだまし":    FAKE_OUT,
-    "ねっぷう":      HEAT_WAVE,
-    "はらだいこ":    BELLY_DRUM,
-    "ふいうち":      SUCKER_PUNCH,
-    "ほのおのパンチ": FIRE_PUNCH,
-    "まもる":        PROTECT,
-    "みがわり":      SUBSTITUTE,
-    "りゅうせいぐん": DRACO_METEOR,
-    "クロスチョップ": CROSS_CHOP,
-    "コメットパンチ": COMET_PUNCH,
-    "サイコキネシス": PSYCHIC,
-    "ジャイロボール": GYRO_BALL,
-    "ダークホール":  DARK_VOID,
-    "トリックルーム": TRICK_ROOM,
-    "ハイドロポンプ": HYDRO_PUMP,
-    "バレットパンチ": BULLET_PUNCH,
+	"":        EMPTY_MOVE_NAME,
+	"10まんボルト": THUNDERBOLT,
+	"アームハンマー": HAMMER_ARM,
+	"ストーンエッジ": STONE_EDGE,
+	"なみのり":    SURF,
+	"れいとうビーム": ICE_BEAM,
+	"わるあがき":   STRUGGLE,
+	"あまごい":    RAIN_DANCE,
+	"いわなだれ":   ROCK_SLIDE,
+	"おんがえし":   RETURN,
+	"かみくだく":   CRUNCH,
+	"がむしゃら":   ENDEAVOR,
+	"こごえるかぜ":  ICY_WIND,
+	"このゆびとまれ": FOLLOW_ME,
+	"さいみんじゅつ": HYPNOSIS,
+	"じこあんじ":   RECOVER,
+	"じしん":     EARTHQUAKE,
+	"じばく":     SELF_DESTRUCT,
+	"たきのぼり":   WATERFALL,
+	"だいばくはつ":  EXPLOSION,
+	"ちょうはつ":   TAUNT,
+	"でんじは":    THUNDER_WAVE,
+	"ねこだまし":   FAKE_OUT,
+	"ねっぷう":    HEAT_WAVE,
+	"はらだいこ":   BELLY_DRUM,
+	"ふいうち":    SUCKER_PUNCH,
+	"ほのおのパンチ": FIRE_PUNCH,
+	"まもる":     PROTECT,
+	"みがわり":    SUBSTITUTE,
+	"りゅうせいぐん": DRACO_METEOR,
+	"クロスチョップ": CROSS_CHOP,
+	"コメットパンチ": COMET_PUNCH,
+	"サイコキネシス": PSYCHIC,
+	"ジャイロボール": GYRO_BALL,
+	"ダークホール":  DARK_VOID,
+	"トリックルーム": TRICK_ROOM,
+	"ハイドロポンプ": HYDRO_PUMP,
+	"バレットパンチ": BULLET_PUNCH,
 }
 
 func StringToMoveName(s string) (MoveName, error) {
@@ -255,9 +255,9 @@ func StringsToMoveNames(ss []string) (MoveNames, error) {
 }
 
 var STRING_TO_MOVE_CATEGORY = map[string]MoveCategory{
-	"物理":PHYSICS,
-	"特殊":SPECIAL,
-	"変化":STATUS,
+	"物理": PHYSICS,
+	"特殊": SPECIAL,
+	"変化": STATUS,
 }
 
 func StringToMoveCategory(s string) (MoveCategory, error) {
@@ -270,12 +270,12 @@ func StringToMoveCategory(s string) (MoveCategory, error) {
 }
 
 var STRING_TO_MOVE_TARGET = map[string]MoveTarget{
-	"通常":NORMAL_TARGET,
-	"相手2体":OPPONENT_TWO_TARGET,
-	"自分":SELF_TARGET,
-	"自分以外":OTHERS_TARGET,
-	"全体":ALL_TARGET,
-	"相手ランダム1体":OPPONENT_RANDOM_ONE_TARGET,
+	"通常":       NORMAL_TARGET,
+	"相手2体":     OPPONENT_TWO_TARGET,
+	"自分":       SELF_TARGET,
+	"自分以外":     OTHERS_TARGET,
+	"全体":       ALL_TARGET,
+	"相手ランダム1体": OPPONENT_RANDOM_ONE_TARGET,
 }
 
 func StringToMoveTarget(s string) (MoveTarget, error) {

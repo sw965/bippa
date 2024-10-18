@@ -7,13 +7,13 @@ import (
 type Item int
 
 const (
-	EMPTY_ITEM Item = iota
-    IAPAPA_BERRY // イバンのみ
-    SITRUS_BERRY // オボンのみ
-    CHESTO_BERRY // カゴのみ
-    FOCUS_SASH   // きあいのタスキ
-    WACAN_BERRY  // ソクノのみ
-    LUM_BERRY    // ラムのみ
+	EMPTY_ITEM   Item = iota
+	IAPAPA_BERRY      // イバンのみ
+	SITRUS_BERRY      // オボンのみ
+	CHESTO_BERRY      // カゴのみ
+	FOCUS_SASH        // きあいのタスキ
+	WACAN_BERRY       // ソクノのみ
+	LUM_BERRY         // ラムのみ
 )
 
 func (i Item) ToString() string {

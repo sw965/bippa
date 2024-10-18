@@ -2,24 +2,24 @@ package bippa
 
 import (
 	"fmt"
-	omwjson "github.com/sw965/omw/json"
 	"github.com/sw965/omw/fn"
-	"golang.org/x/exp/slices"
+	omwjson "github.com/sw965/omw/json"
 	omwmath "github.com/sw965/omw/math"
 	omwslices "github.com/sw965/omw/slices"
+	"golang.org/x/exp/slices"
 )
 
 type PokeData struct {
-	Types Types
-	Genders Genders
-	BaseHP int
-	BaseAtk int
-	BaseDef int
+	Types     Types
+	Genders   Genders
+	BaseHP    int
+	BaseAtk   int
+	BaseDef   int
 	BaseSpAtk int
 	BaseSpDef int
 	BaseSpeed int
 	Abilities Abilities
-	Learnset MoveNames
+	Learnset  MoveNames
 }
 
 func LoadPokeData(name PokeName) (PokeData, error) {
@@ -38,30 +38,30 @@ func LoadPokeData(name PokeName) (PokeData, error) {
 
 func (p *PokeData) ToEasyRead() EasyReadPokeData {
 	return EasyReadPokeData{
-		Types:p.Types.ToStrings(),
-		Genders:p.Genders.ToStrings(),
-		BaseHP:p.BaseHP,
-		BaseAtk:p.BaseAtk,
-		BaseDef:p.BaseDef,
-		BaseSpAtk:p.BaseSpAtk,
-		BaseSpDef:p.BaseSpDef,
-		BaseSpeed:p.BaseSpeed,
-		Abilities:p.Abilities.ToStrings(),
-		Learnset:p.Learnset.ToStrings(),
+		Types:     p.Types.ToStrings(),
+		Genders:   p.Genders.ToStrings(),
+		BaseHP:    p.BaseHP,
+		BaseAtk:   p.BaseAtk,
+		BaseDef:   p.BaseDef,
+		BaseSpAtk: p.BaseSpAtk,
+		BaseSpDef: p.BaseSpDef,
+		BaseSpeed: p.BaseSpeed,
+		Abilities: p.Abilities.ToStrings(),
+		Learnset:  p.Learnset.ToStrings(),
 	}
 }
 
 type EasyReadPokeData struct {
-	Types []string
-	Genders []string
-	BaseHP int
-	BaseAtk int
-	BaseDef int
+	Types     []string
+	Genders   []string
+	BaseHP    int
+	BaseAtk   int
+	BaseDef   int
 	BaseSpAtk int
 	BaseSpDef int
 	BaseSpeed int
 	Abilities []string
-	Learnset []string
+	Learnset  []string
 }
 
 func (e *EasyReadPokeData) From() (PokeData, error) {
@@ -86,16 +86,16 @@ func (e *EasyReadPokeData) From() (PokeData, error) {
 	}
 
 	return PokeData{
-		Types:types,
-		Genders:genders,
-		BaseHP:e.BaseHP,
-		BaseAtk:e.BaseAtk,
-		BaseDef:e.BaseDef,
-		BaseSpAtk:e.BaseSpAtk,
-		BaseSpDef:e.BaseSpDef,
-		BaseSpeed:e.BaseSpeed,
-		Abilities:abilities,
-		Learnset:learnset,
+		Types:     types,
+		Genders:   genders,
+		BaseHP:    e.BaseHP,
+		BaseAtk:   e.BaseAtk,
+		BaseDef:   e.BaseDef,
+		BaseSpAtk: e.BaseSpAtk,
+		BaseSpDef: e.BaseSpDef,
+		BaseSpeed: e.BaseSpeed,
+		Abilities: abilities,
+		Learnset:  learnset,
 	}, nil
 }
 
@@ -126,16 +126,16 @@ type EasyReadPokedex map[string]EasyReadPokeData
 type PokeName int
 
 const (
-    EMPTY_POKE_NAME PokeName = iota
-    GYARADOS   // ギャラドス
-    SNORLAX    // カビゴン
-    SMEARGLE   // ドーブル
-    SALAMENCE  // ボーマンダ
-    METAGROSS  // メタグロス
-    LATIOS     // ラティオス
-    EMPOLEON   // エンペルト
-    BRONZONG   // ドータクン
-    TOXICROAK  // ドクロッグ
+	EMPTY_POKE_NAME PokeName = iota
+	GYARADOS                 // ギャラドス
+	SNORLAX                  // カビゴン
+	SMEARGLE                 // ドーブル
+	SALAMENCE                // ボーマンダ
+	METAGROSS                // メタグロス
+	LATIOS                   // ラティオス
+	EMPOLEON                 // エンペルト
+	BRONZONG                 // ドータクン
+	TOXICROAK                // ドクロッグ
 )
 
 func (pn PokeName) ToString() string {
@@ -168,32 +168,32 @@ func (pns PokeNames) ToStrings() []string {
 type PokeNamesSlice []PokeNames
 
 type Pokemon struct {
-	Name PokeName
+	Name   PokeName
 	Gender Gender
-	Level Level
+	Level  Level
 
-	Nature Nature
+	Nature  Nature
 	Ability Ability
-	Item Item
+	Item    Item
 
 	LearnedMoveNames MoveNames
-	PointUps PointUps
-	Moveset Moveset
+	PointUps         PointUps
+	Moveset          Moveset
 
 	IndividualStat IndividualStat
-	EffortStat EffortStat
-	Stat PokemonStat
+	EffortStat     EffortStat
+	Stat           PokemonStat
 
-	Types Types
+	Types         Types
 	StatusAilment StatusAilment
-	SleepTurn int
-	RankStat RankStat
+	SleepTurn     int
+	RankStat      RankStat
 
-	IsFlinchState bool
-	RemainingTurnTauntState int
-	IsProtectState bool
+	IsFlinchState             bool
+	RemainingTurnTauntState   int
+	IsProtectState            bool
 	ProtectConsecutiveSuccess int
-	SubstituteHP int
+	SubstituteHP              int
 
 	//場に出てから経過したターンをカウントする。ねこだまし用。
 	TurnCount int
@@ -202,7 +202,7 @@ type Pokemon struct {
 
 	//主に、いかくや天候特性などに用いる。
 	IsAfterSwitch bool
-	IsHost bool
+	IsHost        bool
 }
 
 func NewPokemon(name PokeName, gender Gender, level Level, nature Nature, ability Ability, item Item, moveNames MoveNames, pointUps PointUps, iv *IndividualStat, ev *EffortStat) (Pokemon, error) {
@@ -220,8 +220,8 @@ func NewPokemon(name PokeName, gender Gender, level Level, nature Nature, abilit
 	}
 
 	p := Pokemon{
-		LearnedMoveNames:make(MoveNames, 0, MAX_MOVESET_LENGTH),
-		PointUps:make(PointUps, 0, MAX_MOVESET_LENGTH),
+		LearnedMoveNames: make(MoveNames, 0, MAX_MOVESET_LENGTH),
+		PointUps:         make(PointUps, 0, MAX_MOVESET_LENGTH),
 	}
 	p.Name = name
 	err := p.SetGender(gender)
@@ -314,7 +314,7 @@ func (p *Pokemon) Equal(other *Pokemon) bool {
 	if p.Gender != other.Gender {
 		return false
 	}
-	
+
 	if p.Level != other.Level {
 		return false
 	}
@@ -340,7 +340,7 @@ func (p *Pokemon) Equal(other *Pokemon) bool {
 	}
 
 	if !p.Moveset.Equal(other.Moveset) {
-		return false	
+		return false
 	}
 
 	if p.IndividualStat != other.IndividualStat {
@@ -428,7 +428,7 @@ func (p *Pokemon) ApplyHealToBody(heal int) error {
 		return fmt.Errorf("回復量は0以上でなければならない")
 	}
 
-	heal = omwmath.Min(heal, p.Stat.MaxHP - p.Stat.CurrentHP)
+	heal = omwmath.Min(heal, p.Stat.MaxHP-p.Stat.CurrentHP)
 	p.Stat.CurrentHP += heal
 	return nil
 }
@@ -452,46 +452,46 @@ func (p *Pokemon) ApplyDamageToSubstitute(dmg int) error {
 
 func (p *Pokemon) ToEasyRead() EasyReadPokemon {
 	return EasyReadPokemon{
-		Name:p.Name.ToString(),
-		Gender:p.Gender.ToString(),
-		Level:p.Level,
+		Name:   p.Name.ToString(),
+		Gender: p.Gender.ToString(),
+		Level:  p.Level,
 
-		Nature:p.Nature.ToString(),
-		Ability:p.Ability.ToString(),
-		Item:p.Item.ToString(),
+		Nature:  p.Nature.ToString(),
+		Ability: p.Ability.ToString(),
+		Item:    p.Item.ToString(),
 
-		LearnedMoveNames:p.LearnedMoveNames.ToStrings(),
-		PointUps:p.PointUps,
-		Moveset:p.Moveset.ToEasyRead(),
+		LearnedMoveNames: p.LearnedMoveNames.ToStrings(),
+		PointUps:         p.PointUps,
+		Moveset:          p.Moveset.ToEasyRead(),
 
-		IndividualStat:p.IndividualStat,
-		EffortStat:p.EffortStat,
-		Stat:p.Stat,
+		IndividualStat: p.IndividualStat,
+		EffortStat:     p.EffortStat,
+		Stat:           p.Stat,
 
-		Types:p.Types.ToStrings(),
-		StatusAilment:p.StatusAilment.ToString(),
-		SleepTurn:p.SleepTurn,
-		RankStat:p.RankStat,
+		Types:         p.Types.ToStrings(),
+		StatusAilment: p.StatusAilment.ToString(),
+		SleepTurn:     p.SleepTurn,
+		RankStat:      p.RankStat,
 
-		IsFlinchState:p.IsFlinchState,
-		RemainingTurnTauntState:p.RemainingTurnTauntState,
-		IsProtectState:p.IsProtectState,
-		ProtectConsecutiveSuccess:p.ProtectConsecutiveSuccess,
-		SubstituteHP:p.SubstituteHP,
+		IsFlinchState:             p.IsFlinchState,
+		RemainingTurnTauntState:   p.RemainingTurnTauntState,
+		IsProtectState:            p.IsProtectState,
+		ProtectConsecutiveSuccess: p.ProtectConsecutiveSuccess,
+		SubstituteHP:              p.SubstituteHP,
 
-		TurnCount:p.TurnCount,
-		ThisTurnPlannedUseMoveName:p.ThisTurnPlannedUseMoveName.ToString(),
+		TurnCount:                  p.TurnCount,
+		ThisTurnPlannedUseMoveName: p.ThisTurnPlannedUseMoveName.ToString(),
 
-		IsAfterSwitch:p.IsAfterSwitch,
-		IsHost:p.IsHost,
+		IsAfterSwitch: p.IsAfterSwitch,
+		IsHost:        p.IsHost,
 	}
 }
 
 type PokemonEachStatCalculator struct {
-	BaseStat int
-	Level Level
+	BaseStat   int
+	Level      Level
 	Individual Individual
-	Effort Effort
+	Effort     Effort
 }
 
 func (c *PokemonEachStatCalculator) HP() int {
@@ -505,43 +505,43 @@ func (c *PokemonEachStatCalculator) HPOther(bonus NatureBonus) int {
 	level := int(c.Level)
 	iv := int(c.Individual)
 	ev := int(c.Effort)
-	stat := float64((c.BaseStat*2 + iv + ev/4) * level / 100 + 5)
+	stat := float64((c.BaseStat*2+iv+ev/4)*level/100 + 5)
 	return int(stat * float64(bonus))
 }
 
 type PokemonStat struct {
-	MaxHP int
+	MaxHP     int
 	CurrentHP int
-	Atk int
-	Def int
-	SpAtk int
-	SpDef int
-	Speed int
+	Atk       int
+	Def       int
+	SpAtk     int
+	SpDef     int
+	Speed     int
 }
 
 func NewPokemonStat(name PokeName, level Level, nature Nature, iv IndividualStat, ev EffortStat) PokemonStat {
 	p := POKEDEX[name]
 	n := NATUREDEX[nature]
 
-	hpCalc := PokemonEachStatCalculator{BaseStat:p.BaseHP, Level:level, Individual:iv.HP, Effort:ev.HP}
+	hpCalc := PokemonEachStatCalculator{BaseStat: p.BaseHP, Level: level, Individual: iv.HP, Effort: ev.HP}
 	hp := hpCalc.HP()
 
-	atkCalc := PokemonEachStatCalculator{BaseStat:p.BaseAtk, Level:level, Individual:iv.Atk, Effort:ev.Atk}
+	atkCalc := PokemonEachStatCalculator{BaseStat: p.BaseAtk, Level: level, Individual: iv.Atk, Effort: ev.Atk}
 	atk := atkCalc.HPOther(n.AtkBonus)
 
-	defCalc := PokemonEachStatCalculator{BaseStat:p.BaseDef, Level:level, Individual:iv.Def, Effort:ev.Def}
+	defCalc := PokemonEachStatCalculator{BaseStat: p.BaseDef, Level: level, Individual: iv.Def, Effort: ev.Def}
 	def := defCalc.HPOther(n.DefBonus)
 
-	spAtkCalc := PokemonEachStatCalculator{BaseStat:p.BaseSpAtk, Level:level, Individual:iv.SpAtk, Effort:ev.SpAtk}
+	spAtkCalc := PokemonEachStatCalculator{BaseStat: p.BaseSpAtk, Level: level, Individual: iv.SpAtk, Effort: ev.SpAtk}
 	spAtk := spAtkCalc.HPOther(n.SpAtkBonus)
 
-	spDefCalc := PokemonEachStatCalculator{BaseStat:p.BaseSpDef, Level:level, Individual:iv.SpDef, Effort:ev.SpDef}
+	spDefCalc := PokemonEachStatCalculator{BaseStat: p.BaseSpDef, Level: level, Individual: iv.SpDef, Effort: ev.SpDef}
 	spDef := spDefCalc.HPOther(n.SpDefBonus)
 
-	speedCalc := PokemonEachStatCalculator{BaseStat:p.BaseSpeed, Level:level, Individual:iv.Speed, Effort:ev.Speed}
+	speedCalc := PokemonEachStatCalculator{BaseStat: p.BaseSpeed, Level: level, Individual: iv.Speed, Effort: ev.Speed}
 	speed := speedCalc.HPOther(n.SpeedBonus)
 
-	return PokemonStat{MaxHP:hp, CurrentHP:hp, Atk:atk, Def:def, SpAtk:spAtk, SpDef:spDef, Speed:speed}
+	return PokemonStat{MaxHP: hp, CurrentHP: hp, Atk: atk, Def: def, SpAtk: spAtk, SpDef: spDef, Speed: speed}
 }
 
 func (s *PokemonStat) IsFullHP() bool {
@@ -553,38 +553,38 @@ func (s *PokemonStat) CurrentHPRatio() float64 {
 }
 
 type EasyReadPokemon struct {
-	Name string
+	Name   string
 	Gender string
-	Level Level
+	Level  Level
 
-	Nature string
+	Nature  string
 	Ability string
-	Item string
+	Item    string
 
 	LearnedMoveNames []string
-	PointUps PointUps
-	Moveset EasyReadMoveset
+	PointUps         PointUps
+	Moveset          EasyReadMoveset
 
 	IndividualStat IndividualStat
-	EffortStat EffortStat
-	Stat PokemonStat
+	EffortStat     EffortStat
+	Stat           PokemonStat
 
-	Types []string
+	Types         []string
 	StatusAilment string
-	SleepTurn int
-	RankStat RankStat
+	SleepTurn     int
+	RankStat      RankStat
 
-	IsFlinchState bool
-	RemainingTurnTauntState int
-	IsProtectState bool
+	IsFlinchState             bool
+	RemainingTurnTauntState   int
+	IsProtectState            bool
 	ProtectConsecutiveSuccess int
-	SubstituteHP int
+	SubstituteHP              int
 
-	TurnCount int
+	TurnCount                  int
 	ThisTurnPlannedUseMoveName string
-	
+
 	IsAfterSwitch bool
-	IsHost bool
+	IsHost        bool
 }
 
 func (e *EasyReadPokemon) From() (Pokemon, error) {
@@ -639,36 +639,36 @@ func (e *EasyReadPokemon) From() (Pokemon, error) {
 	}
 
 	return Pokemon{
-		Name:pokeName,
-		Gender:gender,
-		Level:e.Level,
+		Name:   pokeName,
+		Gender: gender,
+		Level:  e.Level,
 
-		Nature:nature,
-		Ability:ability,
-		Item:item,
+		Nature:  nature,
+		Ability: ability,
+		Item:    item,
 
-		LearnedMoveNames:learnedMoveNames,
-		PointUps:e.PointUps,
-		Moveset:moveset,
+		LearnedMoveNames: learnedMoveNames,
+		PointUps:         e.PointUps,
+		Moveset:          moveset,
 
-		IndividualStat:e.IndividualStat,
-		EffortStat:e.EffortStat,
-		Stat:e.Stat,
+		IndividualStat: e.IndividualStat,
+		EffortStat:     e.EffortStat,
+		Stat:           e.Stat,
 
-		Types:types,
-		StatusAilment:statusAilment,
-		SleepTurn:e.SleepTurn,
-		RankStat:e.RankStat,
+		Types:         types,
+		StatusAilment: statusAilment,
+		SleepTurn:     e.SleepTurn,
+		RankStat:      e.RankStat,
 
-		IsFlinchState:e.IsFlinchState,
-		RemainingTurnTauntState:e.RemainingTurnTauntState,
-		IsProtectState:e.IsProtectState,
-		ProtectConsecutiveSuccess:e.ProtectConsecutiveSuccess,
-		SubstituteHP:e.SubstituteHP,
+		IsFlinchState:             e.IsFlinchState,
+		RemainingTurnTauntState:   e.RemainingTurnTauntState,
+		IsProtectState:            e.IsProtectState,
+		ProtectConsecutiveSuccess: e.ProtectConsecutiveSuccess,
+		SubstituteHP:              e.SubstituteHP,
 
-		TurnCount:e.TurnCount,
-		ThisTurnPlannedUseMoveName:thisTurnPlannedUseMoveName,
-		IsHost:e.IsHost,
+		TurnCount:                  e.TurnCount,
+		ThisTurnPlannedUseMoveName: thisTurnPlannedUseMoveName,
+		IsHost:                     e.IsHost,
 	}, nil
 }
 
@@ -790,7 +790,7 @@ func NewRomanStan2009Gyarados() Pokemon {
 		MoveNames{WATERFALL, STONE_EDGE, THUNDER_WAVE, PROTECT},
 		MAX_POINT_UPS,
 		&MAX_INDIVIDUAL_STAT,
-		&EffortStat{HP:164, Atk:92, Speed:MAX_EFFORT},
+		&EffortStat{HP: 164, Atk: 92, Speed: MAX_EFFORT},
 	)
 	if err != nil {
 		panic(err)
@@ -839,7 +839,7 @@ func NewRomanStan2009Snorlax() Pokemon {
 		SNORLAX, FEMALE, STANDARD_LEVEL, BRAVE, THICK_FAT, SITRUS_BERRY,
 		MoveNames{RETURN, CRUNCH, SELF_DESTRUCT, PROTECT},
 		MAX_POINT_UPS,
-		&iv, &EffortStat{HP:204, Atk:52, Def:156, SpDef:96},
+		&iv, &EffortStat{HP: 204, Atk: 52, Def: 156, SpDef: 96},
 	)
 	if err != nil {
 		panic(err)
@@ -855,7 +855,7 @@ func NewKusanagi2009Snorlax() Pokemon {
 		MoveNames{RETURN, CRUNCH, SELF_DESTRUCT, PROTECT},
 		MAX_POINT_UPS,
 		&MAX_INDIVIDUAL_STAT,
-		&EffortStat{HP:204, Atk:52, Def:156, SpDef:60, Speed:36},
+		&EffortStat{HP: 204, Atk: 52, Def: 156, SpDef: 60, Speed: 36},
 	)
 	if err != nil {
 		panic(err)
@@ -889,7 +889,7 @@ func NewKusanagiSalamence2009() Pokemon {
 		SALAMENCE, FEMALE, STANDARD_LEVEL, MODEST, INTIMIDATE, SITRUS_BERRY,
 		MoveNames{DRACO_METEOR, HEAT_WAVE, RAIN_DANCE, PROTECT},
 		MAX_POINT_UPS,
-		&MAX_INDIVIDUAL_STAT, &EffortStat{HP:20, SpAtk:236, Speed:252},
+		&MAX_INDIVIDUAL_STAT, &EffortStat{HP: 20, SpAtk: 236, Speed: 252},
 	)
 	if err != nil {
 		panic(err)
@@ -902,10 +902,10 @@ func NewMoruhu2007Metagross() Pokemon {
 	iv := MAX_INDIVIDUAL_STAT.Clone()
 	iv.Speed = MIN_INDIVIDUAL
 	p, err := NewPokemon(
-		METAGROSS, FEMALE, STANDARD_LEVEL, BRAVE, CLEAR_BODY, LUM_BERRY,
+		METAGROSS, UNKNOWN, STANDARD_LEVEL, BRAVE, CLEAR_BODY, LUM_BERRY,
 		MoveNames{EARTHQUAKE, BULLET_PUNCH, ROCK_SLIDE, RECOVER},
 		MAX_POINT_UPS,
-		&iv, &EffortStat{HP:MAX_EFFORT, Def:128, SpDef:128},
+		&iv, &EffortStat{HP: MAX_EFFORT, Def: 128, SpDef: 128},
 	)
 	if err != nil {
 		panic(err)
@@ -921,7 +921,7 @@ func NewMoruhu2008Metagross() Pokemon {
 		METAGROSS, UNKNOWN, STANDARD_LEVEL, BRAVE, CLEAR_BODY, LUM_BERRY,
 		MoveNames{HAMMER_ARM, BULLET_PUNCH, ROCK_SLIDE, RECOVER},
 		MAX_POINT_UPS,
-		&iv, &EffortStat{HP:MAX_EFFORT, Def:128, SpDef:128},
+		&iv, &EffortStat{HP: MAX_EFFORT, Def: 128, SpDef: 128},
 	)
 	if err != nil {
 		panic(err)
@@ -936,7 +936,7 @@ func NewRomanStan2009Metagross() Pokemon {
 		METAGROSS, UNKNOWN, STANDARD_LEVEL, ADAMANT, CLEAR_BODY, LUM_BERRY,
 		MoveNames{COMET_PUNCH, BULLET_PUNCH, EARTHQUAKE, PROTECT},
 		MAX_POINT_UPS,
-		&MAX_INDIVIDUAL_STAT, &EffortStat{HP:236, Atk:36, Def:4, SpDef:172, Speed:60},
+		&MAX_INDIVIDUAL_STAT, &EffortStat{HP: 236, Atk: 36, Def: 4, SpDef: 172, Speed: 60},
 	)
 	if err != nil {
 		panic(err)
@@ -970,7 +970,7 @@ func NewKusanagi2009Empoleon() Pokemon {
 		EMPOLEON, FEMALE, STANDARD_LEVEL, MODEST, TORRENT, WACAN_BERRY,
 		MoveNames{HYDRO_PUMP, SURF, ICY_WIND, PROTECT},
 		MAX_POINT_UPS,
-		&iv, &EffortStat{HP:68, Def:12, SpAtk:252, SpDef:4, Speed:172},
+		&iv, &EffortStat{HP: 68, Def: 12, SpAtk: 252, SpDef: 4, Speed: 172},
 	)
 	if err != nil {
 		panic(err)

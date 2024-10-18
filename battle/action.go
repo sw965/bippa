@@ -25,6 +25,10 @@ func (a *SoloAction) IsMove() bool {
 	return a.MoveName != bp.EMPTY_MOVE_NAME
 }
 
+func (a *SoloAction) IsSwitch() bool {
+	return a.MoveName == bp.EMPTY_MOVE_NAME && !a.IsEmpty()
+}
+
 func (a *SoloAction) Priority() int {
 	if a.IsMove() {
 		moveData := bp.MOVEDEX[a.MoveName]
@@ -96,13 +100,15 @@ func NewLegalSoloActions(m *Manager) SoloActions {
 	}
 
 	if selfMustSwitch {
-		as := make(SoloActions, 0, DOUBLE * DOUBLE)
-		//複数のポケモンが瀕死状態であっても、1匹ずつ交代する為、0番目のインデックスにアクセスする。
-		srcIdx := m.CurrentSelfLeadPokemons.FaintedIndices()[0]
-		src := m.CurrentSelfLeadPokemons[srcIdx]
-		speed := src.Stat.Speed
-		for _, targetIdx := range m.CurrentSelfBenchPokemons.NotFaintedIndices() {
-			as = append(as, SoloAction{SrcIndex:srcIdx, TargetIndex:targetIdx, Speed:speed})
+		srcIndices := m.CurrentSelfLeadPokemons.FaintedIndices()
+		targetIndices := m.CurrentSelfBenchPokemons.NotFaintedIndices()
+		as := make(SoloActions, 0, len(srcIndices) * len(targetIndices))
+		for _, srcIdx := range m.CurrentSelfLeadPokemons.FaintedIndices() {
+			src := m.CurrentSelfLeadPokemons[srcIdx]
+			speed := src.Stat.Speed
+			for _, targetIdx := range m.CurrentSelfBenchPokemons.NotFaintedIndices() {
+				as = append(as, SoloAction{SrcIndex:srcIdx, TargetIndex:targetIdx, Speed:speed})
+			}
 		}
 		return as
 	}
@@ -264,16 +270,16 @@ func NewLegalActions(m *Manager) Actions {
 		first := soloActions[0]
 		second := soloActions[1]
 
-		isFirstSwitch := !first.IsMove()
-		isSecondSwitch := !second.IsMove()
+		isFirstSwitch := !first.IsSwitch()
+		isSecondSwitch := !second.IsSwitch()
 
-		if isFirstSwitch && !first.IsEmpty() && isSecondSwitch && !second.IsEmpty() {
+		if isFirstSwitch && isSecondSwitch {
 			/*
 				自分の先頭のポケモン (ドクロッグ, エンペルト)
 				自分の控えのポケモン (カビゴン, ボーマンダ)
 				ドクロッグ → カビゴンと交代
 				エンペルト → カビゴンと交代
-				みたいに、同じポケモンに交代する事は出来ない。
+				のように、同じポケモンに交代する事は出来ない。
 			*/
 			if first.TargetIndex == second.TargetIndex {
 				return false

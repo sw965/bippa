@@ -1,11 +1,11 @@
 package bippa
 
 import (
+	"github.com/sw965/omw/fn"
 	omwjson "github.com/sw965/omw/json"
 	omwmaps "github.com/sw965/omw/maps"
-	"golang.org/x/exp/slices"
-	"github.com/sw965/omw/fn"
 	omwslices "github.com/sw965/omw/slices"
+	"golang.org/x/exp/slices"
 )
 
 type TypeData map[Type]float64
@@ -20,7 +20,7 @@ func (t TypeData) ToEasyRead() EasyReadTypeData {
 
 type EasyReadTypeData map[string]float64
 
-func(e EasyReadTypeData) From() (TypeData, error) {
+func (e EasyReadTypeData) From() (TypeData, error) {
 	d := TypeData{}
 	for k, v := range e {
 		t, err := StringToType(k)
@@ -95,7 +95,7 @@ func (e EasyReadTypedex) From() (Typedex, error) {
 type Type int
 
 const (
-	NORMAL Type  = iota
+	NORMAL Type = iota
 	FIRE
 	WATER
 	GRASS

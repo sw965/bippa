@@ -3,9 +3,9 @@ package bippa
 type Level int
 
 const (
-	MIN_LEVEL Level = 1
+	MIN_LEVEL      Level = 1
 	STANDARD_LEVEL Level = 50
-	MAX_LEVEL Level = 100
+	MAX_LEVEL      Level = 100
 )
 
 type Levels []Level

@@ -24,8 +24,8 @@ type Manager struct {
 	CurrentOpponentLeadPokemons bp.Pokemons
 	CurrentOpponentBenchPokemons bp.Pokemons
 
-	CurrentSelfFollowMePokemonPointers bp.PokemonPointers
-	CurrentOpponentFollowMePokemonPointers bp.PokemonPointers
+	CurrentSelfAttentionPokemonPointers bp.PokemonPointers
+	CurrentOpponentAttentionPokemonPointers bp.PokemonPointers
 
 	Weather Weather
 	RemainingTurn RemainingTurn
@@ -168,15 +168,15 @@ func (m Manager) Clone() Manager {
 	m.CurrentSelfBenchPokemons = m.CurrentSelfBenchPokemons.Clone()
 	m.CurrentOpponentLeadPokemons = m.CurrentOpponentLeadPokemons.Clone()
 	m.CurrentOpponentBenchPokemons = m.CurrentOpponentBenchPokemons.Clone()
-	m.CurrentSelfFollowMePokemonPointers = slices.Clone(m.CurrentSelfFollowMePokemonPointers)
-	m.CurrentOpponentFollowMePokemonPointers = slices.Clone(m.CurrentOpponentFollowMePokemonPointers)
+	m.CurrentSelfAttentionPokemonPointers = slices.Clone(m.CurrentSelfAttentionPokemonPointers)
+	m.CurrentOpponentAttentionPokemonPointers = slices.Clone(m.CurrentOpponentAttentionPokemonPointers)
 	return m
 }
 
 func (m *Manager) SwapView() {
 	m.CurrentSelfLeadPokemons, m.CurrentSelfBenchPokemons, m.CurrentOpponentLeadPokemons, m.CurrentOpponentBenchPokemons =
 		m.CurrentOpponentLeadPokemons, m.CurrentOpponentBenchPokemons, m.CurrentSelfLeadPokemons, m.CurrentSelfBenchPokemons
-	m.CurrentSelfFollowMePokemonPointers, m.CurrentOpponentFollowMePokemonPointers = m.CurrentOpponentFollowMePokemonPointers, m.CurrentSelfFollowMePokemonPointers
+	m.CurrentSelfAttentionPokemonPointers, m.CurrentOpponentAttentionPokemonPointers = m.CurrentOpponentAttentionPokemonPointers, m.CurrentSelfAttentionPokemonPointers
 	m.CurrentSelfIsHost = !m.CurrentSelfIsHost
 }
 
@@ -239,7 +239,7 @@ func (m *Manager) targetPokemonPointersForSingle(a *SoloAction) (bp.PokemonPoint
 }
 
 func (m *Manager) targetPokemonPointersForDoubleNormalTarget(a *SoloAction) bp.PokemonPointers {
-	followMe := m.CurrentOpponentFollowMePokemonPointers.FilterByNotFainted()
+	followMe := m.CurrentOpponentAttentionPokemonPointers.FilterByNotFainted()
 	if len(followMe) != 0 {
 		// https://wiki.xn--rckteqa2e.com/wiki/%E3%81%93%E3%81%AE%E3%82%86%E3%81%B3%E3%81%A8%E3%81%BE%E3%82%8C
 		// 複数ポケモンがちゅうもくのまと状態である場合、最初にちゅうもくのまと状態になったポケモンが優先される。
@@ -477,17 +477,59 @@ type EasyReadManager struct {
 	CurrentOpponentBenchPokemons bp.EasyReadPokemons
 
 	/*
-		CurrentSelfFollowMePokemonPointers
-		CurrentOpponentFollowMePokemonPointers
-		上記の二つは今の所不要。
+		CurrentSelfAttentionPokemonPointers
+		CurrentOpponentAttentionPokemonPointers
+
+		上記の2つのフィールドは、処理の為に、一時的に使う変数であり、
+		内部的なものであるから、現時点では変換しなくてもよい。
 	*/
 
 	Weather string
 	RemainingTurn RemainingTurn
-
 	Turn int
 	CurrentSelfIsHost bool
 	HostViewMessage string
+}
+
+func (e *EasyReadManager) From() (Manager, error) {
+	selfLeadPokemons, err := e.CurrentSelfLeadPokemons.From()
+	if err != nil {
+		return Manager{}, err
+	}
+
+	selfBenchPokemons, err := e.CurrentSelfBenchPokemons.From()
+	if err != nil {
+		return Manager{}, err
+	}
+
+	opponentLeadPokemons, err := e.CurrentOpponentLeadPokemons.From()
+	if err != nil {
+		return Manager{}, err
+	}
+
+	opponentBenchPokemons, err := e.CurrentOpponentBenchPokemons.From()
+	if err != nil {
+		return Manager{}, err
+	}
+	
+	weather, err := StringToWeather(e.Weather)
+
+	return Manager{
+		CurrentSelfLeadPokemons:selfLeadPokemons,
+		CurrentSelfBenchPokemons:selfBenchPokemons,
+		CurrentOpponentLeadPokemons:opponentLeadPokemons,
+		CurrentOpponentBenchPokemons:opponentBenchPokemons,
+
+		CurrentSelfAttentionPokemonPointers:make(bp.PokemonPointers, 0, len(selfLeadPokemons)),
+		CurrentOpponentAttentionPokemonPointers:make(bp.PokemonPointers, 0, len(opponentLeadPokemons)),
+
+		Weather:weather,
+		RemainingTurn:e.RemainingTurn,
+		Turn:e.Turn,
+
+		CurrentSelfIsHost:e.CurrentSelfIsHost,
+		HostViewMessage:e.HostViewMessage,
+	}, err
 }
 
 type EasyReadManagers []EasyReadManager
